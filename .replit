@@ -37,7 +37,17 @@ externalPort = 3000
 localPort = 5000
 externalPort = 80
 
+[[ports]]
+localPort = 38471
+externalPort = 3001
+
 [userenv]
 
 [userenv.shared]
 MONGODB_URI = "mongodb+srv://akodemydb:QnJpNja7N4E6FZV2@akodemy.plp8wja.mongodb.net/akodemy?retryWrites=true&w=majority&appName=Akodemy"
+JWT_SECRET = "0f52d7d45b18c7055737a2a927ec10f12ebd5361ee8ac5734116e38577221d6a"
+
+[deployment]
+deploymentTarget = "autoscale"
+run = ["npm", "run", "start:prod"]
+build = ["npm", "run", "build:prod"]
