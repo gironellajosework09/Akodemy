@@ -19,6 +19,7 @@ export default function ChallengeEditor() {
   const [showExitConfirm, setShowExitConfirm] = useState(false)
   const timerRef = useRef(null)
   const containerRef = useRef(null)
+  const preFullscreenRef = useRef(null)
 
   useEffect(() => {
     fetchChallenge()
@@ -73,10 +74,9 @@ export default function ChallengeEditor() {
 
   const enterFullscreen = async () => {
     try {
-      if (containerRef.current) {
-        await containerRef.current.requestFullscreen()
-        setIsFullscreen(true)
-      }
+      const element = preFullscreenRef.current || document.documentElement
+      await element.requestFullscreen()
+      setIsFullscreen(true)
     } catch (error) {
       console.error('Failed to enter fullscreen:', error)
       setIsFullscreen(true)
@@ -187,7 +187,7 @@ export default function ChallengeEditor() {
 
   if (!isFullscreen) {
     return (
-      <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center">
+      <div ref={preFullscreenRef} className="min-h-screen bg-gray-100 flex flex-col items-center justify-center">
         <div className="bg-white p-8 rounded-xl shadow-lg text-center max-w-md">
           <h2 className="text-2xl font-bold text-akodemy-purple mb-4">{challenge?.title}</h2>
           <p className="text-gray-600 mb-6">

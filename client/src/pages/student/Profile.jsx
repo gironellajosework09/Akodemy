@@ -173,23 +173,44 @@ export default function Profile() {
                       const mastery = getMasteryLevel(percentage)
                       return (
                         <div key={comp} className="flex items-center gap-4">
-                          <span className="w-40 text-sm">{comp}</span>
-                          <div className="flex-1 bg-gray-200 rounded-full h-4">
+                          <span className="w-48 text-sm flex-shrink-0">{comp}</span>
+                          <div className="flex-1 bg-gray-200 rounded-full h-4 relative">
                             <div
-                              className={`h-4 rounded-full ${mastery.color} mastery-bar`}
+                              className={`h-4 rounded-full ${mastery.color} transition-all duration-300`}
                               style={{ width: `${percentage}%` }}
                             ></div>
                           </div>
+                          <span className={`text-xs font-medium w-24 text-right ${mastery.color.replace('bg-', 'text-')}`}>
+                            {mastery.label}
+                          </span>
                         </div>
                       )
                     })}
                   </div>
-                  <div className="flex justify-between text-sm text-gray-500 mt-2">
-                    <span>Needs Practice</span>
-                    <span>Developing</span>
-                    <span>Mastered</span>
+                  <div className="flex items-center gap-4 mt-4 pt-2 border-t">
+                    <span className="w-48 flex-shrink-0"></span>
+                    <div className="flex-1 flex justify-between text-xs text-gray-500">
+                      <span>0%</span>
+                      <span>40%</span>
+                      <span>80%</span>
+                      <span>100%</span>
+                    </div>
+                    <span className="w-24"></span>
                   </div>
-                  <p className="text-center text-gray-600 mt-2 font-semibold">Mastery</p>
+                  <div className="flex items-center gap-6 mt-2 justify-center">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                      <span className="text-xs text-gray-600">Needs Practice (0-39%)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                      <span className="text-xs text-gray-600">Developing (40-79%)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                      <span className="text-xs text-gray-600">Mastered (80-100%)</span>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
