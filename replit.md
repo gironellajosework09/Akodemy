@@ -95,9 +95,16 @@ The app runs with `node start.js` which starts both:
 - Run `npm run seed` to populate challenges
 
 ## Recent Changes
+- December 4, 2025: Enhanced features
+  - Loading spinners for login/register buttons
+  - Personalized welcome message with user's name
+  - 45 Exercism-style challenges (15 per language, 5 per difficulty tier)
+  - Test case validation with pass/fail feedback
+  - Performance-based competency tracking (+20 per completed challenge)
+  - Fixed backend stability (0.0.0.0 binding, proper port cleanup)
+
 - December 3, 2025: Initial MVP release
   - Full authentication system
-  - 15 coding challenges (5 per language)
   - Monaco Editor integration
   - Judge0 code execution
   - Fullscreen anti-cheat mode
