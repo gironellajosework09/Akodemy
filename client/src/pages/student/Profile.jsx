@@ -168,7 +168,8 @@ export default function Profile() {
                   <h4 className="font-semibold mb-4">Competencies</h4>
                   <div className="space-y-3">
                     {competencies.map((comp, idx) => {
-                      const percentage = progress?.[lang]?.[idx] || Math.floor(Math.random() * 100)
+                      const userCompetencies = user?.competencies?.[lang] || [0, 0, 0, 0, 0, 0]
+                      const percentage = userCompetencies[idx] || 0
                       const mastery = getMasteryLevel(percentage)
                       return (
                         <div key={comp} className="flex items-center gap-4">

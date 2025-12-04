@@ -129,10 +129,13 @@ export default function ChallengeEditor() {
     }
   }
 
+  const [testResults, setTestResults] = useState(null)
+
   const runCode = async () => {
     setRunning(true)
     setOutput('')
     setHint('')
+    setTestResults(null)
     setRunCount((prev) => prev + 1)
 
     try {
@@ -146,6 +149,10 @@ export default function ChallengeEditor() {
 
       if (response.data.error && response.data.hint) {
         setHint(response.data.hint)
+      }
+
+      if (response.data.testResults) {
+        setTestResults(response.data.testResults)
       }
     } catch (error) {
       setOutput(error.response?.data?.message || 'Execution failed')
@@ -286,10 +293,23 @@ export default function ChallengeEditor() {
             <div className="flex-1 flex flex-col">
               <p className="px-4 py-2 bg-gray-100 text-sm font-medium">OUTPUT:</p>
               <div className="flex-1 p-4 overflow-auto">
+                {testResults && (
+                  <div className={`mb-4 p-3 rounded-lg ${testResults.passed ? 'bg-green-100 border border-green-300' : 'bg-red-100 border border-red-300'}`}>
+                    <p className={`font-bold ${testResults.passed ? 'text-green-700' : 'text-red-700'}`}>
+                      {testResults.passed ? '✓ All Tests Passed!' : '✗ Test Failed'}
+                    </p>
+                    {!testResults.passed && (
+                      <div className="mt-2 text-sm">
+                        <p className="text-gray-700"><strong>Expected:</strong> {testResults.expected}</p>
+                        <p className="text-gray-700"><strong>Got:</strong> {testResults.actual}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {hint && (
-                  <div className="mb-4">
-                    <p className="font-medium text-gray-700">Hint:</p>
-                    <p className="text-gray-600">{hint}</p>
+                  <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="font-medium text-yellow-800">Hint:</p>
+                    <p className="text-yellow-700">{hint}</p>
                   </div>
                 )}
                 <pre className={`text-sm whitespace-pre-wrap ${output.includes('Error') || output.includes('error') ? 'text-red-500' : 'text-gray-800'}`}>

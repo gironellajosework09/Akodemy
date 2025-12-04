@@ -25,19 +25,39 @@ router.post('/', authenticateToken, async (req, res) => {
       hint = await rephraseError(error, language, code)
     }
 
+    let testResults = null
+    let passed = false
+
     if (challengeId) {
       try {
+        const challenge = await Challenge.findById(challengeId)
+        
+        if (challenge && challenge.solution && !error) {
+          const cleanOutput = output.trim()
+          const expectedOutput = challenge.solution.trim()
+          passed = cleanOutput === expectedOutput
+          
+          testResults = {
+            passed,
+            expected: expectedOutput,
+            actual: cleanOutput,
+            message: passed ? 'All tests passed!' : `Expected: ${expectedOutput}\nGot: ${cleanOutput}`
+          }
+        }
+
         const existingSubmission = await Submission.findOne({
           userId: req.user._id,
           challengeId
         })
+
+        const status = error ? 'error' : (passed ? 'accepted' : 'wrong_answer')
 
         if (existingSubmission) {
           existingSubmission.code = code
           existingSubmission.output = output
           existingSubmission.error = error
           existingSubmission.hint = hint
-          existingSubmission.status = error ? 'error' : 'accepted'
+          existingSubmission.status = status
           existingSubmission.runCount = (existingSubmission.runCount || 0) + 1
           existingSubmission.runtime = result.time
           existingSubmission.memory = result.memory
@@ -50,7 +70,7 @@ router.post('/', authenticateToken, async (req, res) => {
             output,
             error,
             hint,
-            status: error ? 'error' : 'accepted',
+            status,
             runtime: result.time,
             memory: result.memory
           })
@@ -66,7 +86,9 @@ router.post('/', authenticateToken, async (req, res) => {
       hint,
       status: result.status,
       time: result.time,
-      memory: result.memory
+      memory: result.memory,
+      testResults,
+      passed
     })
   } catch (error) {
     console.error('Execute error:', error)

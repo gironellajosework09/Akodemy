@@ -34,6 +34,10 @@ const challengeSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  solution: {
+    type: String,
+    default: ''
+  },
   testCases: [testCaseSchema],
   competencyIndex: {
     type: Number,
