@@ -26,19 +26,27 @@ export default function Profile() {
   }
 
   const languages = ['javascript', 'python', 'java']
-  const competencies = [
-    'Variables & Data Types',
-    'Control Structures',
-    'Functions',
-    'Arrays & Collections',
-    'Object-Oriented Programming',
-    'Error Handling'
-  ]
 
-  const getMasteryLevel = (percentage) => {
-    if (percentage >= 80) return { label: 'Mastered', color: 'bg-green-500' }
-    if (percentage >= 40) return { label: 'Developing', color: 'bg-yellow-500' }
-    return { label: 'Needs Practice', color: 'bg-red-500' }
+  const getMasteryInfo = (percentage, hasActivity) => {
+    if (!hasActivity || percentage === 0) {
+      return { label: '', color: 'bg-gray-300', textColor: 'text-gray-400' }
+    }
+    if (percentage >= 80) {
+      return { label: 'Mastered', color: 'bg-green-500', textColor: 'text-green-600' }
+    }
+    if (percentage >= 40) {
+      return { label: 'Developing', color: 'bg-yellow-500', textColor: 'text-yellow-600' }
+    }
+    return { label: 'Needs Practice', color: 'bg-red-500', textColor: 'text-red-600' }
+  }
+
+  const getLanguageIcon = (lang) => {
+    switch (lang) {
+      case 'javascript': return '📜'
+      case 'python': return '🐍'
+      case 'java': return '☕'
+      default: return '💻'
+    }
   }
 
   return (
@@ -144,75 +152,81 @@ export default function Profile() {
             </div>
           ) : (
             <div className="space-y-12">
-              {languages.map((lang) => (
-                <div key={lang}>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      {lang === 'javascript' && (
-                        <span className="text-2xl">📜</span>
-                      )}
-                      {lang === 'python' && (
-                        <span className="text-2xl">🐍</span>
-                      )}
-                      {lang === 'java' && (
-                        <span className="text-2xl">☕</span>
-                      )}
-                      <h3 className="text-xl font-bold text-akodemy-purple uppercase">{lang}</h3>
-                    </div>
-                    <div className="flex gap-2">
-                      <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
-                      <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
-                      <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
-                    </div>
-                  </div>
-                  <h4 className="font-semibold mb-4">Competencies</h4>
-                  <div className="space-y-3">
-                    {competencies.map((comp, idx) => {
-                      const userCompetencies = user?.competencies?.[lang] || [0, 0, 0, 0, 0, 0]
-                      const percentage = userCompetencies[idx] || 0
-                      const mastery = getMasteryLevel(percentage)
-                      return (
-                        <div key={comp} className="flex items-center gap-4">
-                          <span className="w-48 text-sm flex-shrink-0">{comp}</span>
-                          <div className="flex-1 bg-gray-200 rounded-full h-4 relative">
-                            <div
-                              className={`h-4 rounded-full ${mastery.color} transition-all duration-300`}
-                              style={{ width: `${percentage}%` }}
-                            ></div>
-                          </div>
-                          <span className={`text-xs font-medium w-24 text-right ${mastery.color.replace('bg-', 'text-')}`}>
-                            {mastery.label}
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                  <div className="flex items-center gap-4 mt-4 pt-2 border-t">
-                    <span className="w-48 flex-shrink-0"></span>
-                    <div className="flex-1 flex justify-between text-xs text-gray-500">
-                      <span>0%</span>
-                      <span>40%</span>
-                      <span>80%</span>
-                      <span>100%</span>
-                    </div>
-                    <span className="w-24"></span>
-                  </div>
-                  <div className="flex items-center gap-6 mt-2 justify-center">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                      <span className="text-xs text-gray-600">Needs Practice (0-39%)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                      <span className="text-xs text-gray-600">Developing (40-79%)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                      <span className="text-xs text-gray-600">Mastered (80-100%)</span>
-                    </div>
-                  </div>
+              {loading ? (
+                <div className="flex justify-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-akodemy-purple"></div>
                 </div>
-              ))}
+              ) : (
+                languages.map((lang) => {
+                  const langProgress = progress?.competencies?.[lang] || []
+                  const summary = progress?.summary?.[lang] || { completed: 0, total: 0 }
+                  
+                  return (
+                    <div key={lang}>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">{getLanguageIcon(lang)}</span>
+                          <h3 className="text-xl font-bold text-akodemy-purple uppercase">{lang}</h3>
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {summary.completed} / {summary.total} challenges completed
+                        </div>
+                      </div>
+                      
+                      <h4 className="font-semibold mb-4">Competencies</h4>
+                      
+                      <div className="space-y-3">
+                        {langProgress.map((comp) => {
+                          const mastery = getMasteryInfo(comp.percentage, comp.hasActivity)
+                          
+                          return (
+                            <div key={comp.index} className="flex items-center gap-4">
+                              <span className="w-48 text-sm flex-shrink-0">{comp.name}</span>
+                              <div className="flex-1 bg-gray-200 rounded-full h-4 relative overflow-hidden">
+                                {comp.percentage > 0 && (
+                                  <div
+                                    className={`h-4 rounded-full ${mastery.color} transition-all duration-500`}
+                                    style={{ width: `${comp.percentage}%` }}
+                                  ></div>
+                                )}
+                              </div>
+                              <div className="w-32 flex items-center justify-end gap-2">
+                                <span className="text-xs text-gray-500">
+                                  {comp.completed}/{comp.total}
+                                </span>
+                                {mastery.label && (
+                                  <span className={`text-xs font-medium ${mastery.textColor}`}>
+                                    {mastery.label}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                      
+                      <div className="flex items-center gap-6 mt-4 pt-4 border-t justify-center">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-gray-300"></div>
+                          <span className="text-xs text-gray-500">Not Started</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                          <span className="text-xs text-gray-600">Needs Practice (1-39%)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                          <span className="text-xs text-gray-600">Developing (40-79%)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                          <span className="text-xs text-gray-600">Mastered (80-100%)</span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
             </div>
           )}
         </div>
