@@ -95,21 +95,26 @@ The app runs with `node start.js` which starts both:
 - Run `npm run seed` to populate challenges
 
 ## Recent Changes
+- December 4, 2025: Comprehensive Exercism Integration
+  - Full Exercism sync fetches ALL 411+ challenges from GitHub (149 JS, 150 Python, 146 Java)
+  - Deterministic competency mapping using keyword matching + consistent hash fallback
+  - Dynamic progress tracking computed from actual user submissions (no hardcoded values)
+  - Profile shows 6 competency categories per language with accurate totals
+  - Color-coded progress bars: gray (not started), red (<40%), yellow (40-79%), green (80%+)
+  - Sync endpoint restricted to faculty users for security
+
 - December 4, 2025: UI/UX Improvements
   - Header updated with Akodemy logo and brand name (replaced welcome text)
   - Added logout button to header
   - Fixed competency progress bar labels with proper alignment
   - Added legend showing mastery levels (Needs Practice, Developing, Mastered)
   - Challenges now sorted by difficulty (beginner first)
-  - Added Exercism sync endpoint to fetch challenges from GitHub
   - Fixed fullscreen button not working in challenge editor
 
 - December 4, 2025: Enhanced features
   - Loading spinners for login/register buttons
   - Personalized welcome message with user's name
-  - 45 Exercism-style challenges (15 per language, 5 per difficulty tier)
   - Test case validation with pass/fail feedback
-  - Performance-based competency tracking (+20 per completed challenge)
   - Fixed backend stability (0.0.0.0 binding, proper port cleanup)
 
 - December 3, 2025: Initial MVP release

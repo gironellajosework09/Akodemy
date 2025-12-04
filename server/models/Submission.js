@@ -13,7 +13,7 @@ const submissionSchema = new mongoose.Schema({
   },
   code: {
     type: String,
-    required: true
+    default: ''
   },
   status: {
     type: String,
