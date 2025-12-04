@@ -187,25 +187,105 @@ export default function ChallengeEditor() {
 
   if (!isFullscreen) {
     return (
-      <div ref={preFullscreenRef} className="min-h-screen bg-gray-100 flex flex-col items-center justify-center">
-        <div className="bg-white p-8 rounded-xl shadow-lg text-center max-w-md">
-          <h2 className="text-2xl font-bold text-akodemy-purple mb-4">{challenge?.title}</h2>
-          <p className="text-gray-600 mb-6">
-            This challenge requires fullscreen mode to prevent cheating.
-            Click the button below to start.
-          </p>
-          <button
-            onClick={enterFullscreen}
-            className="bg-akodemy-purple text-white px-8 py-3 rounded-lg font-semibold hover:bg-purple-800 transition"
-          >
-            Enter Fullscreen & Start Challenge
-          </button>
+      <div ref={preFullscreenRef} className="min-h-screen bg-gray-100">
+        <div className="bg-akodemy-purple text-white px-6 py-3 flex items-center justify-between">
           <button
             onClick={() => navigate(-1)}
-            className="block mx-auto mt-4 text-gray-500 hover:text-akodemy-purple"
+            className="flex items-center gap-2 text-white hover:text-gray-200"
           >
-            Go Back
+            <ChevronLeft className="w-5 h-5" />
+            Back
           </button>
+          <h1 className="text-xl font-bold">Practice Mode</h1>
+          <button
+            onClick={enterFullscreen}
+            className="bg-white text-akodemy-purple px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition"
+          >
+            Start Official Challenge
+          </button>
+        </div>
+
+        <div className="flex h-[calc(100vh-60px)]">
+          <div className="w-80 bg-white p-6 border-r overflow-auto">
+            <h2 className="text-xl font-bold text-akodemy-purple mb-2">{challenge?.title}</h2>
+            <span className={`inline-block px-2 py-1 rounded text-xs font-medium mb-4 ${
+              challenge?.difficulty === 'beginner' ? 'bg-green-100 text-green-700' :
+              challenge?.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-700' :
+              'bg-red-100 text-red-700'
+            }`}>
+              {challenge?.difficulty}
+            </span>
+            <p className="text-gray-600 text-sm mb-4">{challenge?.description}</p>
+            <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                <strong>Practice Mode:</strong> Test your code here before starting the official timed challenge.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex">
+              <div className="flex-1 flex flex-col border-r">
+                <p className="px-4 py-2 bg-gray-100 text-sm font-medium border-b">Code Editor</p>
+                <div className="flex-1">
+                  <Editor
+                    height="100%"
+                    language={getEditorLanguage(challenge?.language)}
+                    value={code}
+                    onChange={(value) => setCode(value || '')}
+                    theme="vs-light"
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 14,
+                      lineNumbers: 'on',
+                      scrollBeyondLastLine: false,
+                      automaticLayout: true,
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="flex-1 flex flex-col">
+                <p className="px-4 py-2 bg-gray-100 text-sm font-medium border-b">Output</p>
+                <div className="flex-1 p-4 overflow-auto bg-white">
+                  {testResults && (
+                    <div className={`mb-4 p-3 rounded-lg ${testResults.passed ? 'bg-green-100 border border-green-300' : 'bg-red-100 border border-red-300'}`}>
+                      <p className={`font-bold ${testResults.passed ? 'text-green-700' : 'text-red-700'}`}>
+                        {testResults.passed ? '✓ All Tests Passed!' : '✗ Test Failed'}
+                      </p>
+                      {!testResults.passed && (
+                        <div className="mt-2 text-sm">
+                          <p className="text-gray-700"><strong>Expected:</strong> {testResults.expected}</p>
+                          <p className="text-gray-700"><strong>Got:</strong> {testResults.actual}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {hint && (
+                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="font-medium text-yellow-800">Hint:</p>
+                      <p className="text-yellow-700">{hint}</p>
+                    </div>
+                  )}
+                  <pre className={`text-sm whitespace-pre-wrap ${output.includes('Error') || output.includes('error') ? 'text-red-500' : 'text-gray-800'}`}>
+                    {output || 'Click "Run Code" to test your solution...'}
+                  </pre>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t p-4 flex items-center justify-between bg-gray-50">
+              <p className="text-sm text-gray-600">Practice runs: {runCount}</p>
+              <button
+                onClick={runCode}
+                disabled={running}
+                className="flex items-center gap-2 bg-akodemy-purple text-white px-6 py-2 rounded-lg hover:bg-purple-800 disabled:opacity-50 transition"
+              >
+                <Play className="w-4 h-4" />
+                {running ? 'Running...' : 'Run Code'}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     )
