@@ -95,6 +95,15 @@ The app runs with `node start.js` which starts both:
 - Run `npm run seed` to populate challenges
 
 ## Recent Changes
+- December 4, 2025: UI/UX Improvements
+  - Header updated with Akodemy logo and brand name (replaced welcome text)
+  - Added logout button to header
+  - Fixed competency progress bar labels with proper alignment
+  - Added legend showing mastery levels (Needs Practice, Developing, Mastered)
+  - Challenges now sorted by difficulty (beginner first)
+  - Added Exercism sync endpoint to fetch challenges from GitHub
+  - Fixed fullscreen button not working in challenge editor
+
 - December 4, 2025: Enhanced features
   - Loading spinners for login/register buttons
   - Personalized welcome message with user's name
