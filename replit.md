@@ -95,6 +95,17 @@ The app runs with `node start.js` which starts both:
 - Run `npm run seed` to populate challenges
 
 ## Recent Changes
+- December 10, 2025: Profile Page Enhancements
+  - Student profile page made fully responsive for mobile devices
+  - Faculty profile button now correctly navigates to /faculty/profile
+  - Created FacultyProfile.jsx page for faculty users
+  - Profile details are now editable with Save Changes button
+  - Backend PUT /api/auth/profile endpoint for saving user profile updates
+  - Removed x/y numbers from achievements progress bars (kept legend only)
+  - Added PDF download button for achievements using html2canvas + jsPDF
+  - Faculty dashboard shows new competency distribution chart
+  - Stacked bar chart shows percentage of students at each mastery level per language
+
 - December 10, 2025: Mobile Responsive Design & Navigation
   - Added back buttons to Language Selection, Difficulty Selection, and Challenge List pages
   - Back buttons placed below header with proper navigation targets

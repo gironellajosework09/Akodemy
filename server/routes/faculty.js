@@ -56,6 +56,79 @@ router.get('/analytics', authenticateToken, requireRole('faculty'), async (req, 
   }
 })
 
+router.get('/competency-distribution', authenticateToken, requireRole('faculty'), async (req, res) => {
+  try {
+    const students = await User.find({ role: 'student' })
+    const studentIds = students.map(s => s._id)
+    const totalStudents = students.length
+
+    if (totalStudents === 0) {
+      return res.json({
+        javascript: { notStarted: 100, needsPractice: 0, developing: 0, mastered: 0 },
+        python: { notStarted: 100, needsPractice: 0, developing: 0, mastered: 0 },
+        java: { notStarted: 100, needsPractice: 0, developing: 0, mastered: 0 }
+      })
+    }
+
+    const allChallenges = await Challenge.find({})
+    const challengeCounts = {}
+    allChallenges.forEach(c => {
+      if (!challengeCounts[c.language]) challengeCounts[c.language] = 0
+      challengeCounts[c.language]++
+    })
+
+    const submissions = await Submission.find({ 
+      userId: { $in: studentIds }, 
+      completed: true 
+    }).populate('challengeId', 'language')
+
+    const studentProgress = {}
+    studentIds.forEach(id => {
+      studentProgress[id.toString()] = { javascript: 0, python: 0, java: 0 }
+    })
+
+    submissions.forEach(sub => {
+      if (sub.challengeId?.language) {
+        const lang = sub.challengeId.language
+        const userId = sub.userId.toString()
+        if (studentProgress[userId]) {
+          studentProgress[userId][lang]++
+        }
+      }
+    })
+
+    const languages = ['javascript', 'python', 'java']
+    const result = {}
+
+    for (const lang of languages) {
+      const totalChallenges = challengeCounts[lang] || 1
+      let notStarted = 0, needsPractice = 0, developing = 0, mastered = 0
+
+      for (const studentId of studentIds) {
+        const completed = studentProgress[studentId.toString()][lang] || 0
+        const percentage = (completed / totalChallenges) * 100
+
+        if (percentage === 0) notStarted++
+        else if (percentage < 40) needsPractice++
+        else if (percentage < 80) developing++
+        else mastered++
+      }
+
+      result[lang] = {
+        notStarted: Math.round((notStarted / totalStudents) * 100),
+        needsPractice: Math.round((needsPractice / totalStudents) * 100),
+        developing: Math.round((developing / totalStudents) * 100),
+        mastered: Math.round((mastered / totalStudents) * 100)
+      }
+    }
+
+    res.json(result)
+  } catch (error) {
+    console.error('Competency distribution error:', error)
+    res.status(500).json({ message: 'Failed to fetch competency distribution' })
+  }
+})
+
 router.get('/students', authenticateToken, requireRole('faculty'), async (req, res) => {
   try {
     const students = await User.find({ role: 'student' })

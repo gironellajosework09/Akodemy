@@ -2,6 +2,7 @@ import express from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import User from '../models/User.js'
+import { authenticateToken } from '../middleware/auth.js'
 
 const router = express.Router()
 const JWT_SECRET = process.env.JWT_SECRET || 'akodemy-secret-key-2025'
@@ -58,6 +59,31 @@ router.post('/login', async (req, res) => {
   } catch (error) {
     console.error('Login error:', error)
     res.status(500).json({ message: 'Login failed' })
+  }
+})
+
+router.put('/profile', authenticateToken, async (req, res) => {
+  try {
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ message: 'User not authenticated' })
+    }
+
+    const { name, address, phone, birthdate, sex } = req.body
+    
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { name, address, phone, birthdate, sex },
+      { new: true }
+    ).select('-password')
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' })
+    }
+
+    res.json(user)
+  } catch (error) {
+    console.error('Profile update error:', error)
+    res.status(500).json({ message: 'Failed to update profile' })
   }
 })
 

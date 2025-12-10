@@ -9,6 +9,7 @@ import DifficultySelection from './pages/student/DifficultySelection'
 import ChallengeList from './pages/student/ChallengeList'
 import ChallengeEditor from './pages/student/ChallengeEditor'
 import FacultyDashboard from './pages/faculty/Dashboard'
+import FacultyProfile from './pages/faculty/Profile'
 import StudentList from './pages/faculty/StudentList'
 import StudentProfileView from './pages/faculty/StudentProfileView'
 
@@ -75,6 +76,11 @@ function AppRoutes() {
       <Route path="/faculty" element={
         <ProtectedRoute allowedRole="faculty">
           <FacultyDashboard />
+        </ProtectedRoute>
+      } />
+      <Route path="/faculty/profile" element={
+        <ProtectedRoute allowedRole="faculty">
+          <FacultyProfile />
         </ProtectedRoute>
       } />
       <Route path="/faculty/students" element={

@@ -104,14 +104,9 @@ export default function StudentProfileView() {
               
               return (
                 <div key={lang} className="bg-gray-800 border border-gray-700 rounded-xl p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">{getLanguageIcon(lang)}</span>
-                      <h3 className="text-xl font-bold text-white uppercase">{lang}</h3>
-                    </div>
-                    <div className="text-sm text-gray-400">
-                      {summary.completed} / {summary.total} challenges completed
-                    </div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="text-2xl">{getLanguageIcon(lang)}</span>
+                    <h3 className="text-xl font-bold text-white uppercase">{lang}</h3>
                   </div>
                   
                   <h4 className="font-semibold mb-4 text-gray-300">Competencies</h4>
@@ -130,16 +125,11 @@ export default function StudentProfileView() {
                               ></div>
                             )}
                           </div>
-                          <div className="w-28 flex items-center justify-end gap-2">
-                            <span className="text-xs text-gray-500">
-                              {comp.completed}/{comp.total}
+                          {mastery.label && (
+                            <span className={`text-xs font-medium ${mastery.textColor} w-24 text-right`}>
+                              {mastery.label}
                             </span>
-                            {mastery.label && (
-                              <span className={`text-xs font-medium ${mastery.textColor}`}>
-                                {mastery.label}
-                              </span>
-                            )}
-                          </div>
+                          )}
                         </div>
                       )
                     }) : (

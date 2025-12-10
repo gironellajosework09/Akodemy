@@ -30,7 +30,7 @@ export default function Header() {
         </Link>
         <div className="flex items-center gap-2 sm:gap-4">
           <Link 
-            to={user?.role === 'faculty' ? '/faculty' : '/profile'} 
+            to={user?.role === 'faculty' ? '/faculty/profile' : '/profile'} 
             className="flex items-center gap-2 bg-gray-800 text-white px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-gray-700 transition border border-gray-700"
           >
             <User className="w-4 h-4 sm:w-5 sm:h-5" />
