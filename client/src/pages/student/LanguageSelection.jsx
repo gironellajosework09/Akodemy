@@ -1,24 +1,27 @@
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft } from 'lucide-react'
+import Layout from '../../components/Layout'
 
 const languages = [
   {
     id: 'java',
     name: 'JAVA',
     icon: '☕',
-    color: 'text-red-600'
+    color: 'text-red-400',
+    bg: 'bg-red-500/20'
   },
   {
     id: 'javascript',
     name: 'JAVASCRIPT',
     icon: '📜',
-    color: 'text-yellow-500'
+    color: 'text-yellow-400',
+    bg: 'bg-yellow-500/20'
   },
   {
     id: 'python',
     name: 'PYTHON',
     icon: '🐍',
-    color: 'text-blue-500'
+    color: 'text-blue-400',
+    bg: 'bg-blue-500/20'
   }
 ]
 
@@ -26,41 +29,29 @@ export default function LanguageSelection() {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="p-4">
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-1 text-gray-600 hover:text-akodemy-purple"
-        >
-          <ChevronLeft className="w-5 h-5" />
-          back
-        </button>
-      </div>
-
-      <div className="container mx-auto px-8 py-8">
+    <Layout>
+      <div className="flex-1 flex flex-col items-center justify-center px-8 py-12">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-akodemy-purple mb-2">Choose your language,</h1>
-          <p className="text-gray-600">test your skills, and earn mastery badges by solving challenges!</p>
+          <h1 className="text-4xl font-bold text-white mb-4">Choose Your Language</h1>
+          <p className="text-gray-400">Test your skills and earn mastery badges by solving challenges!</p>
         </div>
 
-        <div className="flex justify-center items-center gap-8">
+        <div className="flex justify-center items-center gap-8 flex-wrap">
           {languages.map((lang) => (
             <button
               key={lang.id}
               onClick={() => navigate(`/challenges/${lang.id}/difficulty`)}
-              className="group flex flex-col items-center p-6 hover:scale-110 transition-transform"
+              className="group flex flex-col items-center p-8 bg-gray-800 border border-gray-700 rounded-2xl hover:border-akodemy-purple transition-all hover:-translate-y-2"
             >
-              <div className="text-8xl mb-4">{lang.icon}</div>
+              <div className={`text-8xl mb-4 ${lang.bg} w-32 h-32 rounded-xl flex items-center justify-center`}>
+                {lang.icon}
+              </div>
               <p className={`font-bold text-xl ${lang.color}`}>{lang.name}</p>
-              <div className="h-1 w-0 group-hover:w-full bg-akodemy-purple transition-all duration-300 mt-2"></div>
+              <div className="h-1 w-0 group-hover:w-full bg-akodemy-purple transition-all duration-300 mt-3 rounded-full"></div>
             </button>
           ))}
         </div>
       </div>
-
-      <footer className="fixed bottom-0 left-0 right-0 bg-akodemy-purple text-white py-4 text-center">
-        <p>&copy; Copyright 2025. All Rights Reserved.</p>
-      </footer>
-    </div>
+    </Layout>
   )
 }

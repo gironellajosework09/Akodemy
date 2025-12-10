@@ -1,52 +1,55 @@
 import { useNavigate, useParams } from 'react-router-dom'
-import { ChevronLeft } from 'lucide-react'
+import Layout from '../../components/Layout'
 
 const difficulties = [
-  { id: 'beginner', name: 'Beginner', color: 'border-blue-500' },
-  { id: 'intermediate', name: 'Intermediate', color: 'border-yellow-500' },
-  { id: 'advanced', name: 'Advance', color: 'border-red-500' }
+  { id: 'beginner', name: 'Beginner', color: 'border-green-500', bg: 'bg-green-500/20', text: 'text-green-400' },
+  { id: 'intermediate', name: 'Intermediate', color: 'border-yellow-500', bg: 'bg-yellow-500/20', text: 'text-yellow-400' },
+  { id: 'advanced', name: 'Advanced', color: 'border-red-500', bg: 'bg-red-500/20', text: 'text-red-400' }
 ]
 
 export default function DifficultySelection() {
   const navigate = useNavigate()
   const { language } = useParams()
 
-  return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="flex justify-between items-center p-4">
-        <button
-          onClick={() => navigate('/languages')}
-          className="flex items-center gap-1 text-gray-600 hover:text-akodemy-purple"
-        >
-          <ChevronLeft className="w-5 h-5" />
-          back
-        </button>
-        <span className="text-gray-600 uppercase font-medium">PROGRAMMING LANGUAGE</span>
-      </div>
+  const getLanguageDisplay = () => {
+    switch (language) {
+      case 'javascript': return { icon: '📜', name: 'JavaScript' }
+      case 'python': return { icon: '🐍', name: 'Python' }
+      case 'java': return { icon: '☕', name: 'Java' }
+      default: return { icon: '💻', name: language }
+    }
+  }
 
-      <div className="container mx-auto px-8 py-8">
-        <h1 className="text-4xl font-bold text-akodemy-purple text-center mb-12">
-          Skill Difficulty Tiers
+  const langInfo = getLanguageDisplay()
+
+  return (
+    <Layout>
+      <div className="flex-1 flex flex-col items-center justify-center px-8 py-12">
+        <div className="flex items-center gap-2 text-gray-400 mb-8">
+          <span className="text-2xl">{langInfo.icon}</span>
+          <span className="font-medium text-lg">{langInfo.name}</span>
+        </div>
+        
+        <h1 className="text-4xl font-bold text-white text-center mb-12">
+          Choose Your <span className="text-akodemy-purple">Difficulty</span>
         </h1>
 
-        <div className="flex justify-center gap-8">
+        <div className="flex justify-center gap-8 flex-wrap">
           {difficulties.map((diff) => (
             <button
               key={diff.id}
               onClick={() => navigate(`/challenges/${language}/${diff.id}`)}
-              className={`w-64 h-80 bg-white rounded-xl border-2 ${diff.color} shadow-lg hover:shadow-xl transition-all hover:-translate-y-2 flex flex-col items-center justify-end p-6`}
+              className={`w-64 bg-gray-800 border-2 ${diff.color} rounded-2xl shadow-lg hover:shadow-xl transition-all hover:-translate-y-2 flex flex-col items-center p-8`}
             >
-              <div className="w-full h-48 bg-gray-100 rounded-lg mb-4"></div>
-              <p className="font-semibold text-lg">{diff.name}</p>
-              <div className={`h-1 w-16 ${diff.color.replace('border', 'bg')} mt-2 rounded-full`}></div>
+              <div className={`w-24 h-24 ${diff.bg} rounded-xl mb-6 flex items-center justify-center`}>
+                <div className={`w-12 h-12 ${diff.color.replace('border', 'bg')} rounded-lg`}></div>
+              </div>
+              <p className={`font-bold text-xl ${diff.text}`}>{diff.name}</p>
+              <div className={`h-1 w-16 ${diff.color.replace('border', 'bg')} mt-4 rounded-full`}></div>
             </button>
           ))}
         </div>
       </div>
-
-      <footer className="fixed bottom-0 left-0 right-0 bg-akodemy-purple text-white py-4 text-center">
-        <p>&copy; Copyright 2025. All Rights Reserved.</p>
-      </footer>
-    </div>
+    </Layout>
   )
 }

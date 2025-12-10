@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, Search } from 'lucide-react'
+import { Search, User } from 'lucide-react'
+import Layout from '../../components/Layout'
 import api from '../../services/api'
 
 export default function StudentList() {
@@ -29,33 +30,19 @@ export default function StudentList() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-akodemy-purple text-white py-4 px-6 flex justify-between items-center">
-        <div className="text-lg font-medium">Welcome to Akodemy</div>
-        <button className="flex items-center gap-2 bg-white text-akodemy-purple px-4 py-2 rounded-full">
-          My Profile
-        </button>
-      </header>
-
+    <Layout>
       <div className="container mx-auto px-8 py-8">
-        <button
-          onClick={() => navigate('/faculty')}
-          className="flex items-center gap-1 text-gray-600 hover:text-akodemy-purple mb-6"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-
-        <h1 className="text-3xl font-bold text-akodemy-purple mb-6">Student List</h1>
+        <h1 className="text-3xl font-bold text-white mb-6">Student List</h1>
 
         <div className="relative mb-6 max-w-md">
           <input
             type="text"
-            placeholder="Search"
+            placeholder="Search students..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg pr-10"
+            className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg pr-10 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-akodemy-purple focus:border-transparent"
           />
-          <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
         </div>
 
         {loading ? (
@@ -63,34 +50,53 @@ export default function StudentList() {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-akodemy-purple"></div>
           </div>
         ) : (
-          <div className="bg-white rounded-lg overflow-hidden shadow">
+          <div className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-900">
                 <tr>
-                  <th className="text-left px-6 py-4 font-semibold text-gray-700">Students</th>
-                  <th className="text-left px-6 py-4 font-semibold text-gray-700">JavaScript</th>
-                  <th className="text-left px-6 py-4 font-semibold text-gray-700">Python</th>
+                  <th className="text-left px-6 py-4 font-semibold text-gray-300">Student</th>
+                  <th className="text-left px-6 py-4 font-semibold text-gray-300">JavaScript</th>
+                  <th className="text-left px-6 py-4 font-semibold text-gray-300">Python</th>
+                  <th className="text-left px-6 py-4 font-semibold text-gray-300">Java</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredStudents.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
                       No students found
                     </td>
                   </tr>
                 ) : (
-                  filteredStudents.map((student, index) => (
+                  filteredStudents.map((student) => (
                     <tr
                       key={student._id}
                       onClick={() => navigate(`/faculty/student/${student._id}`)}
-                      className={`cursor-pointer hover:bg-gray-50 ${
-                        index === 0 ? 'bg-teal-50' : ''
-                      }`}
+                      className="cursor-pointer hover:bg-gray-700/50 border-t border-gray-700 transition"
                     >
-                      <td className="px-6 py-4">{student.name}</td>
-                      <td className="px-6 py-4">{student.progress?.javascript || 0}%</td>
-                      <td className="px-6 py-4">{student.progress?.python || 0}%</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center">
+                            <User className="w-4 h-4 text-gray-400" />
+                          </div>
+                          <span className="text-white">{student.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`${(student.progress?.javascript || 0) >= 50 ? 'text-green-400' : 'text-gray-400'}`}>
+                          {student.progress?.javascript || 0}%
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`${(student.progress?.python || 0) >= 50 ? 'text-green-400' : 'text-gray-400'}`}>
+                          {student.progress?.python || 0}%
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`${(student.progress?.java || 0) >= 50 ? 'text-green-400' : 'text-gray-400'}`}>
+                          {student.progress?.java || 0}%
+                        </span>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -99,10 +105,6 @@ export default function StudentList() {
           </div>
         )}
       </div>
-
-      <footer className="bg-akodemy-purple text-white py-4 text-center mt-auto">
-        <p>&copy; Copyright 2025. All Rights Reserved.</p>
-      </footer>
-    </div>
+    </Layout>
   )
 }

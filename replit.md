@@ -95,16 +95,21 @@ The app runs with `node start.js` which starts both:
 - Run `npm run seed` to populate challenges
 
 ## Recent Changes
-- December 10, 2025: Landing Page & Login Redesign
+- December 10, 2025: Complete Dark Theme & UI Consistency Update
   - Added dynamic landing page as the home page before login
   - Hero section with animated stats from database
   - Features section highlighting platform capabilities
   - Faculty section with mock dashboard preview
   - CTA section with gradient background
-  - Footer with branding
-  - All stats are dynamic (total challenges, students, completions)
   - Login page redesigned to match dark theme
-  - Consistent styling with navigation and "Back to Home" link
+  - ALL pages updated to consistent dark theme (gray-900 background, gray-800 cards)
+  - All student pages use shared Layout component for consistency
+  - All faculty pages use shared Layout component for consistency
+  - Added ConfirmDialog component for logout confirmation
+  - "Are you sure you want to logout?" dialog on all pages
+  - Fixed faculty StudentProfileView - competencies now dynamic from real submissions
+  - Added backend endpoint for computing student competencies dynamically
+  - Challenge editor exit confirmation dialog added
 
 - December 4, 2025: Comprehensive Exercism Integration
   - Full Exercism sync fetches ALL 411+ challenges from GitHub (149 JS, 150 Python, 146 Java)

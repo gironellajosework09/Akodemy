@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
-import { Users, Trophy, Code, ChevronRight } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { Users, Trophy, Code, ArrowRight } from 'lucide-react'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import api from '../../services/api'
 
 export default function FacultyDashboard() {
@@ -23,15 +23,18 @@ export default function FacultyDashboard() {
     try {
       const response = await api.get('/api/faculty/analytics')
       setStats(response.data.stats || stats)
-      setLanguageData(response.data.languageEngagement || [
-        { name: 'Python', students: 45 },
-        { name: 'JavaScript', students: 38 }
+      const engagement = response.data.languageEngagement || []
+      setLanguageData(engagement.length > 0 ? engagement : [
+        { name: 'JavaScript', students: 0 },
+        { name: 'Python', students: 0 },
+        { name: 'Java', students: 0 }
       ])
     } catch (error) {
       console.error('Failed to fetch analytics:', error)
       setLanguageData([
-        { name: 'Python', students: 45 },
-        { name: 'JavaScript', students: 38 }
+        { name: 'JavaScript', students: 0 },
+        { name: 'Python', students: 0 },
+        { name: 'Java', students: 0 }
       ])
     } finally {
       setLoading(false)
@@ -42,60 +45,85 @@ export default function FacultyDashboard() {
     <Layout>
       <div className="container mx-auto px-8 py-8">
         <div className="mb-8">
-          <h2 className="text-2xl text-akodemy-purple italic mb-2">Welcome to</h2>
-          <h1 className="text-5xl font-bold text-akodemy-purple mb-2">AKODEMY</h1>
-          <h3 className="text-2xl font-bold text-akodemy-purple">Practice. Learn. Master Coding!</h3>
+          <p className="text-akodemy-purple text-lg mb-2">Faculty Dashboard</p>
+          <h1 className="text-4xl font-bold text-white mb-2">Welcome to <span className="text-akodemy-purple">Akodemy</span></h1>
+          <p className="text-gray-400">Monitor student progress and track engagement</p>
         </div>
 
         <div className="grid grid-cols-3 gap-6 mb-8">
-          <div 
+          <button 
             onClick={() => navigate('/faculty/students')}
-            className="bg-purple-100 p-6 rounded-xl flex flex-col items-center cursor-pointer hover:shadow-lg transition"
+            className="bg-gray-800 border border-gray-700 p-6 rounded-xl flex flex-col items-center cursor-pointer hover:border-akodemy-purple transition group"
           >
-            <Users className="w-12 h-12 text-akodemy-purple mb-2" />
-            <p className="text-gray-600">Total Students</p>
-            <p className="text-4xl font-bold text-akodemy-purple">{stats.totalStudents}</p>
+            <div className="w-14 h-14 bg-akodemy-purple/20 rounded-xl flex items-center justify-center mb-3">
+              <Users className="w-7 h-7 text-akodemy-purple" />
+            </div>
+            <p className="text-gray-400 text-sm mb-1">Total Students</p>
+            <p className="text-4xl font-bold text-white">{stats.totalStudents}</p>
+            <p className="text-xs text-akodemy-purple mt-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+              View All <ArrowRight className="w-3 h-3" />
+            </p>
+          </button>
+          <div className="bg-gray-800 border border-gray-700 p-6 rounded-xl flex flex-col items-center">
+            <div className="w-14 h-14 bg-yellow-500/20 rounded-xl flex items-center justify-center mb-3">
+              <Trophy className="w-7 h-7 text-yellow-400" />
+            </div>
+            <p className="text-gray-400 text-sm mb-1">Completionists</p>
+            <p className="text-4xl font-bold text-white">{stats.completionists}</p>
           </div>
-          <div className="bg-purple-100 p-6 rounded-xl flex flex-col items-center">
-            <Trophy className="w-12 h-12 text-yellow-500 mb-2" />
-            <p className="text-gray-600">Completionist</p>
-            <p className="text-4xl font-bold text-akodemy-purple">{stats.completionists}</p>
-          </div>
-          <div className="bg-purple-100 p-6 rounded-xl flex flex-col items-center">
-            <Code className="w-12 h-12 text-akodemy-purple mb-2" />
-            <p className="text-gray-600">Languages</p>
-            <p className="text-4xl font-bold text-akodemy-purple">{stats.languagesActive}</p>
+          <div className="bg-gray-800 border border-gray-700 p-6 rounded-xl flex flex-col items-center">
+            <div className="w-14 h-14 bg-blue-500/20 rounded-xl flex items-center justify-center mb-3">
+              <Code className="w-7 h-7 text-blue-400" />
+            </div>
+            <p className="text-gray-400 text-sm mb-1">Languages</p>
+            <p className="text-4xl font-bold text-white">{stats.languagesActive}</p>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-6">
-          <div className="bg-purple-100 p-6 rounded-xl h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={languageData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="students" fill="#6B46C1" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="bg-purple-100 p-6 rounded-xl">
-            <h3 className="text-2xl font-bold mb-4">Language Engagement</h3>
-            <div className="text-sm text-gray-600 mb-4">
-              <p>AXIS:</p>
-              <p>x = Programming Languages</p>
-              <p>y = Number of Students</p>
+          <div className="bg-gray-800 border border-gray-700 p-6 rounded-xl">
+            <h3 className="text-lg font-bold text-white mb-4">Language Engagement</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={languageData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="name" stroke="#9ca3af" />
+                  <YAxis stroke="#9ca3af" />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#1f2937', 
+                      border: '1px solid #374151',
+                      borderRadius: '8px',
+                      color: '#fff'
+                    }} 
+                  />
+                  <Bar dataKey="students" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-            <div className="text-sm">
-              <p className="font-semibold mb-2">LEGENS:</p>
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-4 h-4 bg-purple-300"></div>
-                <span>Python</span>
+          </div>
+          <div className="bg-gray-800 border border-gray-700 p-6 rounded-xl">
+            <h3 className="text-lg font-bold text-white mb-4">Quick Stats</h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-gray-900 rounded-lg">
+                <span className="text-gray-400">Active Languages</span>
+                <span className="text-white font-semibold">JavaScript, Python, Java</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-purple-500"></div>
-                <span>JavaScript</span>
+              <div className="flex items-center justify-between p-4 bg-gray-900 rounded-lg">
+                <span className="text-gray-400">Completion Rate</span>
+                <span className="text-green-400 font-semibold">
+                  {stats.totalStudents > 0 
+                    ? Math.round((stats.completionists / stats.totalStudents) * 100) 
+                    : 0}%
+                </span>
+              </div>
+              <div className="flex items-center justify-between p-4 bg-gray-900 rounded-lg">
+                <span className="text-gray-400">Most Popular</span>
+                <span className="text-akodemy-purple font-semibold">
+                  {languageData.length > 0 
+                    ? languageData.reduce((a, b) => a.students > b.students ? a : b).name 
+                    : 'N/A'}
+                </span>
               </div>
             </div>
           </div>
