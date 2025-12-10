@@ -95,6 +95,18 @@ The app runs with `node start.js` which starts both:
 - Run `npm run seed` to populate challenges
 
 ## Recent Changes
+- December 10, 2025: Mobile Responsive Design & Navigation
+  - Added back buttons to Language Selection, Difficulty Selection, and Challenge List pages
+  - Back buttons placed below header with proper navigation targets
+  - Pagination added to Challenge List (6 items on mobile, 12 on desktop)
+  - Pagination resets when switching language/difficulty
+  - All selection pages now responsive with single-column grid on mobile
+  - Challenge Editor redesigned for mobile:
+    - Toggleable instructions accordion at top
+    - Full-screen code editor
+    - Results panel shows as overlay only after running code
+    - Compact header with truncated title
+
 - December 10, 2025: Complete Dark Theme & UI Consistency Update
   - Added dynamic landing page as the home page before login
   - Hero section with animated stats from database
