@@ -8,6 +8,7 @@ import challengeRoutes from './routes/challenges.js'
 import executeRoutes from './routes/execute.js'
 import progressRoutes from './routes/progress.js'
 import facultyRoutes from './routes/faculty.js'
+import publicRoutes from './routes/public.js'
 
 dotenv.config()
 
@@ -28,6 +29,7 @@ app.use('/api/challenges', challengeRoutes)
 app.use('/api/execute', executeRoutes)
 app.use('/api/progress', progressRoutes)
 app.use('/api/faculty', facultyRoutes)
+app.use('/api/public', publicRoutes)
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })

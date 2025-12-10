@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import LandingPage from './pages/LandingPage'
 import Login from './pages/Login'
 import StudentDashboard from './pages/student/Dashboard'
 import StudentProfile from './pages/student/Profile'
@@ -87,8 +88,8 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
       
-      <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="/" element={user ? <Navigate to={user.role === 'faculty' ? '/faculty' : '/dashboard'} /> : <LandingPage />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

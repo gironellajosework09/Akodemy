@@ -95,6 +95,15 @@ The app runs with `node start.js` which starts both:
 - Run `npm run seed` to populate challenges
 
 ## Recent Changes
+- December 10, 2025: Landing Page
+  - Added dynamic landing page as the home page before login
+  - Hero section with animated stats from database
+  - Features section highlighting platform capabilities
+  - Faculty section with mock dashboard preview
+  - CTA section with gradient background
+  - Footer with branding
+  - All stats are dynamic (total challenges, students, completions)
+
 - December 4, 2025: Comprehensive Exercism Integration
   - Full Exercism sync fetches ALL 411+ challenges from GitHub (149 JS, 150 Python, 146 Java)
   - Deterministic competency mapping using keyword matching + consistent hash fallback
