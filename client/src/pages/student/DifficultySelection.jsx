@@ -31,7 +31,7 @@ export default function DifficultySelection() {
           className="flex items-center gap-1 text-gray-400 hover:text-white transition mb-6 self-start"
         >
           <ChevronLeft className="w-5 h-5" />
-          <span className="text-sm sm:text-base">Back to Languages</span>
+          <span className="text-sm sm:text-base">Back to Language Selection</span>
         </button>
 
         <div className="flex-1 flex flex-col items-center justify-center">

@@ -101,10 +101,11 @@ The app runs with `node start.js` which starts both:
   - Pagination added to Challenge List (6 items on mobile, 12 on desktop)
   - Pagination resets when switching language/difficulty
   - All selection pages now responsive with single-column grid on mobile
-  - Challenge Editor redesigned for mobile:
-    - Toggleable instructions accordion at top
-    - Full-screen code editor
-    - Results panel shows as overlay only after running code
+  - Header made smaller on mobile (icon only for profile button)
+  - Challenge Editor redesigned for both mobile and desktop:
+    - Toggleable instructions accordion at top (uniform across all views)
+    - Mobile: Tab-based interface (Code Editor / Output tabs)
+    - Desktop: Side-by-side editor and output
     - Compact header with truncated title
 
 - December 10, 2025: Complete Dark Theme & UI Consistency Update

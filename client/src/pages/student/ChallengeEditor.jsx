@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Editor from '@monaco-editor/react'
 import api from '../../services/api'
-import { Play, ChevronLeft, ChevronDown, ChevronUp, X } from 'lucide-react'
+import { Play, ChevronLeft, ChevronDown, ChevronUp } from 'lucide-react'
 import ConfirmDialog from '../../components/ConfirmDialog'
 
 export default function ChallengeEditor() {
@@ -18,7 +18,7 @@ export default function ChallengeEditor() {
   const [runCount, setRunCount] = useState(0)
   const [showExitConfirm, setShowExitConfirm] = useState(false)
   const [showInstructions, setShowInstructions] = useState(false)
-  const [showResults, setShowResults] = useState(false)
+  const [activeTab, setActiveTab] = useState('editor')
   const [testResults, setTestResults] = useState(null)
   const [isMobile, setIsMobile] = useState(false)
   const timerRef = useRef(null)
@@ -124,12 +124,12 @@ export default function ChallengeEditor() {
       }
 
       if (isMobile) {
-        setShowResults(true)
+        setActiveTab('output')
       }
     } catch (error) {
       setOutput(error.response?.data?.message || 'Execution failed')
       if (isMobile) {
-        setShowResults(true)
+        setActiveTab('output')
       }
     } finally {
       setRunning(false)
@@ -160,6 +160,33 @@ export default function ChallengeEditor() {
     )
   }
 
+  const renderOutput = () => (
+    <div className="flex-1 p-4 overflow-auto">
+      {testResults && (
+        <div className={`mb-4 p-3 rounded-lg ${testResults.passed ? 'bg-green-500/20 border border-green-500/50' : 'bg-red-500/20 border border-red-500/50'}`}>
+          <p className={`font-bold ${testResults.passed ? 'text-green-400' : 'text-red-400'}`}>
+            {testResults.passed ? '✓ All Tests Passed!' : '✗ Test Failed'}
+          </p>
+          {!testResults.passed && (
+            <div className="mt-2 text-sm">
+              <p className="text-gray-300"><strong>Expected:</strong> {testResults.expected}</p>
+              <p className="text-gray-300"><strong>Got:</strong> {testResults.actual}</p>
+            </div>
+          )}
+        </div>
+      )}
+      {hint && (
+        <div className="mb-4 p-3 bg-yellow-500/20 border border-yellow-500/50 rounded-lg">
+          <p className="font-medium text-yellow-400">Hint:</p>
+          <p className="text-yellow-300 text-sm">{hint}</p>
+        </div>
+      )}
+      <pre className={`text-sm whitespace-pre-wrap ${output.includes('Error') || output.includes('error') ? 'text-red-400' : 'text-gray-300'}`}>
+        {output || 'Run your code to see output...'}
+      </pre>
+    </div>
+  )
+
   return (
     <>
       <div ref={containerRef} className="h-screen bg-gray-900 flex flex-col">
@@ -184,51 +211,80 @@ export default function ChallengeEditor() {
           </button>
         </div>
 
+        <button
+          onClick={() => setShowInstructions(!showInstructions)}
+          className="flex items-center justify-between px-4 py-3 bg-gray-800 border-b border-gray-700"
+        >
+          <div className="flex items-center gap-2">
+            <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+              challenge?.difficulty === 'beginner' ? 'bg-green-500/20 text-green-400' :
+              challenge?.difficulty === 'intermediate' ? 'bg-yellow-500/20 text-yellow-400' :
+              'bg-red-500/20 text-red-400'
+            }`}>
+              {challenge?.difficulty}
+            </span>
+            <span className="text-white font-medium text-sm">Instructions</span>
+          </div>
+          {showInstructions ? (
+            <ChevronUp className="w-5 h-5 text-gray-400" />
+          ) : (
+            <ChevronDown className="w-5 h-5 text-gray-400" />
+          )}
+        </button>
+
+        {showInstructions && (
+          <div className="bg-gray-800 px-4 py-3 border-b border-gray-700 max-h-40 overflow-auto">
+            <p className="text-sm text-gray-400">{challenge?.description || 'Complete the coding challenge.'}</p>
+          </div>
+        )}
+
         {isMobile ? (
           <div className="flex-1 flex flex-col overflow-hidden">
-            <button
-              onClick={() => setShowInstructions(!showInstructions)}
-              className="flex items-center justify-between px-4 py-3 bg-gray-800 border-b border-gray-700"
-            >
-              <div className="flex items-center gap-2">
-                <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                  challenge?.difficulty === 'beginner' ? 'bg-green-500/20 text-green-400' :
-                  challenge?.difficulty === 'intermediate' ? 'bg-yellow-500/20 text-yellow-400' :
-                  'bg-red-500/20 text-red-400'
-                }`}>
-                  {challenge?.difficulty}
-                </span>
-                <span className="text-white font-medium text-sm">Instructions</span>
-              </div>
-              {showInstructions ? (
-                <ChevronUp className="w-5 h-5 text-gray-400" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-gray-400" />
-              )}
-            </button>
-
-            {showInstructions && (
-              <div className="bg-gray-800 px-4 py-3 border-b border-gray-700 max-h-40 overflow-auto">
-                <p className="text-sm text-gray-400">{challenge?.description || 'Complete the coding challenge.'}</p>
-              </div>
-            )}
+            <div className="flex border-b border-gray-700 bg-gray-800">
+              <button
+                onClick={() => setActiveTab('editor')}
+                className={`flex-1 py-2 text-sm font-medium transition ${
+                  activeTab === 'editor' 
+                    ? 'text-akodemy-purple border-b-2 border-akodemy-purple' 
+                    : 'text-gray-400'
+                }`}
+              >
+                Code Editor
+              </button>
+              <button
+                onClick={() => setActiveTab('output')}
+                className={`flex-1 py-2 text-sm font-medium transition ${
+                  activeTab === 'output' 
+                    ? 'text-akodemy-purple border-b-2 border-akodemy-purple' 
+                    : 'text-gray-400'
+                }`}
+              >
+                Output
+              </button>
+            </div>
 
             <div className="flex-1 flex flex-col overflow-hidden">
-              <Editor
-                height="100%"
-                language={getEditorLanguage(challenge?.language)}
-                value={code}
-                onChange={(value) => setCode(value || '')}
-                theme="vs-dark"
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 13,
-                  lineNumbers: 'on',
-                  scrollBeyondLastLine: false,
-                  automaticLayout: true,
-                  wordWrap: 'on',
-                }}
-              />
+              {activeTab === 'editor' ? (
+                <Editor
+                  height="100%"
+                  language={getEditorLanguage(challenge?.language)}
+                  value={code}
+                  onChange={(value) => setCode(value || '')}
+                  theme="vs-dark"
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 13,
+                    lineNumbers: 'on',
+                    scrollBeyondLastLine: false,
+                    automaticLayout: true,
+                    wordWrap: 'on',
+                  }}
+                />
+              ) : (
+                <div className="flex-1 bg-gray-900 overflow-auto">
+                  {renderOutput()}
+                </div>
+              )}
             </div>
 
             <div className="border-t border-gray-700 p-3 flex items-center justify-between bg-gray-800">
@@ -242,129 +298,46 @@ export default function ChallengeEditor() {
                 {running ? 'Running...' : 'Run Code'}
               </button>
             </div>
-
-            {showResults && (
-              <div className="fixed inset-0 bg-black/80 z-50 flex flex-col">
-                <div className="bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center justify-between">
-                  <h3 className="font-bold text-white">Output</h3>
-                  <button
-                    onClick={() => setShowResults(false)}
-                    className="p-1 text-gray-400 hover:text-white transition"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-                <div className="flex-1 p-4 overflow-auto bg-gray-900">
-                  {testResults && (
-                    <div className={`mb-4 p-3 rounded-lg ${testResults.passed ? 'bg-green-500/20 border border-green-500/50' : 'bg-red-500/20 border border-red-500/50'}`}>
-                      <p className={`font-bold ${testResults.passed ? 'text-green-400' : 'text-red-400'}`}>
-                        {testResults.passed ? '✓ All Tests Passed!' : '✗ Test Failed'}
-                      </p>
-                      {!testResults.passed && (
-                        <div className="mt-2 text-sm">
-                          <p className="text-gray-300"><strong>Expected:</strong> {testResults.expected}</p>
-                          <p className="text-gray-300"><strong>Got:</strong> {testResults.actual}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {hint && (
-                    <div className="mb-4 p-3 bg-yellow-500/20 border border-yellow-500/50 rounded-lg">
-                      <p className="font-medium text-yellow-400">Hint:</p>
-                      <p className="text-yellow-300 text-sm">{hint}</p>
-                    </div>
-                  )}
-                  <pre className={`text-sm whitespace-pre-wrap ${output.includes('Error') || output.includes('error') ? 'text-red-400' : 'text-gray-300'}`}>
-                    {output || 'No output'}
-                  </pre>
-                </div>
-                <div className="p-4 bg-gray-800 border-t border-gray-700">
-                  <button
-                    onClick={() => setShowResults(false)}
-                    className="w-full bg-gray-700 text-white py-3 rounded-lg font-medium hover:bg-gray-600 transition"
-                  >
-                    Back to Editor
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         ) : (
-          <div className="flex-1 flex overflow-hidden">
-            <div className="w-64 bg-gray-800 p-4 border-r border-gray-700 overflow-auto">
-              <span className={`inline-block px-2 py-1 rounded text-xs font-medium mb-3 ${
-                challenge?.difficulty === 'beginner' ? 'bg-green-500/20 text-green-400' :
-                challenge?.difficulty === 'intermediate' ? 'bg-yellow-500/20 text-yellow-400' :
-                'bg-red-500/20 text-red-400'
-              }`}>
-                {challenge?.difficulty}
-              </span>
-              <h3 className="font-bold text-white mb-3">Instructions</h3>
-              <p className="text-sm text-gray-400">{challenge?.description || 'Complete the coding challenge.'}</p>
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex">
+              <div className="flex-1 flex flex-col border-r border-gray-700">
+                <p className="px-4 py-2 bg-gray-800 text-sm font-medium text-gray-300 border-b border-gray-700">Code Editor</p>
+                <div className="flex-1">
+                  <Editor
+                    height="100%"
+                    language={getEditorLanguage(challenge?.language)}
+                    value={code}
+                    onChange={(value) => setCode(value || '')}
+                    theme="vs-dark"
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 14,
+                      lineNumbers: 'on',
+                      scrollBeyondLastLine: false,
+                      automaticLayout: true,
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="flex-1 flex flex-col bg-gray-900">
+                <p className="px-4 py-2 bg-gray-800 text-sm font-medium text-gray-300 border-b border-gray-700">Output</p>
+                {renderOutput()}
+              </div>
             </div>
 
-            <div className="flex-1 flex flex-col">
-              <div className="flex-1 flex">
-                <div className="flex-1 flex flex-col border-r border-gray-700">
-                  <p className="px-4 py-2 bg-gray-800 text-sm font-medium text-gray-300 border-b border-gray-700">Code Editor</p>
-                  <div className="flex-1">
-                    <Editor
-                      height="100%"
-                      language={getEditorLanguage(challenge?.language)}
-                      value={code}
-                      onChange={(value) => setCode(value || '')}
-                      theme="vs-dark"
-                      options={{
-                        minimap: { enabled: false },
-                        fontSize: 14,
-                        lineNumbers: 'on',
-                        scrollBeyondLastLine: false,
-                        automaticLayout: true,
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex-1 flex flex-col bg-gray-900">
-                  <p className="px-4 py-2 bg-gray-800 text-sm font-medium text-gray-300 border-b border-gray-700">Output</p>
-                  <div className="flex-1 p-4 overflow-auto">
-                    {testResults && (
-                      <div className={`mb-4 p-3 rounded-lg ${testResults.passed ? 'bg-green-500/20 border border-green-500/50' : 'bg-red-500/20 border border-red-500/50'}`}>
-                        <p className={`font-bold ${testResults.passed ? 'text-green-400' : 'text-red-400'}`}>
-                          {testResults.passed ? '✓ All Tests Passed!' : '✗ Test Failed'}
-                        </p>
-                        {!testResults.passed && (
-                          <div className="mt-2 text-sm">
-                            <p className="text-gray-300"><strong>Expected:</strong> {testResults.expected}</p>
-                            <p className="text-gray-300"><strong>Got:</strong> {testResults.actual}</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {hint && (
-                      <div className="mb-4 p-3 bg-yellow-500/20 border border-yellow-500/50 rounded-lg">
-                        <p className="font-medium text-yellow-400">Hint:</p>
-                        <p className="text-yellow-300">{hint}</p>
-                      </div>
-                    )}
-                    <pre className={`text-sm whitespace-pre-wrap ${output.includes('Error') || output.includes('error') ? 'text-red-400' : 'text-gray-300'}`}>
-                      {output || 'Run your code to see output...'}
-                    </pre>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t border-gray-700 p-4 flex items-center justify-between bg-gray-800">
-                <p className="text-sm text-gray-400">Runs: {runCount}</p>
-                <button
-                  onClick={runCode}
-                  disabled={running}
-                  className="flex items-center gap-2 bg-akodemy-purple text-white px-6 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 transition"
-                >
-                  <Play className="w-4 h-4" />
-                  {running ? 'Running...' : 'Run Code'}
-                </button>
-              </div>
+            <div className="border-t border-gray-700 p-4 flex items-center justify-between bg-gray-800">
+              <p className="text-sm text-gray-400">Runs: {runCount}</p>
+              <button
+                onClick={runCode}
+                disabled={running}
+                className="flex items-center gap-2 bg-akodemy-purple text-white px-6 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 transition"
+              >
+                <Play className="w-4 h-4" />
+                {running ? 'Running...' : 'Run Code'}
+              </button>
             </div>
           </div>
         )}
