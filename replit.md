@@ -95,7 +95,7 @@ The app runs with `node start.js` which starts both:
 - Run `npm run seed` to populate challenges
 
 ## Recent Changes
-- December 10, 2025: Landing Page
+- December 10, 2025: Landing Page & Login Redesign
   - Added dynamic landing page as the home page before login
   - Hero section with animated stats from database
   - Features section highlighting platform capabilities
@@ -103,6 +103,8 @@ The app runs with `node start.js` which starts both:
   - CTA section with gradient background
   - Footer with branding
   - All stats are dynamic (total challenges, students, completions)
+  - Login page redesigned to match dark theme
+  - Consistent styling with navigation and "Back to Home" link
 
 - December 4, 2025: Comprehensive Exercism Integration
   - Full Exercism sync fetches ALL 411+ challenges from GitHub (149 JS, 150 Python, 146 Java)
