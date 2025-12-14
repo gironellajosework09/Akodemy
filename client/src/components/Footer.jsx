@@ -5,8 +5,15 @@ export default function Footer() {
     <footer className="py-6 px-6 border-t border-gray-800 bg-gray-900">
       <div className="max-w-6xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-akodemy-purple rounded flex items-center justify-center">
+          {/* <div className="w-6 h-6 bg-akodemy-purple rounded flex items-center justify-center">
             <Code2 className="w-4 h-4 text-white" />
+          </div> */}
+          <div className="w-6 h-6 bg-white rounded flex items-center justify-center overflow-hidden">
+            <img
+              src="/images/akodemy-logo.png"  // path to your logo in public/images
+              alt="Akodemy Logo"
+              className="w-4 h-4 object-contain"
+            />
           </div>
           <span className="font-semibold text-white">Akodemy</span>
         </div>

@@ -14,9 +14,9 @@ export default function DifficultySelection() {
 
   const getLanguageDisplay = () => {
     switch (language) {
-      case 'javascript': return { icon: '📜', name: 'JavaScript' }
-      case 'python': return { icon: '🐍', name: 'Python' }
-      case 'java': return { icon: '☕', name: 'Java' }
+      case 'javascript': return { icon: '/images/js-logo.png', name: 'JavaScript' }
+      case 'python': return { icon: '/images/python-logo.png', name: 'Python' }
+      case 'java': return { icon: '/images/java-logo.png', name: 'Java' }
       default: return { icon: '💻', name: language }
     }
   }
@@ -27,7 +27,7 @@ export default function DifficultySelection() {
     <Layout>
       <div className="flex-1 flex flex-col px-4 sm:px-8 py-6 sm:py-12">
         <button
-          onClick={() => navigate('/challenges')}
+          onClick={() => navigate('/languages')}
           className="flex items-center gap-1 text-gray-400 hover:text-white transition mb-6 self-start"
         >
           <ChevronLeft className="w-5 h-5" />
@@ -35,8 +35,14 @@ export default function DifficultySelection() {
         </button>
 
         <div className="flex-1 flex flex-col items-center justify-center">
-          <div className="flex items-center gap-2 text-gray-400 mb-6 sm:mb-8">
-            <span className="text-xl sm:text-2xl">{langInfo.icon}</span>
+          <div className="flex items-center text-gray-400 mb-6 sm:mb-8">
+            <div className="w-10 h-10 sm:w-14 sm:h-14 p-1 sm:p-2 rounded-lg flex items-center justify-center">
+              <img
+                src={langInfo.icon}
+                alt={langInfo.name}
+                className="w-full h-full object-contain"
+              />
+            </div>
             <span className="font-medium text-base sm:text-lg">{langInfo.name}</span>
           </div>
           
