@@ -113,9 +113,9 @@ export default function Profile() {
 
   const getLanguageIcon = (lang) => {
     switch (lang) {
-      case 'javascript': return '📜'
-      case 'python': return '🐍'
-      case 'java': return '☕'
+      case 'javascript': return '/images/js-logo.png'
+      case 'python': return '/images/python-logo.png'
+      case 'java': return '/images/java-logo.png'
       default: return '💻'
     }
   }
@@ -281,9 +281,16 @@ export default function Profile() {
                         <div key={lang}>
                           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4">
                             <div className="flex items-center gap-3">
-                              <span className="text-xl sm:text-2xl">{getLanguageIcon(lang)}</span>
+                              <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center">
+                                <img
+                                  src={getLanguageIcon(lang)}
+                                  alt={lang}
+                                  className="w-full h-full object-contain"
+                                />
+                              </div>
                               <h3 className="text-lg sm:text-xl font-bold text-white uppercase">{lang}</h3>
                             </div>
+
                             <div className="text-xs sm:text-sm text-gray-400">
                               {summary.completed} / {summary.total} challenges completed
                             </div>
