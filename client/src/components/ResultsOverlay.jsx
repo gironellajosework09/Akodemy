@@ -1,13 +1,12 @@
-import { X, Check, RotateCcw, ArrowRight, Home } from 'lucide-react'
+import { X, Check, ArrowRight, ArrowLeft } from 'lucide-react'
 
 export default function ResultsOverlay({ 
   isOpen, 
   challenge, 
   testResults, 
   timeTaken, 
-  onTryAgain, 
-  onNextChallenge, 
-  onDashboard 
+  onBackToChallenges, 
+  onNextChallenge 
 }) {
   if (!isOpen) return null
 
@@ -36,7 +35,7 @@ export default function ResultsOverlay({
 
   return (
     <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 overflow-auto">
-      <div className="w-full max-w-lg">
+      <div className="w-full max-w-lg max-h-[95vh] overflow-y-auto">
         <div className="flex flex-col items-center mb-6">
           <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${allPassed ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
             {allPassed ? (
@@ -160,27 +159,20 @@ export default function ResultsOverlay({
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <button
-            onClick={onTryAgain}
+            onClick={onBackToChallenges}
             className="flex items-center justify-center gap-2 bg-gray-800 text-white px-4 py-3 rounded-lg font-medium hover:bg-gray-700 transition border border-gray-700"
           >
-            <RotateCcw className="w-4 h-4" />
-            <span className="hidden sm:inline">Try Again</span>
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-sm sm:text-base">Back to Challenges</span>
           </button>
           <button
             onClick={onNextChallenge}
-            className="flex items-center justify-center gap-2 bg-gray-800 text-white px-4 py-3 rounded-lg font-medium hover:bg-gray-700 transition border border-gray-700"
-          >
-            <ArrowRight className="w-4 h-4" />
-            <span className="hidden sm:inline">Next</span>
-          </button>
-          <button
-            onClick={onDashboard}
             className="flex items-center justify-center gap-2 bg-akodemy-purple text-white px-4 py-3 rounded-lg font-medium hover:bg-purple-700 transition"
           >
-            <Home className="w-4 h-4" />
-            <span className="hidden sm:inline">Dashboard</span>
+            <ArrowRight className="w-4 h-4" />
+            <span className="text-sm sm:text-base">Next Challenge</span>
           </button>
         </div>
       </div>

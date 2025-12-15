@@ -124,17 +124,8 @@ export default function ChallengeEditor() {
     setShowResults(true)
   }
 
-  const handleTryAgain = () => {
-    setShowResults(false)
-    setTime(0)
-    setRunCount(0)
-    setTestResults(null)
-    setOutput('')
-    setHint('')
-    setCode(challenge?.starterCode || getDefaultCode(challenge?.language))
-    timerRef.current = setInterval(() => {
-      setTime((prev) => prev + 1)
-    }, 1000)
+  const handleBackToChallenges = () => {
+    navigate(`/challenges/${challenge?.language}/${challenge?.difficulty}`)
   }
 
   const handleNextChallenge = async () => {
@@ -151,15 +142,11 @@ export default function ChallengeEditor() {
         navigate(`/challenge/${challenges[currentIndex + 1]._id}`)
         window.location.reload()
       } else {
-        navigate('/dashboard')
+        navigate(`/challenges/${challenge?.language}/${challenge?.difficulty}`)
       }
     } catch (error) {
-      navigate('/dashboard')
+      navigate(`/challenges/${challenge?.language}/${challenge?.difficulty}`)
     }
-  }
-
-  const handleDashboard = () => {
-    navigate('/dashboard')
   }
 
   const runCode = async () => {
@@ -419,9 +406,8 @@ export default function ChallengeEditor() {
         challenge={challenge}
         testResults={finalTestResults}
         timeTaken={finalTime}
-        onTryAgain={handleTryAgain}
+        onBackToChallenges={handleBackToChallenges}
         onNextChallenge={handleNextChallenge}
-        onDashboard={handleDashboard}
       />
     </>
   )

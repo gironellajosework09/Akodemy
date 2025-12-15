@@ -100,7 +100,8 @@ The app runs with `node start.js` which starts both:
   - Shows score percentage, tests passed, time taken (no XP as requested)
   - Includes test results list with pass/fail status for each test case
   - Challenge info displayed with title, language, and difficulty badge
-  - Three action buttons: Try Again, Next Challenge, Dashboard
+  - Two action buttons: Back to Challenges, Next Challenge
+  - Container fits within viewport height (max-h-[95vh])
   - Added Home button to navigation header before My Profile button
   - Home button navigates to appropriate dashboard based on user role
 
