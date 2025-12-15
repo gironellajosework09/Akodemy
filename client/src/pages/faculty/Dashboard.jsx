@@ -14,11 +14,13 @@ export default function FacultyDashboard() {
   })
   const [languageData, setLanguageData] = useState([])
   const [competencyDistribution, setCompetencyDistribution] = useState(null)
+  const [perCompetencyDistribution, setPerCompetencyDistribution] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetchAnalytics()
     fetchCompetencyDistribution()
+    fetchPerCompetencyDistribution()
   }, [])
 
   const fetchAnalytics = async () => {
@@ -49,6 +51,15 @@ export default function FacultyDashboard() {
       setCompetencyDistribution(response.data)
     } catch (error) {
       console.error('Failed to fetch competency distribution:', error)
+    }
+  }
+
+  const fetchPerCompetencyDistribution = async () => {
+    try {
+      const response = await api.get('/api/faculty/competency-student-distribution')
+      setPerCompetencyDistribution(response.data)
+    } catch (error) {
+      console.error('Failed to fetch per-competency distribution:', error)
     }
   }
 
@@ -191,6 +202,34 @@ export default function FacultyDashboard() {
                 <Bar dataKey="Needs Practice" stackId="a" fill="#ef4444" />
                 <Bar dataKey="Developing" stackId="a" fill="#eab308" />
                 <Bar dataKey="Mastered" stackId="a" fill="#22c55e" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="bg-gray-800 border border-gray-700 p-4 sm:p-6 rounded-xl mt-6">
+          <h3 className="text-base sm:text-lg font-bold text-white mb-4">Student Distribution per Competency</h3>
+          <p className="text-gray-400 text-sm mb-4">Percentage of students at each mastery level per competency category</p>
+          <div className="h-80 sm:h-96">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={perCompetencyDistribution} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <XAxis type="number" stroke="#9ca3af" tick={{ fontSize: 12 }} domain={[0, 100]} unit="%" />
+                <YAxis type="category" dataKey="name" stroke="#9ca3af" tick={{ fontSize: 10 }} width={120} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: '#1f2937', 
+                    border: '1px solid #374151',
+                    borderRadius: '8px',
+                    color: '#fff'
+                  }}
+                  formatter={(value) => `${value}%`}
+                />
+                <Legend wrapperStyle={{ paddingTop: '10px' }} />
+                <Bar dataKey="notStarted" name="Not Started" stackId="a" fill="#4b5563" />
+                <Bar dataKey="needsPractice" name="Needs Practice" stackId="a" fill="#ef4444" />
+                <Bar dataKey="developing" name="Developing" stackId="a" fill="#eab308" />
+                <Bar dataKey="mastered" name="Mastered" stackId="a" fill="#22c55e" />
               </BarChart>
             </ResponsiveContainer>
           </div>
