@@ -4,6 +4,7 @@ import Editor from '@monaco-editor/react'
 import api from '../../services/api'
 import { Play, ChevronLeft, ChevronDown, ChevronUp } from 'lucide-react'
 import ConfirmDialog from '../../components/ConfirmDialog'
+import ResultsOverlay from '../../components/ResultsOverlay'
 
 export default function ChallengeEditor() {
   const navigate = useNavigate()
@@ -21,6 +22,9 @@ export default function ChallengeEditor() {
   const [activeTab, setActiveTab] = useState('editor')
   const [testResults, setTestResults] = useState(null)
   const [isMobile, setIsMobile] = useState(false)
+  const [showResults, setShowResults] = useState(false)
+  const [finalTestResults, setFinalTestResults] = useState([])
+  const [finalTime, setFinalTime] = useState(0)
   const timerRef = useRef(null)
   const containerRef = useRef(null)
 
@@ -71,6 +75,15 @@ export default function ChallengeEditor() {
 
   const finishChallenge = async () => {
     try {
+      if (timerRef.current) clearInterval(timerRef.current)
+      setFinalTime(time)
+      
+      let testsForOverlay = []
+      if (testResults) {
+        testsForOverlay = [{ passed: testResults.passed, expected: testResults.expected, actual: testResults.actual }]
+      }
+      setFinalTestResults(testsForOverlay)
+      
       await api.post(`/api/progress/save`, {
         challengeId,
         code,
@@ -78,7 +91,8 @@ export default function ChallengeEditor() {
         runCount,
         completed: true
       })
-      navigate(-1)
+      
+      setShowResults(true)
     } catch (error) {
       console.error('Failed to finish challenge:', error)
     }
@@ -89,6 +103,15 @@ export default function ChallengeEditor() {
   }
 
   const confirmExit = async () => {
+    if (timerRef.current) clearInterval(timerRef.current)
+    setFinalTime(time)
+    
+    let testsForOverlay = []
+    if (testResults) {
+      testsForOverlay = [{ passed: testResults.passed, expected: testResults.expected, actual: testResults.actual }]
+    }
+    setFinalTestResults(testsForOverlay)
+    
     await api.post(`/api/progress/save`, {
       challengeId,
       code,
@@ -96,7 +119,47 @@ export default function ChallengeEditor() {
       runCount,
       completed: false
     }).catch(() => {})
-    navigate(-1)
+    
+    setShowExitConfirm(false)
+    setShowResults(true)
+  }
+
+  const handleTryAgain = () => {
+    setShowResults(false)
+    setTime(0)
+    setRunCount(0)
+    setTestResults(null)
+    setOutput('')
+    setHint('')
+    setCode(challenge?.starterCode || getDefaultCode(challenge?.language))
+    timerRef.current = setInterval(() => {
+      setTime((prev) => prev + 1)
+    }, 1000)
+  }
+
+  const handleNextChallenge = async () => {
+    try {
+      const response = await api.get('/api/challenges', {
+        params: {
+          language: challenge?.language,
+          difficulty: challenge?.difficulty
+        }
+      })
+      const challenges = response.data
+      const currentIndex = challenges.findIndex(c => c._id === challengeId)
+      if (currentIndex >= 0 && currentIndex < challenges.length - 1) {
+        navigate(`/challenge/${challenges[currentIndex + 1]._id}`)
+        window.location.reload()
+      } else {
+        navigate('/dashboard')
+      }
+    } catch (error) {
+      navigate('/dashboard')
+    }
+  }
+
+  const handleDashboard = () => {
+    navigate('/dashboard')
   }
 
   const runCode = async () => {
@@ -349,6 +412,16 @@ export default function ChallengeEditor() {
         message="Are you sure you want to exit? Your progress will be saved."
         onConfirm={confirmExit}
         onCancel={() => setShowExitConfirm(false)}
+      />
+
+      <ResultsOverlay
+        isOpen={showResults}
+        challenge={challenge}
+        testResults={finalTestResults}
+        timeTaken={finalTime}
+        onTryAgain={handleTryAgain}
+        onNextChallenge={handleNextChallenge}
+        onDashboard={handleDashboard}
       />
     </>
   )

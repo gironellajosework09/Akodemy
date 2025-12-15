@@ -95,6 +95,15 @@ The app runs with `node start.js` which starts both:
 - Run `npm run seed` to populate challenges
 
 ## Recent Changes
+- December 15, 2025: Results Overlay & Navigation Update
+  - Added ResultsOverlay component that displays after finishing or exiting a challenge
+  - Shows score percentage, tests passed, time taken (no XP as requested)
+  - Includes test results list with pass/fail status for each test case
+  - Challenge info displayed with title, language, and difficulty badge
+  - Three action buttons: Try Again, Next Challenge, Dashboard
+  - Added Home button to navigation header before My Profile button
+  - Home button navigates to appropriate dashboard based on user role
+
 - December 10, 2025: Profile Page Enhancements
   - Student profile page made fully responsive for mobile devices
   - Faculty profile button now correctly navigates to /faculty/profile
