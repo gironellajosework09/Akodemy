@@ -95,6 +95,17 @@ The app runs with `node start.js` which starts both:
 - Run `npm run seed` to populate challenges
 
 ## Recent Changes
+- December 15, 2025: Scoring System & Dashboard Enhancements
+  - Added scoring service (server/services/scoring.js) with weighted scoring breakdown:
+    - 50% test cases, 10% input validation, 10% edge cases
+    - 10% readability, 10% logic structure, 10% required concepts
+  - Scoring API endpoint: POST /api/score with { code, language, challengeId }
+  - Returns { passed, total, score, breakdown }
+  - Faculty dashboard now shows per-competency student distribution chart
+  - New API: GET /api/faculty/competency-student-distribution
+  - Achievements: removed mastery labels, restored x/y numbers on progress bars
+  - Results overlay: hidden scrollbar with CSS
+
 - December 15, 2025: Results Overlay & Navigation Update
   - Added ResultsOverlay component that displays after finishing or exiting a challenge
   - Shows score percentage, tests passed, time taken (no XP as requested)
