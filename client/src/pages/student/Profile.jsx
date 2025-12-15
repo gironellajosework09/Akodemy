@@ -307,11 +307,9 @@ export default function Profile() {
                                         ></div>
                                       )}
                                     </div>
-                                    {mastery.label && (
-                                      <span className={`text-xs font-medium ${mastery.textColor} w-20 sm:w-24 text-right`}>
-                                        {mastery.label}
-                                      </span>
-                                    )}
+                                    <span className="text-xs text-gray-400 w-12 text-right">
+                                      {comp.completed}/{comp.total}
+                                    </span>
                                   </div>
                                 </div>
                               )
