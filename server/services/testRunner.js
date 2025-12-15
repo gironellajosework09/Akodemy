@@ -282,6 +282,13 @@ print(json.dumps(_test_results))
 `
 }
 
+function cleanJsExports(code) {
+  return code
+    .replace(/^export\s+/gm, '')
+    .replace(/module\.exports\s*=\s*\{[^}]*\}/g, '')
+    .replace(/export\s+default\s+/g, '')
+}
+
 async function runTestsWithCanonicalData(userCode, language, testCases) {
   if (!testCases || testCases.length === 0) {
     return { passed: 0, total: 0, score: 0, results: [], error: 'No test cases available' }
@@ -297,16 +304,15 @@ async function runTestsWithCanonicalData(userCode, language, testCases) {
       const expected = testCase.expected
       
       if (language === 'javascript') {
+        const cleanedCode = cleanJsExports(userCode)
         const inputStr = JSON.stringify(input)
-        const expectedStr = JSON.stringify(expected)
         
-        const funcMatch = userCode.match(/(?:function\s+(\w+)|(?:const|let|var)\s+(\w+)\s*=\s*(?:function|\(|async))/);
+        const funcMatch = cleanedCode.match(/(?:function\s+(\w+)|(?:const|let|var)\s+(\w+)\s*=\s*(?:function|\(|async))/);
         const funcName = funcMatch ? (funcMatch[1] || funcMatch[2]) : null;
         
-        testCode = `${userCode}
+        testCode = `${cleanedCode}
 
 // Find and run the function
-const funcName = "${funcName}";
 let testFunc = null;
 
 if (typeof ${funcName || 'undefined'} === 'function') {
@@ -315,22 +321,42 @@ if (typeof ${funcName || 'undefined'} === 'function') {
 
 if (testFunc) {
   const inputVal = ${inputStr};
-  const result = Array.isArray(inputVal) ? testFunc(...inputVal) : testFunc(inputVal);
+  // Handle different input formats: object with named args, array, or single value
+  let result;
+  if (inputVal && typeof inputVal === 'object' && !Array.isArray(inputVal)) {
+    // Object input - get values in order and spread them
+    const args = Object.values(inputVal);
+    result = testFunc(...args);
+  } else if (Array.isArray(inputVal)) {
+    result = testFunc(...inputVal);
+  } else {
+    result = testFunc(inputVal);
+  }
   console.log(JSON.stringify(result));
 } else {
   console.log('NO_FUNCTION');
 }`
       } else if (language === 'python') {
         const inputStr = JSON.stringify(input).replace(/null/g, 'None').replace(/true/g, 'True').replace(/false/g, 'False')
+        const isObjectInput = input && typeof input === 'object' && !Array.isArray(input)
+        
         testCode = `${userCode}
 
 import json
 import sys
 
 # Find the main function
-funcs = [v for k, v in globals().items() if callable(v) and not k.startswith('_') and k != 'json']
+funcs = [v for k, v in globals().items() if callable(v) and not k.startswith('_') and k not in ['json', 'sys']]
+input_val = ${inputStr}
+
 if funcs:
-    result = funcs[0](${typeof input === 'object' ? `*${inputStr}` : inputStr})
+    # Handle different input formats
+    if isinstance(input_val, dict):
+        result = funcs[0](*input_val.values())
+    elif isinstance(input_val, list):
+        result = funcs[0](*input_val)
+    else:
+        result = funcs[0](input_val)
     print(json.dumps(result))
 else:
     print('NO_FUNCTION')
