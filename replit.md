@@ -95,12 +95,18 @@ The app runs with `node start.js` which starts both:
 - Run `npm run seed` to populate challenges
 
 ## Recent Changes
-- December 15, 2025: Scoring System & Dashboard Enhancements
-  - Added scoring service (server/services/scoring.js) with weighted scoring breakdown:
-    - 50% test cases, 10% input validation, 10% edge cases
-    - 10% readability, 10% logic structure, 10% required concepts
-  - Scoring API endpoint: POST /api/score with { code, language, challengeId }
-  - Returns { passed, total, score, breakdown }
+- December 15, 2025: Exercism Test-Based Scoring System
+  - REPLACED heuristic scoring with real Exercism test file execution
+  - New service: server/services/exercismTestSync.js - downloads official test files from Exercism GitHub
+  - New service: server/services/testRunner.js - wraps user code with test harness and executes via Judge0
+  - Test files stored locally at server/exercism/{language}/{slug}/
+  - Scoring API: POST /api/score - now runs actual tests, returns { passed, total, score, results }
+  - Test sync API: POST /api/score/sync-tests (faculty only) - downloads test files for all challenges
+  - Slug normalization: handles both `-js/-py` and `-javascript/-python` suffixes
+  - Falls back to canonical test data if test file not found or pytest parametrization detected
+  - Challenge model updated with testFilePath, exerciseDir, exerciseSlug fields
+
+- December 15, 2025: Earlier - Scoring System & Dashboard Enhancements
   - Faculty dashboard now shows per-competency student distribution chart
   - New API: GET /api/faculty/competency-student-distribution
   - Achievements: removed mastery labels, restored x/y numbers on progress bars

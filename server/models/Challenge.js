@@ -42,6 +42,18 @@ const challengeSchema = new mongoose.Schema({
   competencyIndex: {
     type: Number,
     default: 0
+  },
+  testFilePath: {
+    type: String,
+    default: null
+  },
+  exerciseDir: {
+    type: String,
+    default: null
+  },
+  exerciseSlug: {
+    type: String,
+    default: null
   }
 }, { timestamps: true })
 
