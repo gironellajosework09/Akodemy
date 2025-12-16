@@ -101,20 +101,25 @@ The app runs with `node start.js` which starts both:
 - Run `npm run seed` to populate challenges
 
 ## Recent Changes
-- December 16, 2025: Canonical Test Harness Extraction System
+- December 16, 2025: Canonical Test Harness Extraction System (Complete)
+  - Applied to ALL 417 exercises across JavaScript (137), Python (138), and Java (142)
+  - Removed 28 duplicate challenges from database
+  - All challenges now have exercismSlug properly set
   - Fetches canonical-data.json from Exercism problem-specifications GitHub repo
   - Extracts test cases with inputs/outputs (ignores actual test frameworks)
+  - Handles multi-property exercises (e.g., difference-of-squares)
+  - Handles expected error test cases (e.g., hamming invalid input)
   - Generates single-file test runners per language:
-    - JavaScript: Node.js compatible, no npm modules
-    - Python: Single script, no external packages
-    - Java: Single Main class, no JUnit/Maven/Gradle
+    - JavaScript: Node.js compatible, no npm modules, dynamic function resolution
+    - Python: Single script, no external packages, camelCase to snake_case conversion
+    - Java: Single Main class, no JUnit/Maven/Gradle, Objects.equals for all comparisons
   - Files:
     - server/services/canonical/testFetcher.js - fetches canonical data with 24hr caching
     - server/services/canonical/gradingEngine.js - orchestrates grading pipeline
     - server/services/canonical/runnerGenerators.js - generates language-specific runners
   - API: POST /api/grading/grade
     - Body: { code, language, exerciseSlug }
-    - Returns: { total, passed, score, competency, details }
+    - Returns: { exercise, language, total, passed, score, competency, competencyColor, details }
   - Competency Level Mapping:
     - 90-100% = Mastered (green)
     - 75-89% = Proficient (blue)
@@ -122,6 +127,7 @@ The app runs with `node start.js` which starts both:
     - 0-49% = Not Started (red)
   - Scoring: score = (passed_tests / total_tests) * 100
   - Judge0 sandbox execution for security
+  - 24-hour cache for canonical data to reduce GitHub API calls
 
 - December 15, 2025: Earlier - Scoring System & Dashboard Enhancements
   - Faculty dashboard now shows per-competency student distribution chart

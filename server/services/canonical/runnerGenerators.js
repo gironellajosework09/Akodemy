@@ -27,7 +27,7 @@ function serializeValue(value) {
 
 function serializeJavaValue(value) {
   if (value === null) return 'null'
-  if (typeof value === 'string') return `"${value.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`
+  if (typeof value === 'string') return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`
   if (typeof value === 'number') {
     if (Number.isInteger(value)) return String(value)
     return String(value) + (String(value).includes('.') ? '' : '.0')
@@ -39,11 +39,15 @@ function serializeJavaValue(value) {
       return `java.util.Arrays.asList(${value.map(v => Number.isInteger(v) ? v : v + '.0').join(', ')})`
     }
     if (typeof value[0] === 'string') {
-      return `java.util.Arrays.asList(${value.map(v => `"${v.replace(/"/g, '\\"')}"`).join(', ')})`
+      return `java.util.Arrays.asList(${value.map(v => `"${v.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`).join(', ')})`
     }
     return `java.util.Arrays.asList(${value.map(v => serializeJavaValue(v)).join(', ')})`
   }
-  return String(value)
+  if (typeof value === 'object') {
+    // For complex objects like {error: "..."}, serialize as JSON string
+    return `"${JSON.stringify(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+  }
+  return `"${String(value)}"`
 }
 
 function getJavaType(value) {
@@ -70,10 +74,12 @@ function generateInputArgs(input, language) {
 }
 
 export function generateJavaScriptRunner(studentCode, testCases, exerciseSlug) {
-  const functionName = toCamelCase(testCases.property || exerciseSlug)
+  const defaultFunctionName = toCamelCase(testCases.property || exerciseSlug)
   
+  // Include property in test cases for multi-property exercises
   const casesJson = JSON.stringify(testCases.cases.map(c => ({
     description: c.description,
+    property: c.property || testCases.property || exerciseSlug,
     input: c.input,
     expected: c.expected
   })))
@@ -111,24 +117,50 @@ let passed = 0;
 const total = testCases.length;
 const details = [];
 
+function toCamelCase(str) {
+  return str.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+}
+
 for (const tc of testCases) {
   try {
     const args = getInputArgs(tc.input);
-    const actual = ${functionName}(...args);
-    const success = deepEqual(actual, tc.expected);
-    if (success) passed++;
-    details.push({
-      description: tc.description,
-      passed: success,
-      expected: tc.expected,
-      actual: success ? undefined : actual
-    });
+    const fnName = toCamelCase(tc.property);
+    const fn = eval(fnName);
+    const actual = fn(...args);
+    
+    // Check if expected is an error object
+    if (tc.expected && typeof tc.expected === 'object' && tc.expected.error) {
+      details.push({
+        description: tc.description,
+        passed: false,
+        expected: 'error: ' + tc.expected.error,
+        actual: actual
+      });
+    } else {
+      const success = deepEqual(actual, tc.expected);
+      if (success) passed++;
+      details.push({
+        description: tc.description,
+        passed: success,
+        expected: tc.expected,
+        actual: success ? undefined : actual
+      });
+    }
   } catch (error) {
-    details.push({
-      description: tc.description,
-      passed: false,
-      error: error.message
-    });
+    if (tc.expected && typeof tc.expected === 'object' && tc.expected.error) {
+      passed++;
+      details.push({
+        description: tc.description,
+        passed: true,
+        expected: 'error: ' + tc.expected.error
+      });
+    } else {
+      details.push({
+        description: tc.description,
+        passed: false,
+        error: error.message
+      });
+    }
   }
 }
 
@@ -142,11 +174,13 @@ export function generatePythonRunner(studentCode, testCases, exerciseSlug) {
   const rawProperty = testCases.property || exerciseSlug
   const functionName = camelToSnake(rawProperty).replace(/-/g, '_').replace(/^_/, '')
   
+  // Include property in test cases for multi-property exercises
   const casesJson = JSON.stringify(testCases.cases.map(c => ({
     description: c.description,
+    property: c.property || testCases.property || exerciseSlug,
     input: c.input,
     expected: c.expected
-  })))
+  }))).replace(/\\/g, '\\\\').replace(/'/g, "\\'")
   
   return `
 # === STUDENT CODE ===
@@ -155,7 +189,7 @@ ${studentCode}
 # === TEST HARNESS ===
 import json
 
-test_cases = json.loads('''${casesJson}''')
+test_cases = json.loads('${casesJson}')
 
 def deep_equal(a, b):
     if type(a) != type(b):
@@ -178,6 +212,11 @@ def get_input_args(input_obj):
     keys = list(input_obj.keys())
     return [input_obj[k] for k in keys], {}
 
+def camel_to_snake(name):
+    import re
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\\1_\\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\\1_\\2', s1).lower().replace('-', '_')
+
 passed = 0
 total = len(test_cases)
 details = []
@@ -185,23 +224,48 @@ details = []
 for tc in test_cases:
     try:
         args, kwargs = get_input_args(tc['input'])
-        actual = ${functionName}(*args, **kwargs)
+        fn_name = camel_to_snake(tc.get('property', '${functionName}'))
+        fn = globals().get(fn_name) or locals().get(fn_name)
+        if not fn:
+            raise Exception(f"Function {fn_name} not found")
+        actual = fn(*args, **kwargs)
         expected = tc['expected']
-        success = deep_equal(actual, expected)
-        if success:
-            passed += 1
-        details.append({
-            'description': tc['description'],
-            'passed': success,
-            'expected': expected,
-            'actual': None if success else actual
-        })
+        
+        # Check if expected is an error object
+        if isinstance(expected, dict) and 'error' in expected:
+            # Expected an error but didn't get one
+            details.append({
+                'description': tc['description'],
+                'passed': False,
+                'expected': 'error: ' + expected['error'],
+                'actual': actual
+            })
+        else:
+            success = deep_equal(actual, expected)
+            if success:
+                passed += 1
+            details.append({
+                'description': tc['description'],
+                'passed': success,
+                'expected': expected,
+                'actual': None if success else actual
+            })
     except Exception as e:
-        details.append({
-            'description': tc['description'],
-            'passed': False,
-            'error': str(e)
-        })
+        expected = tc['expected']
+        # Check if we expected an error
+        if isinstance(expected, dict) and 'error' in expected:
+            passed += 1
+            details.append({
+                'description': tc['description'],
+                'passed': True,
+                'expected': 'error: ' + expected['error']
+            })
+        else:
+            details.append({
+                'description': tc['description'],
+                'passed': False,
+                'error': str(e)
+            })
 
 score = round((passed / total) * 100) if total > 0 else 0
 
@@ -211,20 +275,37 @@ print(json.dumps({'total': total, 'passed': passed, 'score': score, 'details': d
 
 export function generateJavaRunner(studentCode, testCases, exerciseSlug) {
   const className = toPascalCase(exerciseSlug)
-  const methodName = toCamelCase(testCases.property || exerciseSlug)
+  const defaultMethodName = toCamelCase(testCases.property || exerciseSlug)
   
   const modifiedStudentCode = studentCode.replace(/public\s+class/g, 'class')
   
   const testCode = testCases.cases.map((tc, i) => {
     const args = generateInputArgs(tc.input, 'java')
-    const expected = serializeJavaValue(tc.expected)
-    const javaType = getJavaType(tc.expected)
-    
-    const comparison = `java.util.Objects.equals(expected${i}, actual${i})`
-    
     const desc = tc.description.replace(/"/g, "'").replace(/\\/g, "\\\\")
+    // Use per-test property if available, otherwise use default
+    const methodName = toCamelCase(tc.property || testCases.property || exerciseSlug)
     
-    return `
+    // Check if this test expects an error
+    const expectsError = tc.expected && typeof tc.expected === 'object' && tc.expected.error
+    
+    if (expectsError) {
+      // Test expects an exception to be thrown
+      return `
+            try {
+                Object actual${i} = solution.${methodName}(${args});
+                total++;
+                // Expected error but got result
+                details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":false,\\"expected\\":\\"error expected\\"},");
+            } catch (Exception e) {
+                passed++;
+                total++;
+                details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":true,\\"expected\\":\\"error\\"},");
+            }`
+    } else {
+      const expected = serializeJavaValue(tc.expected)
+      const comparison = `java.util.Objects.equals(expected${i}, actual${i})`
+      
+      return `
             try {
                 Object expected${i} = ${expected};
                 Object actual${i} = solution.${methodName}(${args});
@@ -236,6 +317,7 @@ export function generateJavaRunner(studentCode, testCases, exerciseSlug) {
                 total++;
                 details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":false,\\"error\\":\\"").append(e.getMessage() != null ? e.getMessage().replace("\\"", "'") : "error").append("\\"},");
             }`
+    }
   }).join('\n')
   
   return `
