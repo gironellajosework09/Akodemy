@@ -1,7 +1,7 @@
 import express from 'express'
 import { authenticateToken } from '../middleware/auth.js'
-import { gradeSubmission, fetchTests } from '../services/gradingEngine.js'
-import { getCacheStats, clearCache } from '../services/github/testFetcher.js'
+import { gradeSubmission } from '../services/canonical/gradingEngine.js'
+import { getTestCases, getCacheStats as getCanonicalCacheStats } from '../services/canonical/testFetcher.js'
 import Challenge from '../models/Challenge.js'
 
 const router = express.Router()
@@ -73,27 +73,24 @@ router.post('/grade', authenticateToken, async (req, res) => {
 
 router.post('/fetch-tests', authenticateToken, async (req, res) => {
   try {
-    const { language, exerciseSlug } = req.body
+    const { exerciseSlug } = req.body
 
-    if (!language || !exerciseSlug) {
-      return res.status(400).json({ message: 'Language and exercise slug are required' })
+    if (!exerciseSlug) {
+      return res.status(400).json({ message: 'Exercise slug is required' })
     }
 
-    const testData = await fetchTests(language, exerciseSlug)
+    const testData = await getTestCases(exerciseSlug)
 
-    if (testData) {
-      res.json({
-        success: true,
-        fileName: testData.fileName,
-        path: testData.path,
-        contentLength: testData.content?.length || 0
-      })
-    } else {
-      res.status(404).json({
-        success: false,
-        message: `Could not fetch tests for ${exerciseSlug} in ${language}`
-      })
-    }
+    res.json({
+      success: true,
+      exercise: testData.exercise,
+      property: testData.property,
+      totalCases: testData.cases.length,
+      cases: testData.cases.map(c => ({
+        uuid: c.uuid,
+        description: c.description
+      }))
+    })
   } catch (error) {
     console.error('Test fetch error:', error)
     res.status(500).json({ message: 'Failed to fetch tests', error: error.message })
@@ -106,25 +103,10 @@ router.get('/cache-stats', authenticateToken, async (req, res) => {
       return res.status(403).json({ message: 'Faculty access required' })
     }
 
-    const stats = await getCacheStats()
+    const stats = await getCanonicalCacheStats()
     res.json(stats)
   } catch (error) {
     res.status(500).json({ message: 'Failed to get cache stats', error: error.message })
-  }
-})
-
-router.delete('/cache/:language/:slug', authenticateToken, async (req, res) => {
-  try {
-    if (req.user.role !== 'faculty') {
-      return res.status(403).json({ message: 'Faculty access required' })
-    }
-
-    const { language, slug } = req.params
-    const cleared = await clearCache(language, slug)
-    
-    res.json({ success: cleared })
-  } catch (error) {
-    res.status(500).json({ message: 'Failed to clear cache', error: error.message })
   }
 })
 

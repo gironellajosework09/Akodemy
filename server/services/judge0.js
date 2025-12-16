@@ -8,11 +8,16 @@ const LANGUAGE_IDS = {
   java: 62
 }
 
-export async function executeCode(code, language, stdin = '') {
-  const languageId = LANGUAGE_IDS[language]
+export async function executeCode(code, languageOrId, stdin = '') {
+  let languageId
   
-  if (!languageId) {
-    throw new Error(`Unsupported language: ${language}`)
+  if (typeof languageOrId === 'number') {
+    languageId = languageOrId
+  } else {
+    languageId = LANGUAGE_IDS[languageOrId]
+    if (!languageId) {
+      throw new Error(`Unsupported language: ${languageOrId}`)
+    }
   }
 
   try {
