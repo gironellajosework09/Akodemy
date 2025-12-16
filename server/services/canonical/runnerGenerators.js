@@ -27,23 +27,35 @@ function serializeValue(value) {
 
 function serializeJavaValue(value) {
   if (value === null) return 'null'
-  if (typeof value === 'string') return `"${value.replace(/"/g, '\\"')}"`
+  if (typeof value === 'string') return `"${value.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`
   if (typeof value === 'number') {
     if (Number.isInteger(value)) return String(value)
-    return String(value)
+    return String(value) + (String(value).includes('.') ? '' : '.0')
   }
-  if (typeof value === 'boolean') return String(value)
+  if (typeof value === 'boolean') return `Boolean.valueOf(${value})`
   if (Array.isArray(value)) {
-    if (value.length === 0) return 'new int[0]'
+    if (value.length === 0) return 'java.util.Collections.emptyList()'
     if (typeof value[0] === 'number') {
-      return `new int[]{${value.join(', ')}}`
+      return `java.util.Arrays.asList(${value.map(v => Number.isInteger(v) ? v : v + '.0').join(', ')})`
     }
     if (typeof value[0] === 'string') {
-      return `new String[]{${value.map(v => `"${v}"`).join(', ')}}`
+      return `java.util.Arrays.asList(${value.map(v => `"${v.replace(/"/g, '\\"')}"`).join(', ')})`
     }
-    return `new Object[]{${value.map(v => serializeJavaValue(v)).join(', ')}}`
+    return `java.util.Arrays.asList(${value.map(v => serializeJavaValue(v)).join(', ')})`
   }
   return String(value)
+}
+
+function getJavaType(value) {
+  if (value === null) return 'Object'
+  if (typeof value === 'string') return 'String'
+  if (typeof value === 'number') {
+    if (Number.isInteger(value)) return 'int'
+    return 'double'
+  }
+  if (typeof value === 'boolean') return 'boolean'
+  if (Array.isArray(value)) return 'Object'
+  return 'Object'
 }
 
 function generateInputArgs(input, language) {
@@ -206,29 +218,16 @@ export function generateJavaRunner(studentCode, testCases, exerciseSlug) {
   const testCode = testCases.cases.map((tc, i) => {
     const args = generateInputArgs(tc.input, 'java')
     const expected = serializeJavaValue(tc.expected)
+    const javaType = getJavaType(tc.expected)
     
-    let comparison
-    if (typeof tc.expected === 'string') {
-      comparison = `expected${i}.equals(actual${i})`
-    } else if (Array.isArray(tc.expected)) {
-      comparison = `java.util.Arrays.equals(expected${i}, actual${i})`
-    } else if (typeof tc.expected === 'boolean') {
-      comparison = `expected${i} == actual${i}`
-    } else {
-      comparison = `expected${i} == actual${i}` 
-    }
-    
-    const expectedType = typeof tc.expected === 'string' ? 'String' 
-      : typeof tc.expected === 'boolean' ? 'boolean'
-      : Array.isArray(tc.expected) ? 'int[]'
-      : 'int'
+    const comparison = `java.util.Objects.equals(expected${i}, actual${i})`
     
     const desc = tc.description.replace(/"/g, "'").replace(/\\/g, "\\\\")
     
     return `
             try {
-                ${expectedType} expected${i} = ${expected};
-                ${expectedType} actual${i} = solution.${methodName}(${args});
+                Object expected${i} = ${expected};
+                Object actual${i} = solution.${methodName}(${args});
                 boolean success${i} = ${comparison};
                 if (success${i}) passed++;
                 total++;
