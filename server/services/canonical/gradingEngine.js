@@ -5,6 +5,7 @@ import {
   generateJavaRunner 
 } from './runnerGenerators.js'
 import { executeCode } from '../judge0.js'
+import Challenge from '../../models/Challenge.js'
 
 const LANGUAGE_IDS = {
   javascript: 63,
@@ -26,6 +27,30 @@ function getCompetency(score) {
   return COMPETENCY_THRESHOLDS[COMPETENCY_THRESHOLDS.length - 1]
 }
 
+async function getTestCasesFromDB(exerciseSlug, language) {
+  const challenge = await Challenge.findOne({ 
+    exercismSlug: exerciseSlug, 
+    language 
+  })
+  
+  if (challenge && challenge.canonicalTests && challenge.canonicalTests.length > 0) {
+    console.log(`Using stored canonical tests for ${exerciseSlug} (${language})`)
+    return {
+      exercise: exerciseSlug,
+      property: challenge.canonicalTests[0]?.property || exerciseSlug,
+      cases: challenge.canonicalTests.map(tc => ({
+        uuid: tc.uuid,
+        description: tc.description,
+        property: tc.property,
+        input: tc.input,
+        expected: tc.expected
+      }))
+    }
+  }
+  
+  return null
+}
+
 export async function gradeSubmission(code, language, exerciseSlug) {
   if (!LANGUAGE_IDS[language]) {
     throw new Error(`Unsupported language: ${language}. Supported: javascript, python, java`)
@@ -37,7 +62,12 @@ export async function gradeSubmission(code, language, exerciseSlug) {
   
   console.log(`Grading ${normalizedSlug} (${language})...`)
   
-  const testCases = await getTestCases(normalizedSlug)
+  let testCases = await getTestCasesFromDB(normalizedSlug, language)
+  
+  if (!testCases) {
+    console.log(`No stored tests found, fetching from GitHub...`)
+    testCases = await getTestCases(normalizedSlug)
+  }
   
   if (!testCases.cases || testCases.cases.length === 0) {
     throw new Error(`No test cases found for exercise: ${normalizedSlug}`)

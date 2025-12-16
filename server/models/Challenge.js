@@ -6,6 +6,14 @@ const testCaseSchema = new mongoose.Schema({
   description: String
 })
 
+const canonicalTestSchema = new mongoose.Schema({
+  uuid: String,
+  description: String,
+  property: String,
+  input: mongoose.Schema.Types.Mixed,
+  expected: mongoose.Schema.Types.Mixed
+})
+
 const challengeSchema = new mongoose.Schema({
   title: {
     type: String,
@@ -54,6 +62,20 @@ const challengeSchema = new mongoose.Schema({
   exerciseSlug: {
     type: String,
     default: null
+  },
+  canonicalTests: {
+    type: [canonicalTestSchema],
+    default: []
+  },
+  canonicalTestsMeta: {
+    fetchedAt: { type: Date, default: null },
+    status: { 
+      type: String, 
+      enum: ['pending', 'success', 'failed', 'not_found'],
+      default: 'pending'
+    },
+    errorMessage: { type: String, default: null },
+    testCount: { type: Number, default: 0 }
   }
 }, { timestamps: true })
 
