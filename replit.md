@@ -84,11 +84,12 @@ akodemy/
 - `GET /api/faculty/students` - List all students
 - `GET /api/faculty/student/:id` - Get student details
 
-### Grading (New)
-- `POST /api/grading/grade` - Grade code submission with Exercism tests
+### Grading
+- `POST /api/grading/grade` - Grade code submission with canonical tests
   - Body: { code, language, exerciseSlug }
-  - Returns: { totalTests, passedTests, passRate, competency, score, errors, details }
-- `GET /api/grading/cache-stats` - View test file cache statistics
+  - Returns: { exercise, language, total, passed, score, competency, competencyColor, details }
+- `GET /api/grading/sync-status` - View canonical test sync statistics
+- `POST /api/grading/sync-canonical-tests` - Trigger sync of all canonical tests (faculty only)
 
 ## Running the App
 The app runs with `node start.js` which starts both:
@@ -101,33 +102,28 @@ The app runs with `node start.js` which starts both:
 - Run `npm run seed` to populate challenges
 
 ## Recent Changes
-- December 16, 2025: Canonical Test Harness Extraction System (Complete)
-  - Applied to ALL 417 exercises across JavaScript (137), Python (138), and Java (142)
-  - Removed 28 duplicate challenges from database
-  - All challenges now have exercismSlug properly set
-  - Fetches canonical-data.json from Exercism problem-specifications GitHub repo
-  - Extracts test cases with inputs/outputs (ignores actual test frameworks)
-  - Handles multi-property exercises (e.g., difference-of-squares)
-  - Handles expected error test cases (e.g., hamming invalid input)
-  - Generates single-file test runners per language:
-    - JavaScript: Node.js compatible, no npm modules, dynamic function resolution
-    - Python: Single script, no external packages, camelCase to snake_case conversion
-    - Java: Single Main class, no JUnit/Maven/Gradle, Objects.equals for all comparisons
+- December 16, 2025: Database Canonical Test Storage System
+  - Canonical tests now stored in database instead of on-demand fetching
+  - Challenge model extended with canonicalTests and canonicalTestsMeta fields
+  - Sync script fetches from Exercism problem-specifications GitHub repo
+  - Results: 389/417 exercises synced (93%), 6,230 total test cases stored
+  - By language: JavaScript (130/2,070 tests), Python (127/2,051 tests), Java (132/2,109 tests)
+  - 28 exercises not found (language-specific without canonical data)
+  - Judge0 service updated with base64 encoding for special character handling
+  - Safe connection handling - sync reuses existing DB connection when called via API
   - Files:
-    - server/services/canonical/testFetcher.js - fetches canonical data with 24hr caching
-    - server/services/canonical/gradingEngine.js - orchestrates grading pipeline
+    - server/services/canonical/syncCanonicalTests.js - database sync script
+    - server/services/canonical/gradingEngine.js - uses stored tests, falls back to GitHub
     - server/services/canonical/runnerGenerators.js - generates language-specific runners
-  - API: POST /api/grading/grade
-    - Body: { code, language, exerciseSlug }
-    - Returns: { exercise, language, total, passed, score, competency, competencyColor, details }
+  - API Endpoints:
+    - POST /api/grading/grade - grade submission with stored canonical tests
+    - GET /api/grading/sync-status - view sync statistics
+    - POST /api/grading/sync-canonical-tests - trigger sync (faculty only)
   - Competency Level Mapping:
     - 90-100% = Mastered (green)
     - 75-89% = Proficient (blue)
     - 50-74% = Developing (yellow)
     - 0-49% = Not Started (red)
-  - Scoring: score = (passed_tests / total_tests) * 100
-  - Judge0 sandbox execution for security
-  - 24-hour cache for canonical data to reduce GitHub API calls
 
 - December 15, 2025: Earlier - Scoring System & Dashboard Enhancements
   - Faculty dashboard now shows per-competency student distribution chart

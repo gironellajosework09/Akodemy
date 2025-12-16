@@ -83,10 +83,21 @@ async function fetchCanonicalData(exerciseSlug) {
 }
 
 async function syncAllCanonicalTests() {
-  console.log('Connecting to MongoDB...')
-  await mongoose.connect(process.env.MONGODB_URI)
+  const wasConnected = mongoose.connection.readyState === 1
   
-  const Challenge = mongoose.model('Challenge', challengeSchema)
+  if (!wasConnected) {
+    console.log('Connecting to MongoDB...')
+    await mongoose.connect(process.env.MONGODB_URI)
+  } else {
+    console.log('Using existing MongoDB connection...')
+  }
+  
+  let Challenge
+  try {
+    Challenge = mongoose.model('Challenge')
+  } catch {
+    Challenge = mongoose.model('Challenge', challengeSchema)
+  }
   
   const challenges = await Challenge.find({})
   console.log(`Found ${challenges.length} challenges to sync`)
@@ -214,7 +225,9 @@ async function syncAllCanonicalTests() {
     failedExercises.forEach(e => console.log(`  - ${e.slug}: ${e.error}`))
   }
   
-  await mongoose.disconnect()
+  if (!wasConnected) {
+    await mongoose.disconnect()
+  }
   
   return { stats, notFoundExercises, failedExercises }
 }
