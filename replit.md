@@ -101,27 +101,27 @@ The app runs with `node start.js` which starts both:
 - Run `npm run seed` to populate challenges
 
 ## Recent Changes
-- December 16, 2025: Enhanced Auto-Grading System
-  - NEW Grading Engine: server/services/gradingEngine.js - orchestrates test fetching and execution
-  - GitHub Test Fetcher: server/services/github/testFetcher.js - fetches tests from Exercism repos with Base64 decoding
-  - Local caching in .test-cache/{language}/{exercise}/ with 24-hour TTL
-  - Pluggable language runners with base class pattern:
-    - server/services/runners/baseRunner.js - abstract base class
-    - server/services/runners/javascriptRunner.js - Jest-compatible mock framework
-    - server/services/runners/pythonRunner.js - unittest-compatible mock framework
-  - Grading API: POST /api/grading/grade - returns { totalTests, passedTests, passRate, competency, score, errors, details }
-  - Cache API: GET /api/grading/cache-stats - view cache statistics
-  - Competency Level Mapping (spec-compliant):
+- December 16, 2025: Canonical Test Harness Extraction System
+  - Fetches canonical-data.json from Exercism problem-specifications GitHub repo
+  - Extracts test cases with inputs/outputs (ignores actual test frameworks)
+  - Generates single-file test runners per language:
+    - JavaScript: Node.js compatible, no npm modules
+    - Python: Single script, no external packages
+    - Java: Single Main class, no JUnit/Maven/Gradle
+  - Files:
+    - server/services/canonical/testFetcher.js - fetches canonical data with 24hr caching
+    - server/services/canonical/gradingEngine.js - orchestrates grading pipeline
+    - server/services/canonical/runnerGenerators.js - generates language-specific runners
+  - API: POST /api/grading/grade
+    - Body: { code, language, exerciseSlug }
+    - Returns: { total, passed, score, competency, details }
+  - Competency Level Mapping:
     - 90-100% = Mastered (green)
     - 75-89% = Proficient (blue)
     - 50-74% = Developing (yellow)
     - 0-49% = Not Started (red)
-  - Security: Code sanitization in runners, Judge0 sandbox execution
-
-- December 15, 2025: Exercism Test-Based Scoring System (Legacy)
-  - Previous scoring system at /api/score endpoints
-  - Uses server/services/exercismTestSync.js and server/services/testRunner.js
-  - Test files stored at server/exercism/{language}/{slug}/
+  - Scoring: score = (passed_tests / total_tests) * 100
+  - Judge0 sandbox execution for security
 
 - December 15, 2025: Earlier - Scoring System & Dashboard Enhancements
   - Faculty dashboard now shows per-competency student distribution chart
