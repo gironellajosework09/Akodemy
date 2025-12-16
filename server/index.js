@@ -10,6 +10,7 @@ import progressRoutes from './routes/progress.js'
 import facultyRoutes from './routes/faculty.js'
 import publicRoutes from './routes/public.js'
 import scoringRoutes from './routes/scoring.js'
+import gradingRoutes from './routes/grading.js'
 
 dotenv.config()
 
@@ -32,6 +33,7 @@ app.use('/api/progress', progressRoutes)
 app.use('/api/faculty', facultyRoutes)
 app.use('/api/public', publicRoutes)
 app.use('/api/score', scoringRoutes)
+app.use('/api/grading', gradingRoutes)
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })

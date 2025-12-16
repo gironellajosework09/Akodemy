@@ -1,0 +1,135 @@
+Role: You are a senior backend engineer building an automated grading engine for a coding playground (Akodemy).
+The system already pulls Exercism challenges via API.
+Your task is to implement test-case fetching and execution using Exercism GitHub repositories.
+
+🎯 OBJECTIVES
+
+Fetch language-specific test cases for an Exercism exercise from GitHub
+
+Store them locally in the project
+
+Run the tests against a student’s submitted solution
+
+Return structured grading results
+
+Map results to competency levels
+
+🧩 FUNCTIONAL REQUIREMENTS
+1️⃣ Test Case Source (IMPORTANT)
+
+Do NOT use the Exercism API for test cases
+
+Pull test files from Exercism GitHub repositories:
+
+Python: exercism/python
+
+JavaScript: exercism/javascript
+
+Java: exercism/java
+
+Folder pattern:
+
+exercises/practice/{exercise-slug}/
+
+
+Examples:
+
+Python → *_test.py
+
+JavaScript → *.test.js
+
+Java → src/test/java/**/*Test.java
+
+2️⃣ Test Fetching Logic
+
+Use GitHub REST API (/repos/{owner}/{repo}/contents/...)
+
+Decode Base64 file contents
+
+Cache tests locally to avoid repeated API calls
+
+Fail gracefully if test files are missing
+
+3️⃣ Execution Environment
+
+Run tests in a sandboxed process
+
+Capture:
+
+Total tests
+
+Passed tests
+
+Failed tests
+
+Error output
+
+Execution commands:
+
+Python → pytest
+
+JavaScript → npm test or jest
+
+Java → mvn test
+
+4️⃣ Grading Logic
+
+Compute pass percentage:
+
+passRate = passedTests / totalTests
+
+
+Map to competency levels:
+
+100% → Mastered
+
+70–99% → Developing
+
+40–69% → Needs Practice
+
+<40% → Not Started
+
+5️⃣ API Output Format
+
+Return this JSON:
+
+{
+  "exercise": "accumulate",
+  "language": "python",
+  "totalTests": 10,
+  "passedTests": 8,
+  "failedTests": 2,
+  "passRate": 0.8,
+  "competency": "Developing",
+  "errors": []
+}
+
+🧱 IMPLEMENTATION DETAILS
+
+Use Node.js (or adapt to existing backend)
+
+Use:
+
+child_process for execution
+
+fs for file storage
+
+axios or fetch for GitHub API
+
+Write clean, modular code:
+
+fetchTests(language, exerciseSlug)
+
+runTests(language, exercisePath)
+
+gradeResults(testOutput)
+
+🧪 EXTRA REQUIREMENTS (BONUS POINTS)
+
+Add timeout limits for execution
+
+Prevent infinite loops
+
+Add basic security (no filesystem access outside sandbox)
+
+Make language runners pluggable
