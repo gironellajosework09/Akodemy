@@ -110,4 +110,56 @@ router.get('/cache-stats', authenticateToken, async (req, res) => {
   }
 })
 
+router.post('/sync-canonical-tests', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'faculty') {
+      return res.status(403).json({ message: 'Faculty access required' })
+    }
+
+    const { syncAllCanonicalTests } = await import('../services/canonical/syncCanonicalTests.js')
+    
+    res.json({ message: 'Sync started. Check server logs for progress.' })
+    
+    syncAllCanonicalTests().then(result => {
+      console.log('Canonical tests sync completed:', result.stats)
+    }).catch(err => {
+      console.error('Canonical tests sync failed:', err)
+    })
+  } catch (error) {
+    console.error('Sync error:', error)
+    res.status(500).json({ message: 'Failed to start sync', error: error.message })
+  }
+})
+
+router.get('/sync-status', authenticateToken, async (req, res) => {
+  try {
+    const stats = await Challenge.aggregate([
+      {
+        $group: {
+          _id: '$canonicalTestsMeta.status',
+          count: { $sum: 1 }
+        }
+      }
+    ])
+    
+    const byLanguage = await Challenge.aggregate([
+      { $match: { 'canonicalTestsMeta.status': 'success' } },
+      {
+        $group: {
+          _id: '$language',
+          count: { $sum: 1 },
+          totalTests: { $sum: '$canonicalTestsMeta.testCount' }
+        }
+      }
+    ])
+    
+    res.json({
+      statusCounts: stats,
+      byLanguage
+    })
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to get sync status', error: error.message })
+  }
+})
+
 export default router
