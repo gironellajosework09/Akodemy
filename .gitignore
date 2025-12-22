@@ -6,3 +6,5 @@ server/.env
 dist/
 build/
 .cache/
+server/test-cache/
+server/exercism/

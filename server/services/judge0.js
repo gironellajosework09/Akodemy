@@ -8,20 +8,38 @@ const LANGUAGE_IDS = {
   java: 62
 }
 
-export async function executeCode(code, language, stdin = '') {
-  const languageId = LANGUAGE_IDS[language]
+function toBase64(str) {
+  return Buffer.from(str, 'utf-8').toString('base64')
+}
+
+function fromBase64(str) {
+  if (!str) return ''
+  try {
+    return Buffer.from(str, 'base64').toString('utf-8')
+  } catch {
+    return str
+  }
+}
+
+export async function executeCode(code, languageOrId, stdin = '') {
+  let languageId
   
-  if (!languageId) {
-    throw new Error(`Unsupported language: ${language}`)
+  if (typeof languageOrId === 'number') {
+    languageId = languageOrId
+  } else {
+    languageId = LANGUAGE_IDS[languageOrId]
+    if (!languageId) {
+      throw new Error(`Unsupported language: ${languageOrId}`)
+    }
   }
 
   try {
     const submitResponse = await axios.post(
-      `${JUDGE0_API_URL}/submissions?base64_encoded=false&wait=true`,
+      `${JUDGE0_API_URL}/submissions?base64_encoded=true&wait=true`,
       {
-        source_code: code,
+        source_code: toBase64(code),
         language_id: languageId,
-        stdin: stdin
+        stdin: stdin ? toBase64(stdin) : ''
       },
       {
         headers: {
@@ -36,12 +54,12 @@ export async function executeCode(code, language, stdin = '') {
     return {
       status: result.status?.description || 'Unknown',
       statusId: result.status?.id,
-      stdout: result.stdout || '',
-      stderr: result.stderr || '',
-      compileOutput: result.compile_output || '',
+      stdout: fromBase64(result.stdout) || '',
+      stderr: fromBase64(result.stderr) || '',
+      compileOutput: fromBase64(result.compile_output) || '',
       time: result.time,
       memory: result.memory,
-      error: result.stderr || result.compile_output || null
+      error: fromBase64(result.stderr) || fromBase64(result.compile_output) || null
     }
   } catch (error) {
     console.error('Judge0 execution error:', error.response?.data || error.message)

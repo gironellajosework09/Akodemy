@@ -277,4 +277,97 @@ router.get('/student/:id/competencies', authenticateToken, requireRole('faculty'
   }
 })
 
+router.get('/competency-student-distribution', authenticateToken, requireRole('faculty'), async (req, res) => {
+  try {
+    const students = await User.find({ role: 'student' })
+    const studentIds = students.map(s => s._id)
+    const totalStudents = students.length
+
+    const competencyNames = [
+      'Variables & Data Types',
+      'Control Structures', 
+      'Functions',
+      'Arrays & Collections',
+      'Object-Oriented Programming',
+      'Error Handling'
+    ]
+
+    if (totalStudents === 0) {
+      const emptyResult = competencyNames.map(name => ({
+        name,
+        notStarted: 100,
+        needsPractice: 0,
+        developing: 0,
+        mastered: 0
+      }))
+      return res.json(emptyResult)
+    }
+
+    const allChallenges = await Challenge.find({})
+    const submissions = await Submission.find({ 
+      userId: { $in: studentIds }, 
+      completed: true 
+    }).select('userId challengeId')
+
+    const completedMap = {}
+    submissions.forEach(sub => {
+      const key = `${sub.userId}-${sub.challengeId}`
+      completedMap[key] = true
+    })
+
+    const competencyStats = {}
+    for (let i = 0; i < 6; i++) {
+      competencyStats[i] = { 
+        name: competencyNames[i],
+        challengesByStudent: {} 
+      }
+      studentIds.forEach(id => {
+        competencyStats[i].challengesByStudent[id.toString()] = { total: 0, completed: 0 }
+      })
+    }
+
+    allChallenges.forEach(challenge => {
+      const idx = challenge.competencyIndex ?? 0
+      studentIds.forEach(studentId => {
+        const key = studentId.toString()
+        if (competencyStats[idx].challengesByStudent[key]) {
+          competencyStats[idx].challengesByStudent[key].total++
+          const compKey = `${studentId}-${challenge._id}`
+          if (completedMap[compKey]) {
+            competencyStats[idx].challengesByStudent[key].completed++
+          }
+        }
+      })
+    })
+
+    const result = []
+    for (let i = 0; i < 6; i++) {
+      let notStarted = 0, needsPractice = 0, developing = 0, mastered = 0
+
+      for (const studentId of studentIds) {
+        const stats = competencyStats[i].challengesByStudent[studentId.toString()]
+        const percentage = stats.total > 0 ? (stats.completed / stats.total) * 100 : 0
+
+        if (percentage === 0) notStarted++
+        else if (percentage < 40) needsPractice++
+        else if (percentage < 80) developing++
+        else mastered++
+      }
+
+      result.push({
+        name: competencyNames[i],
+        notStarted: Math.round((notStarted / totalStudents) * 100),
+        needsPractice: Math.round((needsPractice / totalStudents) * 100),
+        developing: Math.round((developing / totalStudents) * 100),
+        mastered: Math.round((mastered / totalStudents) * 100)
+      })
+    }
+
+    res.json(result)
+  } catch (error) {
+    console.error('Competency student distribution error:', error)
+    res.status(500).json({ message: 'Failed to fetch competency student distribution' })
+  }
+})
+
 export default router

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { User, LogOut, Code2 } from 'lucide-react'
+import { User, LogOut, Code2, Home } from 'lucide-react'
 import ConfirmDialog from './ConfirmDialog'
 
 export default function Header() {
@@ -35,6 +35,13 @@ export default function Header() {
           <span className="text-lg sm:text-2xl font-bold tracking-wide">Akodemy</span>
         </Link>
         <div className="flex items-center gap-2 sm:gap-4">
+          <Link 
+            to={user?.role === 'faculty' ? '/faculty' : '/dashboard'} 
+            className="flex items-center gap-2 bg-gray-800 text-white px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-gray-700 transition border border-gray-700"
+          >
+            <Home className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="hidden sm:inline text-sm sm:text-base">Home</span>
+          </Link>
           <Link 
             to={user?.role === 'faculty' ? '/faculty/profile' : '/profile'} 
             className="flex items-center gap-2 bg-gray-800 text-white px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-gray-700 transition border border-gray-700"
