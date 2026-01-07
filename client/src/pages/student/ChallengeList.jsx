@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Clock, Play, ChevronLeft, ChevronRight } from 'lucide-react'
 import Layout from '../../components/Layout'
 import ChallengeEntryModal from '../../components/ChallengeEntryModal'
+import InstructionsModal from '../../components/InstructionsModal'
 import api from '../../services/api'
 
 const ITEMS_PER_PAGE_MOBILE = 6
@@ -17,6 +18,7 @@ export default function ChallengeList() {
   const [isMobile, setIsMobile] = useState(false)
   const [selectedChallenge, setSelectedChallenge] = useState(null)
   const [showEntryModal, setShowEntryModal] = useState(false)
+  const [showInstructionsModal, setShowInstructionsModal] = useState(false)
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 640)
@@ -189,7 +191,20 @@ export default function ChallengeList() {
         }}
         onStartAttempt={(challenge) => {
           setShowEntryModal(false)
-          navigate(`/challenge/${challenge._id}`)
+          setShowInstructionsModal(true)
+        }}
+      />
+
+      <InstructionsModal
+        isOpen={showInstructionsModal}
+        challenge={selectedChallenge}
+        onClose={() => {
+          setShowInstructionsModal(false)
+          setSelectedChallenge(null)
+        }}
+        onStartCoding={() => {
+          setShowInstructionsModal(false)
+          navigate(`/challenge/${selectedChallenge._id}`)
         }}
       />
     </Layout>

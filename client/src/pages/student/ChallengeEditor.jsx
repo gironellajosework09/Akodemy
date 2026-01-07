@@ -20,7 +20,7 @@ export default function ChallengeEditor() {
   const [time, setTime] = useState(0)
   const [runCount, setRunCount] = useState(0)
   const [showExitConfirm, setShowExitConfirm] = useState(false)
-  const [showInstructions, setShowInstructions] = useState(true)
+  const [showInstructions, setShowInstructions] = useState(false)
   const [activeTab, setActiveTab] = useState('editor')
   const [testResults, setTestResults] = useState(null)
   const [isMobile, setIsMobile] = useState(false)
@@ -312,7 +312,7 @@ export default function ChallengeEditor() {
 
         <button
           onClick={() => setShowInstructions(!showInstructions)}
-          className="flex items-center justify-between px-4 py-3 bg-gray-800 border-b border-gray-700"
+          className="flex items-center justify-between px-4 py-3 bg-gray-800 border-b border-gray-700 hover:bg-gray-750 transition"
         >
           <div className="flex items-center gap-2">
             <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
@@ -322,7 +322,9 @@ export default function ChallengeEditor() {
             }`}>
               {challenge?.difficulty}
             </span>
-            <span className="text-white font-medium text-sm">Instructions</span>
+            <span className="text-white font-medium text-sm">
+              {showInstructions ? 'Hide Instructions' : 'View Instructions'}
+            </span>
           </div>
           {showInstructions ? (
             <ChevronUp className="w-5 h-5 text-gray-400" />
@@ -421,7 +423,7 @@ export default function ChallengeEditor() {
               )}
             </div>
 
-            <div className="border-t border-gray-700 p-3 flex items-center justify-center bg-gray-800">
+            <div className="border-t border-gray-700 p-3 flex items-center justify-end bg-gray-800">
               <button
                 onClick={runCode}
                 disabled={running}
@@ -461,7 +463,7 @@ export default function ChallengeEditor() {
               </div>
             </div>
 
-            <div className="border-t border-gray-700 p-4 flex items-center justify-center bg-gray-800">
+            <div className="border-t border-gray-700 p-4 flex items-center justify-end bg-gray-800">
               <button
                 onClick={runCode}
                 disabled={running}

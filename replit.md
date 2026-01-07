@@ -51,3 +51,19 @@ Akodemy is built with a React 18 frontend (Vite, TailwindCSS) and a Node.js + Ex
 - **Exercism Problem Specifications (GitHub)**: Source for coding challenges and their canonical tests, synced into the Akodemy database.
 - **Monaco Editor**: Integrated into the frontend for the interactive code editing experience.
 - **html2canvas & jsPDF**: Used for generating PDF reports of student achievements.
+
+## Recent Changes
+- January 7, 2026: Instruction-First Challenge Experience
+  - Two-modal flow before coding starts:
+    1. Challenge Entry Modal: Shows best time, runs, latest code preview
+    2. Instructions Modal: Full scrollable instructions with numbered steps, "Start Coding" button
+  - Instructions mandatory to view before coding begins
+  - Editor opens with instructions minimized by default
+  - "View Instructions" accordion button during coding (toggles to "Hide Instructions")
+  - Smooth expand/collapse for instructions panel
+  - Run button positioned at bottom right (mobile and desktop)
+  - Finish button disabled until code is run at least once
+  - View Latest Submission modal (read-only) during coding
+  - History Panel shows all previous attempts
+  - New component: InstructionsModal.jsx
+  - UX Rules: Modal mandatory, instructions visible first, editor never blocked, no auto-load of previous code
