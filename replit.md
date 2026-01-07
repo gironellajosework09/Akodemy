@@ -65,8 +65,12 @@ akodemy/
 ## API Endpoints
 
 ### Authentication
-- `POST /api/auth/register` - Register new user
+- `POST /api/auth/register` - Register new user (with password validation)
 - `POST /api/auth/login` - Login user
+- `POST /api/auth/forgot-password` - Request OTP for password reset
+- `POST /api/auth/verify-otp` - Verify OTP code
+- `POST /api/auth/reset-password` - Reset password with token
+- `POST /api/auth/resend-otp` - Resend OTP code
 
 ### Challenges
 - `GET /api/challenges` - List challenges (with filters)
@@ -102,6 +106,23 @@ The app runs with `node start.js` which starts both:
 - Run `npm run seed` to populate challenges
 
 ## Recent Changes
+- January 7, 2026: Enhanced Authentication System
+  - Added "Forgot Password" option to login page
+  - Password requirements enforced: min 8 chars, uppercase, lowercase, number, special char
+  - Password strength indicator (Weak/Medium/Strong) - weak passwords rejected
+  - New password cannot be same as current or previous password
+  - OTP-based password reset flow:
+    - 6-character alphanumeric OTP sent via Gmail SMTP
+    - OTP expires after 2 minutes
+    - Resend Code option available after expiry
+    - OTP input with red shake animation on error
+    - Confirmation dialog before proceeding to reset
+  - Password reset form with New Password + Confirm Password
+  - All auth buttons have loading spinners during processing
+  - Backend endpoints: forgot-password, verify-otp, reset-password, resend-otp
+  - User model extended with previousPassword and resetOtp fields
+  - Email service using nodemailer with Gmail SMTP (akodemy.aeoncarde@gmail.com)
+
 - December 16, 2025: Database Canonical Test Storage System
   - Canonical tests now stored in database instead of on-demand fetching
   - Challenge model extended with canonicalTests and canonicalTestsMeta fields
