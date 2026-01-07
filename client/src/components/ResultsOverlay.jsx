@@ -1,4 +1,4 @@
-import { X, Check, ArrowRight, ArrowLeft } from 'lucide-react'
+import { X, Check, ArrowRight, ArrowLeft, RotateCcw } from 'lucide-react'
 
 export default function ResultsOverlay({ 
   isOpen, 
@@ -6,6 +6,7 @@ export default function ResultsOverlay({
   testResults, 
   timeTaken, 
   onBackToChallenges, 
+  onRetry,
   onNextChallenge 
 }) {
   if (!isOpen) return null
@@ -159,20 +160,27 @@ export default function ResultsOverlay({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
           <button
             onClick={onBackToChallenges}
-            className="flex items-center justify-center gap-2 bg-gray-800 text-white px-4 py-3 rounded-lg font-medium hover:bg-gray-700 transition border border-gray-700"
+            className="flex items-center justify-center gap-1 sm:gap-2 bg-gray-800 text-white px-2 sm:px-4 py-3 rounded-lg font-medium hover:bg-gray-700 transition border border-gray-700"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm sm:text-base">Back to Challenges</span>
+            <span className="text-xs sm:text-base">Back</span>
+          </button>
+          <button
+            onClick={onRetry}
+            className="flex items-center justify-center gap-1 sm:gap-2 bg-yellow-600 text-white px-2 sm:px-4 py-3 rounded-lg font-medium hover:bg-yellow-700 transition"
+          >
+            <RotateCcw className="w-4 h-4" />
+            <span className="text-xs sm:text-base">Retry</span>
           </button>
           <button
             onClick={onNextChallenge}
-            className="flex items-center justify-center gap-2 bg-akodemy-purple text-white px-4 py-3 rounded-lg font-medium hover:bg-purple-700 transition"
+            className="flex items-center justify-center gap-1 sm:gap-2 bg-akodemy-purple text-white px-2 sm:px-4 py-3 rounded-lg font-medium hover:bg-purple-700 transition"
           >
+            <span className="text-xs sm:text-base">Next</span>
             <ArrowRight className="w-4 h-4" />
-            <span className="text-sm sm:text-base">Next Challenge</span>
           </button>
         </div>
       </div>

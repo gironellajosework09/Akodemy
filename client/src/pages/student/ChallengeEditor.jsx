@@ -190,6 +190,10 @@ export default function ChallengeEditor() {
     }
   }
 
+  const handleRetry = () => {
+    window.location.reload()
+  }
+
   const runCode = async () => {
     setRunning(true)
     setOutput('')
@@ -499,6 +503,7 @@ export default function ChallengeEditor() {
         testResults={finalTestResults}
         timeTaken={finalTime}
         onBackToChallenges={handleBackToChallenges}
+        onRetry={handleRetry}
         onNextChallenge={handleNextChallenge}
       />
 
