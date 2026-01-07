@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Clock, Play, ChevronLeft, ChevronRight } from 'lucide-react'
 import Layout from '../../components/Layout'
+import ChallengeEntryModal from '../../components/ChallengeEntryModal'
 import api from '../../services/api'
 
 const ITEMS_PER_PAGE_MOBILE = 6
@@ -14,6 +15,8 @@ export default function ChallengeList() {
   const [loading, setLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [isMobile, setIsMobile] = useState(false)
+  const [selectedChallenge, setSelectedChallenge] = useState(null)
+  const [showEntryModal, setShowEntryModal] = useState(false)
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 640)
@@ -109,7 +112,10 @@ export default function ChallengeList() {
                 paginatedChallenges.map((challenge) => (
                   <button
                     key={challenge._id}
-                    onClick={() => navigate(`/challenge/${challenge._id}`)}
+                    onClick={() => {
+                      setSelectedChallenge(challenge)
+                      setShowEntryModal(true)
+                    }}
                     className="bg-gray-800 border border-gray-700 rounded-xl p-4 sm:p-6 text-left hover:border-akodemy-purple transition hover:-translate-y-1 group"
                   >
                     <h3 className="text-base sm:text-lg font-bold text-white mb-2 sm:mb-3 group-hover:text-akodemy-purple transition line-clamp-2">{challenge.title}</h3>
@@ -173,6 +179,19 @@ export default function ChallengeList() {
           </>
         )}
       </div>
+
+      <ChallengeEntryModal
+        isOpen={showEntryModal}
+        challenge={selectedChallenge}
+        onClose={() => {
+          setShowEntryModal(false)
+          setSelectedChallenge(null)
+        }}
+        onStartAttempt={(challenge) => {
+          setShowEntryModal(false)
+          navigate(`/challenge/${challenge._id}`)
+        }}
+      />
     </Layout>
   )
 }

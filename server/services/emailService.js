@@ -1,21 +1,21 @@
-import nodemailer from 'nodemailer'
+import nodemailer from "nodemailer";
 
-const GMAIL_USER = 'akodemy.aeoncarde@gmail.com'
-const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD
+const GMAIL_USER = "akodemy.aeoncarde@gmail.com";
+const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  service: "gmail",
   auth: {
     user: GMAIL_USER,
-    pass: GMAIL_APP_PASSWORD
-  }
-})
+    pass: GMAIL_APP_PASSWORD,
+  },
+});
 
 export async function sendOtpEmail(toEmail, otpCode) {
   const mailOptions = {
     from: `"Akodemy" <${GMAIL_USER}>`,
     to: toEmail,
-    subject: 'Akodemy - Password Reset Code',
+    subject: "Akodemy - Password Reset Code",
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
@@ -43,24 +43,24 @@ export async function sendOtpEmail(toEmail, otpCode) {
           <p>&copy; ${new Date().getFullYear()} Akodemy. All rights reserved.</p>
         </div>
       </div>
-    `
-  }
+    `,
+  };
 
   try {
-    await transporter.sendMail(mailOptions)
-    console.log(`OTP email sent to ${toEmail}`)
-    return { success: true }
+    await transporter.sendMail(mailOptions);
+    console.log(`OTP email sent to ${toEmail}`);
+    return { success: true };
   } catch (error) {
-    console.error('Failed to send OTP email:', error)
-    return { success: false, error: error.message }
+    console.error("Failed to send OTP email:", error);
+    return { success: false, error: error.message };
   }
 }
 
 export function generateOtp() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-  let otp = ''
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let otp = "";
   for (let i = 0; i < 6; i++) {
-    otp += chars.charAt(Math.floor(Math.random() * chars.length))
+    otp += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-  return otp
+  return otp;
 }
