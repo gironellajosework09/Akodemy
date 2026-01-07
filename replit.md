@@ -68,4 +68,7 @@ Akodemy is built with a React 18 frontend (Vite, TailwindCSS) and a Node.js + Ex
   - New component: InstructionsModal.jsx
   - Results Modal shows: Attempt number, Time spent, Runs, Pass/Fail status
   - Retry button follows same instruction-first flow (does not reuse editor state)
+  - Hard copy-paste blocking in code editor (Ctrl+C/V/X, right-click, clipboard events)
+  - Visual notice in editor header: "Copy & paste is disabled"
+  - Toast notification when blocked action attempted
   - UX Rules: Modal mandatory, instructions visible first, editor never blocked, no auto-load of previous code
