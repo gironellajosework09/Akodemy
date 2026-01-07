@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { Clock, Play, ChevronLeft, ChevronRight } from 'lucide-react'
 import Layout from '../../components/Layout'
 import ChallengeEntryModal from '../../components/ChallengeEntryModal'
@@ -11,6 +11,7 @@ const ITEMS_PER_PAGE_DESKTOP = 12
 
 export default function ChallengeList() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { language, difficulty } = useParams()
   const [challenges, setChallenges] = useState([])
   const [loading, setLoading] = useState(true)
@@ -31,6 +32,17 @@ export default function ChallengeList() {
     setCurrentPage(1)
     fetchChallenges()
   }, [language, difficulty])
+
+  useEffect(() => {
+    if (location.state?.retryChallengeId && challenges.length > 0) {
+      const retryChallenge = challenges.find(c => c._id === location.state.retryChallengeId)
+      if (retryChallenge) {
+        setSelectedChallenge(retryChallenge)
+        setShowInstructionsModal(true)
+        navigate(location.pathname, { replace: true, state: {} })
+      }
+    }
+  }, [challenges, location.state])
 
   const fetchChallenges = async () => {
     try {

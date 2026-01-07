@@ -31,6 +31,7 @@ export default function ChallengeEditor() {
   const [latestSubmission, setLatestSubmission] = useState(null)
   const [showHistory, setShowHistory] = useState(false)
   const [startedAt] = useState(new Date())
+  const [attemptNumber, setAttemptNumber] = useState(1)
   const timerRef = useRef(null)
   const containerRef = useRef(null)
 
@@ -72,6 +73,10 @@ export default function ChallengeEditor() {
       const response = await api.get(`/api/progress/challenge/${challengeId}/latest`)
       if (response.data) {
         setLatestSubmission(response.data)
+      }
+      const summaryResponse = await api.get(`/api/progress/challenge/${challengeId}/summary`)
+      if (summaryResponse.data?.attemptCount) {
+        setAttemptNumber(summaryResponse.data.attemptCount + 1)
       }
     } catch (error) {
       console.error('Failed to fetch latest submission:', error)
@@ -191,7 +196,9 @@ export default function ChallengeEditor() {
   }
 
   const handleRetry = () => {
-    window.location.reload()
+    navigate(`/challenges/${challenge?.language}/${challenge?.difficulty}`, {
+      state: { retryChallengeId: challengeId }
+    })
   }
 
   const runCode = async () => {
@@ -502,6 +509,8 @@ export default function ChallengeEditor() {
         challenge={challenge}
         testResults={finalTestResults}
         timeTaken={finalTime}
+        runCount={runCount}
+        attemptNumber={attemptNumber}
         onBackToChallenges={handleBackToChallenges}
         onRetry={handleRetry}
         onNextChallenge={handleNextChallenge}

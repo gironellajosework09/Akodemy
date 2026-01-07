@@ -1,10 +1,12 @@
-import { X, Check, ArrowRight, ArrowLeft, RotateCcw } from 'lucide-react'
+import { X, Check, ArrowRight, ArrowLeft, RotateCcw, Play, Clock, Hash } from 'lucide-react'
 
 export default function ResultsOverlay({ 
   isOpen, 
   challenge, 
   testResults, 
-  timeTaken, 
+  timeTaken,
+  runCount,
+  attemptNumber,
   onBackToChallenges, 
   onRetry,
   onNextChallenge 
@@ -85,22 +87,32 @@ export default function ResultsOverlay({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="bg-gray-900 rounded-lg p-4 text-center">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <Check className="w-4 h-4 text-gray-400" />
-              </div>
-              <p className="text-xl font-bold text-white">{passedTests}/{totalTests}</p>
-              <p className="text-xs text-gray-400">Tests Passed</p>
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="bg-gray-900 rounded-lg p-3 text-center">
+              <Hash className="w-4 h-4 text-gray-400 mx-auto mb-1" />
+              <p className="text-lg font-bold text-white">{attemptNumber || 1}</p>
+              <p className="text-xs text-gray-400">Attempt</p>
             </div>
-            <div className="bg-gray-900 rounded-lg p-4 text-center">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <p className="text-xl font-bold text-white">{formatTime(timeTaken)}</p>
-              <p className="text-xs text-gray-400">Time Taken</p>
+            <div className="bg-gray-900 rounded-lg p-3 text-center">
+              <Clock className="w-4 h-4 text-gray-400 mx-auto mb-1" />
+              <p className="text-lg font-bold text-white">{formatTime(timeTaken)}</p>
+              <p className="text-xs text-gray-400">Time Spent</p>
+            </div>
+            <div className="bg-gray-900 rounded-lg p-3 text-center">
+              <Play className="w-4 h-4 text-gray-400 mx-auto mb-1" />
+              <p className="text-lg font-bold text-white">{runCount || 0}</p>
+              <p className="text-xs text-gray-400">Runs</p>
+            </div>
+            <div className="bg-gray-900 rounded-lg p-3 text-center">
+              {allPassed ? (
+                <Check className="w-4 h-4 text-green-400 mx-auto mb-1" />
+              ) : (
+                <X className="w-4 h-4 text-red-400 mx-auto mb-1" />
+              )}
+              <p className={`text-lg font-bold ${allPassed ? 'text-green-400' : 'text-red-400'}`}>
+                {allPassed ? 'Passed' : 'Failed'}
+              </p>
+              <p className="text-xs text-gray-400">Status</p>
             </div>
           </div>
         </div>

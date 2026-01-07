@@ -66,4 +66,6 @@ Akodemy is built with a React 18 frontend (Vite, TailwindCSS) and a Node.js + Ex
   - View Latest Submission modal (read-only) during coding
   - History Panel shows all previous attempts
   - New component: InstructionsModal.jsx
+  - Results Modal shows: Attempt number, Time spent, Runs, Pass/Fail status
+  - Retry button follows same instruction-first flow (does not reuse editor state)
   - UX Rules: Modal mandatory, instructions visible first, editor never blocked, no auto-load of previous code
