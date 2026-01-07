@@ -105,6 +105,65 @@ The app runs with `node start.js` which starts both:
 - IP whitelist set to 0.0.0.0/0 for Replit access
 - Run `npm run seed` to populate challenges
 
+### Database Models
+
+#### User (server/models/User.js)
+Core user model with authentication and progress tracking.
+- `name`, `email`, `password`, `previousPassword`
+- `role` (student/faculty)
+- `resetOtp` { code, expiresAt } - legacy OTP in user doc
+- `competencies` - per-language skill arrays
+- `progress` - completion percentages
+
+#### Otp (server/models/Otp.js)
+Dedicated OTP collection for forgot password with auto-expiry.
+- `userId` - Reference to User
+- `otp` - 6-character alphanumeric code
+- `expiresAt` - TTL index for auto-deletion after 2 minutes
+- `used` - Boolean flag
+- `requestedAt` - Timestamp
+- Indexes: userId+otp compound, TTL on expiresAt
+
+#### ChallengeAnswer (server/models/ChallengeAnswer.js)
+Full submission history for analytics and grading.
+- `userId`, `challengeId` - References
+- `answer` - Submitted code
+- `language` (javascript/python/java)
+- `isCorrect`, `score` (0-100)
+- `attemptNumber` - Auto-incrementing per user+challenge
+- `runs` - Number of test runs before submission
+- `startedAt`, `submittedAt` - Timestamps
+- `bestTime` - Calculated duration in seconds
+- Indexes: userId+challengeId+submittedAt, challengeId+isCorrect
+- Static methods: `getNextAttemptNumber()`, `getUserChallengeHistory()`, `getUserStats()`
+
+#### LatestAnswer (server/models/LatestAnswer.js)
+Single latest submission per user per challenge for quick reference.
+- Same fields as ChallengeAnswer
+- Unique compound index on userId+challengeId
+- Static methods: `upsertFromSubmission()`, `getUserLatestAnswers()`
+
+#### Challenge (server/models/Challenge.js)
+Coding challenges with canonical tests.
+- `title`, `slug`, `description`
+- `language`, `difficulty`
+- `starterCode`, `solution`
+- `testCases`, `canonicalTests`
+- `competencyIndex`
+
+#### Submission (server/models/Submission.js)
+Legacy submission model for code execution tracking.
+- `userId`, `challengeId`
+- `code`, `status`, `output`, `error`
+- `runtime`, `memory`, `runCount`
+
+### Example Usage
+See `server/examples/dbUsageExamples.js` for complete code examples:
+- OTP creation, verification, and cleanup
+- Challenge submission with auto-incrementing attempts
+- LatestAnswer upsert pattern
+- Analytics aggregations (language stats, leaderboards)
+
 ## Recent Changes
 - January 7, 2026: Enhanced Authentication System
   - Added "Forgot Password" option to login page
