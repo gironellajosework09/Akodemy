@@ -14,6 +14,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  previousPassword: {
+    type: String,
+    default: null
+  },
   role: {
     type: String,
     enum: ['student', 'faculty'],
@@ -24,6 +28,10 @@ const userSchema = new mongoose.Schema({
   birthdate: String,
   sex: String,
   info: String,
+  resetOtp: {
+    code: String,
+    expiresAt: Date
+  },
   competencies: {
     javascript: {
       type: [Number],

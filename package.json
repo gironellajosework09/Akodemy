@@ -15,7 +15,9 @@
     "concurrently": "^8.2.2"
   },
   "dependencies": {
+    "dotenv": "^17.2.3",
     "html2canvas": "^1.4.1",
-    "jspdf": "^3.0.4"
+    "jspdf": "^3.0.4",
+    "nodemailer": "^7.0.12"
   }
 }
