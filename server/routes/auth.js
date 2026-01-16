@@ -1,3 +1,4 @@
+// Express routes for Auth endpoints.
 import express from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
@@ -5,6 +6,7 @@ import User from '../models/User.js'
 import { authenticateToken } from '../middleware/auth.js'
 import { sendOtpEmail, generateOtp } from '../services/emailService.js'
 
+// Route handlers for Auth APIs.
 const router = express.Router()
 const JWT_SECRET = process.env.JWT_SECRET || 'akodemy-secret-key-2025'
 
@@ -277,3 +279,6 @@ router.post('/resend-otp', async (req, res) => {
 })
 
 export default router
+
+
+

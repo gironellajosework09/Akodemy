@@ -1,9 +1,11 @@
+// Express routes for Scoring endpoints.
 import express from 'express'
 import { authenticateToken } from '../middleware/auth.js'
 import { calculateScore } from '../services/scoring.js'
 import { syncAllTestFiles, downloadExerciseTests, normalizeToExercismSlug } from '../services/exercismTestSync.js'
 import Challenge from '../models/Challenge.js'
 
+// Route handlers for Scoring APIs.
 const router = express.Router()
 
 router.post('/', authenticateToken, async (req, res) => {
@@ -106,3 +108,6 @@ router.post('/sync-challenge-test', authenticateToken, async (req, res) => {
 })
 
 export default router
+
+
+

@@ -1,5 +1,7 @@
+// UI component: Footer.
 import { Code2 } from 'lucide-react'
 
+// Component logic for Footer.
 export default function Footer() {
   return (
     <footer className="py-6 px-6 border-t border-gray-800 bg-gray-900">
@@ -22,3 +24,6 @@ export default function Footer() {
     </footer>
   )
 }
+
+
+

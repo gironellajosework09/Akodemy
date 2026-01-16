@@ -1,3 +1,4 @@
+// Auth context and session helpers.
 import { createContext, useContext, useState, useEffect } from 'react'
 import api from '../services/api'
 
@@ -64,3 +65,5 @@ export function useAuth() {
   }
   return context
 }
+
+

@@ -1,9 +1,11 @@
+// Faculty page: Student Profile View.
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ChevronLeft, User } from 'lucide-react'
 import Layout from '../../components/Layout'
 import api from '../../services/api'
 
+// Faculty page logic for Student Profile View.
 export default function StudentProfileView() {
   const navigate = useNavigate()
   const { studentId } = useParams()
@@ -168,3 +170,6 @@ export default function StudentProfileView() {
     </Layout>
   )
 }
+
+
+

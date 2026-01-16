@@ -1,7 +1,9 @@
+// Student page: Language Selection.
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import Layout from '../../components/Layout'
 
+// Student page logic for Language Selection.
 const languages = [
   {
     id: 'java',
@@ -70,3 +72,6 @@ export default function LanguageSelection() {
     </Layout>
   )
 }
+
+
+

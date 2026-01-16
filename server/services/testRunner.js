@@ -1,8 +1,10 @@
+// Test runner for Exercism and canonical cases.
 import { executeCode } from './judge0.js'
 import fs from 'fs/promises'
 import path from 'path'
 import { getTestFilePath, readTestFile, EXERCISM_BASE_DIR, normalizeToExercismSlug } from './exercismTestSync.js'
 
+// Service logic for Test Runner.
 function countTestsFromJestOutput(output) {
   const passMatch = output.match(/(\d+) pass(?:ed|ing)/i)
   const failMatch = output.match(/(\d+) fail(?:ed|ing)/i)
@@ -14,6 +16,7 @@ function countTestsFromJestOutput(output) {
 }
 
 function countTestsFromPytestOutput(output) {
+  // Pytest emits several summary formats; handle common variants before falling back.
   const summaryMatch = output.match(/(\d+) passed(?:.*?(\d+) failed)?/i) ||
                        output.match(/(\d+) failed(?:.*?(\d+) passed)?/i)
   
@@ -33,6 +36,7 @@ function countTestsFromPytestOutput(output) {
     }
   }
   
+  // Fallback: count assertion markers when no summary is found.
   const assertions = output.match(/(?:PASSED|FAILED|ok|FAIL)/g) || []
   const passed = assertions.filter(a => a === 'PASSED' || a === 'ok').length
   return { passed, total: assertions.length || 1 }
@@ -63,6 +67,7 @@ function extractTestCasesFromPythonTest(testContent) {
 }
 
 function wrapJavaScriptCode(userCode, testContent, slug) {
+  // Inline a minimal Jest-like harness so tests can run in a single Judge0 execution.
   const fileName = slug.replace(/-/g, '')
   
   const cleanedUserCode = userCode
@@ -167,6 +172,7 @@ function wrapPythonCode(userCode, testContent, slug) {
   const targetModuleImportRegex = new RegExp(`from\\s+${moduleName}\\s+import\\s+[^\\n]+`, 'g')
   const targetModuleImportRegex2 = new RegExp(`import\\s+${moduleName}\\b`, 'g')
   
+  // Strip imports/decorators and run a lightweight unittest-style runner inline.
   const cleanedTest = testContent
     .replace(targetModuleImportRegex, '')
     .replace(targetModuleImportRegex2, '')
@@ -290,6 +296,7 @@ function cleanJsExports(code) {
 }
 
 async function runTestsWithCanonicalData(userCode, language, testCases) {
+  // Fallback path when no Exercism test file is usable.
   if (!testCases || testCases.length === 0) {
     return { passed: 0, total: 0, score: 0, results: [], error: 'No test cases available' }
   }
@@ -411,6 +418,7 @@ async function runTests(userCode, language, challengeSlug, testCases = []) {
   const testFile = await readTestFile(language, exerciseSlug)
   
   if (!testFile) {
+    // Prefer Exercism tests, but fall back to canonical data if missing.
     console.log(`No test file found for ${exerciseSlug}, falling back to canonical data`)
     return runTestsWithCanonicalData(userCode, language, testCases)
   }
@@ -447,6 +455,7 @@ async function runTests(userCode, language, challengeSlug, testCases = []) {
     }
     
     try {
+      // Wrapped tests log a JSON payload on the last line.
       const output = result.stdout?.trim()
       const lastLine = output?.split('\n').pop()
       const testResults = JSON.parse(lastLine)
@@ -478,3 +487,6 @@ export {
   extractTestCasesFromJsTest,
   extractTestCasesFromPythonTest
 }
+
+
+

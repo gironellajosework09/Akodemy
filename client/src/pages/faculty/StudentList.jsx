@@ -1,9 +1,11 @@
+// Faculty page: Student List.
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, User } from 'lucide-react'
 import Layout from '../../components/Layout'
 import api from '../../services/api'
 
+// Faculty page logic for Student List.
 export default function StudentList() {
   const navigate = useNavigate()
   const [students, setStudents] = useState([])
@@ -108,3 +110,6 @@ export default function StudentList() {
     </Layout>
   )
 }
+
+
+

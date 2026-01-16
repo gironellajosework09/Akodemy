@@ -1,7 +1,9 @@
+// UI component: History Panel.
 import { useState, useEffect } from 'react'
 import { Clock, Play, CheckCircle, XCircle, History, ChevronDown, ChevronUp } from 'lucide-react'
 import api from '../services/api'
 
+// Component logic for History Panel.
 export default function HistoryPanel({ challengeId, isOpen, onToggle }) {
   const [history, setHistory] = useState([])
   const [loading, setLoading] = useState(false)
@@ -119,3 +121,6 @@ export default function HistoryPanel({ challengeId, isOpen, onToggle }) {
     </div>
   )
 }
+
+
+

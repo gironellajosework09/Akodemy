@@ -1,5 +1,7 @@
+// Mongoose schema for Submission records.
 import mongoose from 'mongoose'
 
+// Schema details and validation for Submission.
 const submissionSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -31,3 +33,6 @@ const submissionSchema = new mongoose.Schema({
 }, { timestamps: true })
 
 export default mongoose.model('Submission', submissionSchema)
+
+
+

@@ -1,3 +1,4 @@
+// Student page: Challenge List.
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { Clock, Play, ChevronLeft, ChevronRight } from 'lucide-react'
@@ -6,6 +7,7 @@ import ChallengeEntryModal from '../../components/ChallengeEntryModal'
 import InstructionsModal from '../../components/InstructionsModal'
 import api from '../../services/api'
 
+// Student page logic for Challenge List.
 const ITEMS_PER_PAGE_MOBILE = 6
 const ITEMS_PER_PAGE_DESKTOP = 12
 
@@ -230,3 +232,6 @@ export default function ChallengeList() {
     </Layout>
   )
 }
+
+
+

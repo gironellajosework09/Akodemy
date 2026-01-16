@@ -1,5 +1,7 @@
+// Mongoose schema for User records.
 import mongoose from 'mongoose'
 
+// Schema details and validation for User.
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -54,3 +56,6 @@ const userSchema = new mongoose.Schema({
 }, { timestamps: true })
 
 export default mongoose.model('User', userSchema)
+
+
+

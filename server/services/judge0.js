@@ -1,5 +1,7 @@
+// Judge0 API client for code execution.
 import axios from 'axios'
 
+// Service logic for Judge0.
 const JUDGE0_API_URL = process.env.JUDGE0_API_URL || 'https://ce.judge0.com'
 
 const LANGUAGE_IDS = {
@@ -83,3 +85,6 @@ export async function executeCode(code, languageOrId, stdin = '') {
     }
   }
 }
+
+
+

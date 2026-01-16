@@ -1,9 +1,11 @@
+// Express routes for Challenges endpoints.
 import express from 'express'
 import Challenge from '../models/Challenge.js'
 import Submission from '../models/Submission.js'
 import { authenticateToken } from '../middleware/auth.js'
 import { syncAllChallenges } from '../services/exercismSync.js'
 
+// Route handlers for Challenges APIs.
 const router = express.Router()
 
 const DIFFICULTY_ORDER = { beginner: 1, intermediate: 2, advanced: 3 }
@@ -135,3 +137,6 @@ function formatTime(seconds) {
 }
 
 export default router
+
+
+

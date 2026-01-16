@@ -1,5 +1,7 @@
+// Mongoose schema for Latest Answer records.
 import mongoose from 'mongoose'
 
+// Schema details and validation for Latest Answer.
 const latestAnswerSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -90,3 +92,6 @@ latestAnswerSchema.statics.getUserLatestAnswers = async function(userId, languag
 }
 
 export default mongoose.model('LatestAnswer', latestAnswerSchema)
+
+
+

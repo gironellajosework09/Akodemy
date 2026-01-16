@@ -1,5 +1,7 @@
+// Sync Exercism exercises into the database.
 import axios from 'axios'
 
+// Service logic for Exercism Sync.
 const GITHUB_API = 'https://api.github.com'
 const GITHUB_RAW = 'https://raw.githubusercontent.com'
 
@@ -282,3 +284,6 @@ export {
   extractAllTestCases,
   TRACKS
 }
+
+
+

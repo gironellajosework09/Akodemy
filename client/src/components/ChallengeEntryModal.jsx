@@ -1,7 +1,9 @@
+// UI component: Challenge Entry Modal.
 import { useState, useEffect } from 'react'
 import { X, Clock, Play, Code, ArrowRight, ArrowLeft } from 'lucide-react'
 import api from '../services/api'
 
+// Component logic for Challenge Entry Modal.
 export default function ChallengeEntryModal({ isOpen, challenge, onClose, onStartAttempt }) {
   const [loading, setLoading] = useState(true)
   const [summary, setSummary] = useState(null)
@@ -146,3 +148,6 @@ export default function ChallengeEntryModal({ isOpen, challenge, onClose, onStar
     </div>
   )
 }
+
+
+

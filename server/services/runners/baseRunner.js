@@ -1,3 +1,5 @@
+// Base runner abstraction for language execution.
+// Service logic for Base Runner.
 export class BaseRunner {
   constructor(config = {}) {
     this.timeout = config.timeout || 30000
@@ -48,3 +50,6 @@ export function getCompetencyLevel(passRate) {
   if (passRate >= 0.5) return COMPETENCY_LEVELS.DEVELOPING
   return COMPETENCY_LEVELS.NOT_STARTED
 }
+
+
+

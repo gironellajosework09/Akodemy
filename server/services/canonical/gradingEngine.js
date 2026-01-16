@@ -1,5 +1,7 @@
+// Grade submissions against canonical tests.
 import { getTestCases } from './testFetcher.js'
 import { 
+// Service logic for Grading Engine.
   generateJavaScriptRunner, 
   generatePythonRunner, 
   generateJavaRunner 
@@ -28,6 +30,7 @@ function getCompetency(score) {
 }
 
 async function getTestCasesFromDB(exerciseSlug, language) {
+  // Prefer stored canonical tests to avoid repeated GitHub fetches.
   const challenge = await Challenge.findOne({ 
     exercismSlug: exerciseSlug, 
     language 
@@ -65,6 +68,7 @@ export async function gradeSubmission(code, language, exerciseSlug) {
   let testCases = await getTestCasesFromDB(normalizedSlug, language)
   
   if (!testCases) {
+    // Fallback to live canonical tests when nothing is stored in the DB.
     console.log(`No stored tests found, fetching from GitHub...`)
     testCases = await getTestCases(normalizedSlug)
   }
@@ -152,3 +156,6 @@ export async function gradeSubmission(code, language, exerciseSlug) {
     details: parsedResult.details || []
   }
 }
+
+
+

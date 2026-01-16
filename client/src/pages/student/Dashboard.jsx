@@ -1,8 +1,10 @@
+// Student page: Dashboard.
 import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import { useAuth } from '../../context/AuthContext'
 import { ArrowRight, Code2, Target, Trophy } from 'lucide-react'
 
+// Student page logic for Dashboard.
 export default function Dashboard() {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -56,3 +58,6 @@ export default function Dashboard() {
     </Layout>
   )
 }
+
+
+

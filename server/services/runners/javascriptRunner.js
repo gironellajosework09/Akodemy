@@ -1,6 +1,8 @@
+// JavaScript runner for executing tests.
 import { BaseRunner } from './baseRunner.js'
 import { executeCode } from '../judge0.js'
 
+// Service logic for Javascript Runner.
 export class JavaScriptRunner extends BaseRunner {
   constructor(config = {}) {
     super(config)
@@ -176,3 +178,6 @@ console.log('__TEST_RESULTS__' + JSON.stringify(__testResults));
     }
   }
 }
+
+
+

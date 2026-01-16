@@ -1,3 +1,4 @@
+// Faculty page: Dashboard.
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
@@ -5,6 +6,7 @@ import { Users, Trophy, Code, ArrowRight } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts'
 import api from '../../services/api'
 
+// Faculty page logic for Dashboard.
 export default function FacultyDashboard() {
   const navigate = useNavigate()
   const [stats, setStats] = useState({
@@ -238,3 +240,6 @@ export default function FacultyDashboard() {
     </Layout>
   )
 }
+
+
+

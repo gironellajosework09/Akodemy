@@ -1,3 +1,4 @@
+// Express routes for Progress endpoints.
 import express from 'express'
 import { authenticateToken } from '../middleware/auth.js'
 import Submission from '../models/Submission.js'
@@ -5,6 +6,7 @@ import Challenge from '../models/Challenge.js'
 import ChallengeAnswer from '../models/ChallengeAnswer.js'
 import LatestAnswer from '../models/LatestAnswer.js'
 
+// Route handlers for Progress APIs.
 const router = express.Router()
 
 const COMPETENCY_NAMES = [
@@ -314,3 +316,6 @@ router.get('/challenge/:challengeId/summary', authenticateToken, async (req, res
 })
 
 export default router
+
+
+

@@ -1,9 +1,11 @@
+// Faculty page: Profile.
 import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import Layout from '../../components/Layout'
 import { User, Save, Check } from 'lucide-react'
 import api from '../../services/api'
 
+// Faculty page logic for Profile.
 export default function FacultyProfile() {
   const { user, setUser } = useAuth()
   const [formData, setFormData] = useState({
@@ -145,3 +147,6 @@ export default function FacultyProfile() {
     </Layout>
   )
 }
+
+
+

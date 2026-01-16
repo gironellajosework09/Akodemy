@@ -1,8 +1,10 @@
+// Sync Exercism tests to the local cache.
 import axios from 'axios'
 import fs from 'fs/promises'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
+// Service logic for Exercism Test Sync.
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
@@ -40,16 +42,23 @@ async function fetchTestFile(language, slug) {
   const slugName = slug.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
   const snakeName = slug.replace(/-/g, '_')
   
-  let testFileName, testUrl
-  
+  let testFileName, testUrls
+
+  // Exercism test paths differ by language; build the correct URL per track.
   switch (language) {
     case 'javascript':
       testFileName = `${slug}.spec.js`
-      testUrl = `${GITHUB_RAW}/exercism/${track}/main/exercises/practice/${slug}/${testFileName}`
+      testUrls = [
+        `${GITHUB_RAW}/exercism/${track}/main/exercises/practice/${slug}/${testFileName}`,
+        `${GITHUB_RAW}/exercism/${track}/main/exercises/concept/${slug}/${testFileName}`
+      ]
       break
     case 'python':
       testFileName = `${snakeName}_test.py`
-      testUrl = `${GITHUB_RAW}/exercism/${track}/main/exercises/practice/${slug}/${testFileName}`
+      testUrls = [
+        `${GITHUB_RAW}/exercism/${track}/main/exercises/practice/${slug}/${testFileName}`,
+        `${GITHUB_RAW}/exercism/${track}/main/exercises/concept/${slug}/${testFileName}`
+      ]
       break
     case 'java':
       const className = slug
@@ -57,23 +66,34 @@ async function fetchTestFile(language, slug) {
         .map(word => word.charAt(0).toUpperCase() + word.slice(1))
         .join('')
       testFileName = `${className}Test.java`
-      testUrl = `${GITHUB_RAW}/exercism/${track}/main/exercises/practice/${slug}/src/test/java/${testFileName}`
+      testUrls = [
+        `${GITHUB_RAW}/exercism/${track}/main/exercises/practice/${slug}/src/test/java/${testFileName}`,
+        `${GITHUB_RAW}/exercism/${track}/main/exercises/concept/${slug}/src/test/java/${testFileName}`
+      ]
       break
     default:
       throw new Error(`Unknown language: ${language}`)
   }
 
-  try {
-    const response = await axios.get(testUrl, { timeout: 10000 })
-    return {
-      fileName: testFileName,
-      content: response.data,
-      url: testUrl
+  for (const testUrl of testUrls) {
+    try {
+      const response = await axios.get(testUrl, { timeout: 10000, validateStatus: (status) => status < 500 })
+      if (response.status === 404) continue
+      if (response.status >= 400) {
+        console.log(`Could not fetch test file for ${slug} (${language}): ${response.status}`)
+        continue
+      }
+      return {
+        fileName: testFileName,
+        content: response.data,
+        url: testUrl
+      }
+    } catch (error) {
+      console.log(`Could not fetch test file for ${slug} (${language}): ${error.message}`)
     }
-  } catch (error) {
-    console.log(`Could not fetch test file for ${slug} (${language}): ${error.message}`)
-    return null
   }
+
+  return null
 }
 
 async function fetchExampleSolution(language, slug) {
@@ -82,6 +102,7 @@ async function fetchExampleSolution(language, slug) {
   
   let solutionUrl
   
+  // Example solutions live in language-specific folders.
   switch (language) {
     case 'javascript':
       solutionUrl = `${GITHUB_RAW}/exercism/${track}/main/exercises/practice/${slug}/.meta/proof.ci.js`
@@ -106,6 +127,7 @@ async function fetchExampleSolution(language, slug) {
   } catch (error) {
     try {
       if (language === 'javascript') {
+        // Some JS exercises use an alternate exemplar path.
         const altUrl = `${GITHUB_RAW}/exercism/${track}/main/exercises/practice/${slug}/.meta/exemplar.js`
         const response = await axios.get(altUrl, { timeout: 10000 })
         return response.data
@@ -152,6 +174,7 @@ async function downloadExerciseTests(language, slug) {
 }
 
 function normalizeToExercismSlug(slug) {
+  // Strip language suffixes so slugs match Exercism's canonical naming.
   return slug
     .replace(/-(?:javascript|python|java)$/i, '')
     .replace(/-(?:js|py)$/i, '')
@@ -212,6 +235,7 @@ async function syncAllTestFiles(Challenge, options = {}) {
         results.errors.push({ slug: challenge.slug, error: 'Could not fetch test file' })
       }
       
+      // Small delay to avoid hammering GitHub with back-to-back requests.
       await new Promise(resolve => setTimeout(resolve, 50))
       
     } catch (error) {
@@ -262,3 +286,6 @@ export {
   EXERCISM_BASE_DIR,
   TEST_FILE_PATTERNS
 }
+
+
+

@@ -1,8 +1,10 @@
+// Runner registry and competency helpers.
 import { JavaScriptRunner } from './javascriptRunner.js'
 import { PythonRunner } from './pythonRunner.js'
 import { JavaRunner } from './javaRunner.js'
 import { getCompetencyLevel, COMPETENCY_LEVELS } from './baseRunner.js'
 
+// Service logic for Index.
 const runners = {
   javascript: JavaScriptRunner,
   python: PythonRunner,
@@ -26,3 +28,6 @@ export function registerRunner(language, RunnerClass) {
 }
 
 export { getCompetencyLevel, COMPETENCY_LEVELS }
+
+
+

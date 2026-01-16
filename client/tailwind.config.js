@@ -1,4 +1,4 @@
-/** @type {import('tailwindcss').Config} */
+// Tailwind theme and content configuration.
 export default {
   content: [
     "./index.html",
@@ -32,3 +32,4 @@ export default {
   },
   plugins: [],
 }
+

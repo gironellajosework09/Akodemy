@@ -1,5 +1,7 @@
+// Scoring helpers for test results.
 import { runTests, runTestsWithCanonicalData } from './testRunner.js'
 
+// Service logic for Scoring.
 export const calculateScore = async (userCode, language, challengeId = null, testCases = []) => {
   try {
     let result
@@ -39,3 +41,6 @@ export const calculateScore = async (userCode, language, challengeId = null, tes
 }
 
 export default { calculateScore }
+
+
+

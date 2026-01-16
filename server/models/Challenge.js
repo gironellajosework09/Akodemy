@@ -1,5 +1,7 @@
+// Mongoose schema for Challenge records.
 import mongoose from 'mongoose'
 
+// Schema details and validation for Challenge.
 const testCaseSchema = new mongoose.Schema({
   input: mongoose.Schema.Types.Mixed,
   expected: mongoose.Schema.Types.Mixed,
@@ -9,6 +11,13 @@ const testCaseSchema = new mongoose.Schema({
 const canonicalTestSchema = new mongoose.Schema({
   uuid: String,
   description: String,
+  property: String,
+  input: mongoose.Schema.Types.Mixed,
+  expected: mongoose.Schema.Types.Mixed
+})
+
+const officialTestSchema = new mongoose.Schema({
+  name: String,
   property: String,
   input: mongoose.Schema.Types.Mixed,
   expected: mongoose.Schema.Types.Mixed
@@ -67,6 +76,14 @@ const challengeSchema = new mongoose.Schema({
     type: [canonicalTestSchema],
     default: []
   },
+  officialTests: {
+    type: [officialTestSchema],
+    default: []
+  },
+  officialTestFilePath: {
+    type: String,
+    default: null
+  },
   canonicalTestsMeta: {
     fetchedAt: { type: Date, default: null },
     status: { 
@@ -76,7 +93,23 @@ const challengeSchema = new mongoose.Schema({
     },
     errorMessage: { type: String, default: null },
     testCount: { type: Number, default: 0 }
+  },
+  officialTestsMeta: {
+    fetchedAt: { type: Date, default: null },
+    status: {
+      type: String,
+      enum: ['pending', 'success', 'failed', 'not_found', 'skipped', 'fallback'],
+      default: 'pending'
+    },
+    errorMessage: { type: String, default: null },
+    testCount: { type: Number, default: 0 },
+    tomlSha: { type: String, default: null },
+    sourcePath: { type: String, default: null },
+    testsTomlUrl: { type: String, default: null }
   }
 }, { timestamps: true })
 
 export default mongoose.model('Challenge', challengeSchema)
+
+
+

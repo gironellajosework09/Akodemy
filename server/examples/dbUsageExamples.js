@@ -1,3 +1,4 @@
+// Example database queries for reference.
 import mongoose from 'mongoose'
 import Otp from '../models/Otp.js'
 import ChallengeAnswer from '../models/ChallengeAnswer.js'
@@ -256,3 +257,5 @@ export {
   analyticsExamples,
   runAllExamples
 }
+
+

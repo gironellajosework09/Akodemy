@@ -1,3 +1,4 @@
+// API server bootstrap and route wiring.
 import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
@@ -44,3 +45,5 @@ app.get("/api/health", (req, res) => {
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+

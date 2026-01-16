@@ -1,5 +1,7 @@
+// UI component: Confirm Dialog.
 import { X } from 'lucide-react'
 
+// Component logic for Confirm Dialog.
 export default function ConfirmDialog({ isOpen, title, message, onConfirm, onCancel }) {
   if (!isOpen) return null
 
@@ -33,3 +35,6 @@ export default function ConfirmDialog({ isOpen, title, message, onConfirm, onCan
     </div>
   )
 }
+
+
+

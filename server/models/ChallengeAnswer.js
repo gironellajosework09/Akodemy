@@ -1,5 +1,7 @@
+// Mongoose schema for Challenge Answer records.
 import mongoose from 'mongoose'
 
+// Schema details and validation for Challenge Answer.
 const challengeAnswerSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -123,3 +125,6 @@ challengeAnswerSchema.statics.getUserStats = async function(userId, language = n
 }
 
 export default mongoose.model('ChallengeAnswer', challengeAnswerSchema)
+
+
+

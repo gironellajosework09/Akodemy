@@ -1,3 +1,4 @@
+// Student page: Profile.
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import Layout from '../../components/Layout'
@@ -6,6 +7,7 @@ import api from '../../services/api'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 
+// Student page logic for Profile.
 export default function Profile() {
   const { user, setUser } = useAuth()
   const [activeTab, setActiveTab] = useState('info')
@@ -354,3 +356,6 @@ export default function Profile() {
     </Layout>
   )
 }
+
+
+

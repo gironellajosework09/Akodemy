@@ -1,5 +1,7 @@
+// UI component: Latest Submission Modal.
 import { X, Clock, Play, CheckCircle, XCircle } from 'lucide-react'
 
+// Component logic for Latest Submission Modal.
 export default function LatestSubmissionModal({ isOpen, onClose, submission }) {
   if (!isOpen || !submission) return null
 
@@ -79,3 +81,6 @@ export default function LatestSubmissionModal({ isOpen, onClose, submission }) {
     </div>
   )
 }
+
+
+

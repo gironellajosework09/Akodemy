@@ -7,6 +7,8 @@
     "client": "cd client && npm run dev",
     "server": "cd server && npm run dev",
     "seed": "cd server && node seed.js",
+    "sync-exercism-tests": "node server/scripts/syncExercismTests.js",
+    "sync-exercism-templates": "node server/scripts/syncExercismTemplates.js",
     "install-all": "npm install && cd client && npm install && cd ../server && npm install",
     "build:prod": "cd client && npm run build",
     "start:prod": "node server/production.js"

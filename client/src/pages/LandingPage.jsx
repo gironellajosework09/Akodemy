@@ -1,7 +1,9 @@
+// Marketing landing page UI.
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Code2, Target, Trophy, Zap, Users, BarChart3, BookOpen, ArrowRight } from 'lucide-react'
 
+// Page logic for Landing Page.
 export default function LandingPage() {
   const navigate = useNavigate()
   const [stats, setStats] = useState({
@@ -260,3 +262,6 @@ export default function LandingPage() {
     </div>
   )
 }
+
+
+

@@ -1,6 +1,9 @@
+// Database seed script for initial content.
 import mongoose from 'mongoose'
 import dotenv from 'dotenv'
 import Challenge from './models/Challenge.js'
+import { syncExercismTests } from './services/exercismTestsSync.js'
+import { syncExercismTemplates } from './services/exercismTemplatesSync.js'
 
 dotenv.config()
 
@@ -943,6 +946,12 @@ async function seed() {
     await Challenge.insertMany(challenges)
     console.log(`Seeded ${challenges.length} challenges`)
 
+    if (process.env.SEED_SYNC_EXERCISM === 'true') {
+      console.log('Syncing Exercism tests and templates...')
+      await syncExercismTests(Challenge, { onProgress: (message) => console.log(message) })
+      await syncExercismTemplates(Challenge, { onProgress: (message) => console.log(message) })
+    }
+
     await mongoose.disconnect()
     console.log('Done!')
     process.exit(0)
@@ -953,3 +962,5 @@ async function seed() {
 }
 
 seed()
+
+

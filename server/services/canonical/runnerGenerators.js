@@ -1,3 +1,5 @@
+// Generate language runners for canonical tests.
+// Service logic for Runner Generators.
 function toCamelCase(str) {
   return str.replace(/-([a-z])/g, (_, c) => c.toUpperCase())
 }
@@ -26,6 +28,7 @@ function serializeValue(value) {
 }
 
 function serializeJavaValue(value) {
+  // Convert JS values into Java-friendly literals for generated runner code.
   if (value === null) return 'null'
   if (typeof value === 'string') return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`
   if (typeof value === 'number') {
@@ -66,6 +69,7 @@ function generateInputArgs(input, language) {
   const keys = Object.keys(input)
   if (keys.length === 0) return ''
   
+  // Keep canonical input order; Java needs Java literal formatting.
   if (language === 'java') {
     return keys.map(k => serializeJavaValue(input[k])).join(', ')
   }
@@ -158,6 +162,7 @@ for (const tc of testCases) {
       details.push({
         description: tc.description,
         passed: false,
+        expected: tc.expected,
         error: error.message
       });
     }
@@ -264,6 +269,7 @@ for tc in test_cases:
             details.append({
                 'description': tc['description'],
                 'passed': False,
+                'expected': expected,
                 'error': str(e)
             })
 
@@ -277,6 +283,7 @@ export function generateJavaRunner(studentCode, testCases, exerciseSlug) {
   const className = toPascalCase(exerciseSlug)
   const defaultMethodName = toCamelCase(testCases.property || exerciseSlug)
   
+  // Remove "public" to avoid multiple public classes when we wrap with Main.
   const modifiedStudentCode = studentCode.replace(/public\s+class/g, 'class')
   
   const testCode = testCases.cases.map((tc, i) => {
@@ -310,9 +317,19 @@ export function generateJavaRunner(studentCode, testCases, exerciseSlug) {
                 Object expected${i} = ${expected};
                 Object actual${i} = solution.${methodName}(${args});
                 boolean success${i} = ${comparison};
-                if (success${i}) passed++;
                 total++;
-                details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":").append(success${i}).append("},");
+                if (success${i}) {
+                    passed++;
+                    details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":true},");
+                } else {
+                    String expectedStr${i} = escapeJson(expected${i});
+                    String actualStr${i} = escapeJson(actual${i});
+                    details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":false,\\"expected\\":\\"")
+                        .append(expectedStr${i})
+                        .append("\\",\\"actual\\":\\"")
+                        .append(actualStr${i})
+                        .append("\\"},");
+                }
             } catch (Exception e) {
                 total++;
                 details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":false,\\"error\\":\\"").append(e.getMessage() != null ? e.getMessage().replace("\\"", "'") : "error").append("\\"},");
@@ -324,6 +341,12 @@ export function generateJavaRunner(studentCode, testCases, exerciseSlug) {
 ${modifiedStudentCode}
 
 public class Main {
+    private static String escapeJson(Object value) {
+        if (value == null) return "null";
+        String str = String.valueOf(value);
+        return str.replace("\\\\", "\\\\\\\\").replace("\\"", "'");
+    }
+
     public static void main(String[] args) {
         int passed = 0;
         int total = 0;
@@ -350,3 +373,6 @@ ${testCode}
 }
 `.trim()
 }
+
+
+

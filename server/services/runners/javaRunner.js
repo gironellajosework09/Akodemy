@@ -1,6 +1,8 @@
+// Java runner for executing tests.
 import { BaseRunner } from './baseRunner.js'
 import { executeCode } from '../judge0.js'
 
+// Service logic for Java Runner.
 export class JavaRunner extends BaseRunner {
   constructor(config = {}) {
     super(config)
@@ -165,3 +167,6 @@ public class Main {
     }
   }
 }
+
+
+

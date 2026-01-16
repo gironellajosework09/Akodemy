@@ -1,8 +1,10 @@
+// Express routes for Public endpoints.
 import express from 'express'
 import User from '../models/User.js'
 import Challenge from '../models/Challenge.js'
 import Submission from '../models/Submission.js'
 
+// Route handlers for Public APIs.
 const router = express.Router()
 
 router.get('/stats', async (req, res) => {
@@ -32,3 +34,6 @@ router.get('/stats', async (req, res) => {
 })
 
 export default router
+
+
+

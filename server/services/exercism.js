@@ -1,5 +1,7 @@
+// Fetch Exercism exercises and starter templates.
 const axios = require('axios')
 
+// Service logic for Exercism.
 const GITHUB_API = 'https://api.github.com'
 const EXERCISM_ORG = 'exercism'
 
@@ -199,3 +201,6 @@ module.exports = {
   getStarterCode,
   DIFFICULTY_ORDER
 }
+
+
+

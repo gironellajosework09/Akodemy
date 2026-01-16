@@ -1,5 +1,7 @@
+// UI component: Results Overlay.
 import { X, Check, ArrowRight, ArrowLeft, RotateCcw, Play, Clock, Hash } from 'lucide-react'
 
+// Component logic for Results Overlay.
 export default function ResultsOverlay({ 
   isOpen, 
   challenge, 
@@ -199,3 +201,6 @@ export default function ResultsOverlay({
     </div>
   )
 }
+
+
+

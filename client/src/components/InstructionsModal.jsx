@@ -1,5 +1,7 @@
+// UI component: Instructions Modal.
 import { X, BookOpen, ArrowRight } from 'lucide-react'
 
+// Component logic for Instructions Modal.
 export default function InstructionsModal({ isOpen, challenge, onClose, onStartCoding }) {
   if (!isOpen || !challenge) return null
 
@@ -81,3 +83,6 @@ export default function InstructionsModal({ isOpen, challenge, onClose, onStartC
     </div>
   )
 }
+
+
+

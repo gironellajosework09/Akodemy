@@ -1,9 +1,11 @@
+// Express routes for Faculty endpoints.
 import express from 'express'
 import { authenticateToken, requireRole } from '../middleware/auth.js'
 import User from '../models/User.js'
 import Submission from '../models/Submission.js'
 import Challenge from '../models/Challenge.js'
 
+// Route handlers for Faculty APIs.
 const router = express.Router()
 
 router.get('/analytics', authenticateToken, requireRole('faculty'), async (req, res) => {
@@ -371,3 +373,6 @@ router.get('/competency-student-distribution', authenticateToken, requireRole('f
 })
 
 export default router
+
+
+

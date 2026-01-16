@@ -1,6 +1,8 @@
+// Grading engine for submissions using tests.
 import { fetchTests } from './github/testFetcher.js'
 import { getRunner, getCompetencyLevel } from './runners/index.js'
 
+// Service logic for Grading Engine.
 export async function runTests(language, exercisePath, userCode) {
   const runner = getRunner(language)
   
@@ -66,3 +68,6 @@ export async function gradeSubmission(userCode, language, exerciseSlug) {
 
 export { fetchTests } from './github/testFetcher.js'
 export { getRunner, getCompetencyLevel } from './runners/index.js'
+
+
+

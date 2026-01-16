@@ -1,3 +1,4 @@
+// Student page: Challenge Editor.
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Editor from '@monaco-editor/react'
@@ -8,6 +9,7 @@ import ResultsOverlay from '../../components/ResultsOverlay'
 import LatestSubmissionModal from '../../components/LatestSubmissionModal'
 import HistoryPanel from '../../components/HistoryPanel'
 
+// Student page logic for Challenge Editor.
 export default function ChallengeEditor() {
   const navigate = useNavigate()
   const { challengeId } = useParams()
@@ -36,6 +38,7 @@ export default function ChallengeEditor() {
   const timerRef = useRef(null)
   const containerRef = useRef(null)
   const editorRef = useRef(null)
+  const allowClipboard = true //toggle for disabling copy & paste in editor
 
   const showClipboardBlockedToast = useCallback(() => {
     setClipboardToast(true)
@@ -45,36 +48,38 @@ export default function ChallengeEditor() {
   const handleEditorMount = useCallback((editor, monaco) => {
     editorRef.current = editor
 
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyC, () => {
-      showClipboardBlockedToast()
-    })
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV, () => {
-      showClipboardBlockedToast()
-    })
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyX, () => {
-      showClipboardBlockedToast()
-    })
+    if (!allowClipboard) {
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyC, () => {
+        showClipboardBlockedToast()
+      })
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyV, () => {
+        showClipboardBlockedToast()
+      })
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyX, () => {
+        showClipboardBlockedToast()
+      })
 
-    const editorDom = editor.getDomNode()
-    if (editorDom) {
-      editorDom.addEventListener('contextmenu', (e) => {
-        e.preventDefault()
-        showClipboardBlockedToast()
-      })
-      editorDom.addEventListener('paste', (e) => {
-        e.preventDefault()
-        showClipboardBlockedToast()
-      })
-      editorDom.addEventListener('copy', (e) => {
-        e.preventDefault()
-        showClipboardBlockedToast()
-      })
-      editorDom.addEventListener('cut', (e) => {
-        e.preventDefault()
-        showClipboardBlockedToast()
-      })
+      const editorDom = editor.getDomNode()
+      if (editorDom) {
+        editorDom.addEventListener('contextmenu', (e) => {
+          e.preventDefault()
+          showClipboardBlockedToast()
+        })
+        editorDom.addEventListener('paste', (e) => {
+          e.preventDefault()
+          showClipboardBlockedToast()
+        })
+        editorDom.addEventListener('copy', (e) => {
+          e.preventDefault()
+          showClipboardBlockedToast()
+        })
+        editorDom.addEventListener('cut', (e) => {
+          e.preventDefault()
+          showClipboardBlockedToast()
+        })
+      }
     }
-  }, [showClipboardBlockedToast])
+  }, [allowClipboard, showClipboardBlockedToast])
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768)
@@ -454,10 +459,12 @@ export default function ChallengeEditor() {
             <div className="flex-1 flex flex-col overflow-hidden">
               {activeTab === 'editor' ? (
                 <div className="flex-1 flex flex-col relative">
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-900/30 border-b border-yellow-700/50">
-                    <ShieldAlert className="w-3.5 h-3.5 text-yellow-500" />
-                    <span className="text-xs text-yellow-400">Copy & paste is disabled for this challenge.</span>
-                  </div>
+                  {!allowClipboard && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-900/30 border-b border-yellow-700/50">
+                      <ShieldAlert className="w-3.5 h-3.5 text-yellow-500" />
+                      <span className="text-xs text-yellow-400">Copy & Paste is disabled for this challenge.</span>
+                    </div>
+                  )}
                   <div className="flex-1">
                     <Editor
                       height="100%"
@@ -501,10 +508,12 @@ export default function ChallengeEditor() {
               <div className="flex-1 flex flex-col border-r border-gray-700">
                 <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700">
                   <span className="text-sm font-medium text-gray-300">Code Editor</span>
-                  <div className="flex items-center gap-2 text-xs text-yellow-400">
-                    <ShieldAlert className="w-3.5 h-3.5 text-yellow-500" />
-                    Copy & paste disabled
-                  </div>
+                  {!allowClipboard && (
+                    <div className="flex items-center gap-2 text-xs text-yellow-400">
+                      <ShieldAlert className="w-3.5 h-3.5 text-yellow-500" />
+                      Copy & Paste disabled
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1">
                   <Editor
@@ -579,14 +588,17 @@ export default function ChallengeEditor() {
         submission={latestSubmission}
       />
 
-      {clipboardToast && (
+      {!allowClipboard && clipboardToast && (
         <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in">
           <div className="flex items-center gap-2 bg-red-900/90 text-red-100 px-4 py-2 rounded-lg shadow-lg border border-red-700">
             <ShieldAlert className="w-4 h-4" />
-            <span className="text-sm font-medium">Copy & paste is blocked</span>
+            <span className="text-sm font-medium">Copy & Paste is blocked</span>
           </div>
         </div>
       )}
     </>
   )
 }
+
+
+

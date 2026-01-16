@@ -1,7 +1,9 @@
+// Student page: Difficulty Selection.
 import { useNavigate, useParams } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import Layout from '../../components/Layout'
 
+// Student page logic for Difficulty Selection.
 const difficulties = [
   { id: 'beginner', name: 'Beginner', color: 'border-green-500', bg: 'bg-green-500/20', text: 'text-green-400' },
   { id: 'intermediate', name: 'Intermediate', color: 'border-yellow-500', bg: 'bg-yellow-500/20', text: 'text-yellow-400' },
@@ -70,3 +72,6 @@ export default function DifficultySelection() {
     </Layout>
   )
 }
+
+
+

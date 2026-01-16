@@ -1,9 +1,11 @@
+// Express routes for Grading endpoints.
 import express from 'express'
 import { authenticateToken } from '../middleware/auth.js'
 import { gradeSubmission } from '../services/canonical/gradingEngine.js'
 import { getTestCases, getCacheStats as getCanonicalCacheStats } from '../services/canonical/testFetcher.js'
 import Challenge from '../models/Challenge.js'
 
+// Route handlers for Grading APIs.
 const router = express.Router()
 
 router.post('/grade', authenticateToken, async (req, res) => {
@@ -163,3 +165,6 @@ router.get('/sync-status', authenticateToken, async (req, res) => {
 })
 
 export default router
+
+
+

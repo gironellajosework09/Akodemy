@@ -1,19 +1,36 @@
+// Email helper for OTP delivery.
 import nodemailer from "nodemailer";
 
-const GMAIL_USER = "akodemy.aeoncarde@gmail.com";
-const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
+// Service logic for Email Service.
+const DEFAULT_GMAIL_USER = "akodemy.aeoncarde@gmail.com";
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: GMAIL_USER,
-    pass: GMAIL_APP_PASSWORD,
-  },
-});
+function createTransporter(user) {
+  const appPassword = process.env.GMAIL_APP_PASSWORD;
+  if (!appPassword) {
+    throw new Error("GMAIL_APP_PASSWORD is not set");
+  }
+
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user,
+      pass: appPassword,
+    },
+  });
+}
 
 export async function sendOtpEmail(toEmail, otpCode) {
+  const gmailUser = process.env.GMAIL_USER || DEFAULT_GMAIL_USER;
+  let transporter;
+  try {
+    transporter = createTransporter(gmailUser);
+  } catch (error) {
+    console.error("Email configuration error:", error);
+    return { success: false, error: "Email service not configured" };
+  }
+
   const mailOptions = {
-    from: `"Akodemy" <${GMAIL_USER}>`,
+    from: `"Akodemy" <${gmailUser}>`,
     to: toEmail,
     subject: "Akodemy - Password Reset Code",
     html: `
@@ -64,3 +81,6 @@ export function generateOtp() {
   }
   return otp;
 }
+
+
+

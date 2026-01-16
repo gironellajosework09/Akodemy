@@ -1,9 +1,11 @@
+// Sync canonical tests into storage.
 import axios from 'axios'
 import mongoose from 'mongoose'
 import dotenv from 'dotenv'
 import { fileURLToPath } from 'url'
 import path from 'path'
 
+// Service logic for Sync Canonical Tests.
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
@@ -242,3 +244,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 }
 
 export { syncAllCanonicalTests, fetchCanonicalData, flattenCases }
+
+
+

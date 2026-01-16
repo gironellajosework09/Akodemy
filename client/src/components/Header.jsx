@@ -1,9 +1,11 @@
+// UI component: Header.
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { User, LogOut, Code2, Home } from 'lucide-react'
 import ConfirmDialog from './ConfirmDialog'
 
+// Component logic for Header.
 export default function Header() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
@@ -68,3 +70,6 @@ export default function Header() {
     </>
   )
 }
+
+
+

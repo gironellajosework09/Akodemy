@@ -1,9 +1,11 @@
+// Login and password reset flow UI.
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Eye, EyeOff, Code2, ArrowLeft, Check, X, AlertCircle } from 'lucide-react'
 import api from '../services/api'
 
+// Page logic for Login.
 function PasswordStrengthIndicator({ password }) {
   const getStrength = () => {
     let score = 0
@@ -178,7 +180,7 @@ export default function Login() {
     setLoading(true)
     
     try {
-      const response = await api.post('/auth/forgot-password', { email })
+      const response = await api.post('/api/auth/forgot-password', { email })
       setOtpExpiry(response.data.expiresAt)
       setMode('otp')
       setSuccess('OTP sent to your email')
@@ -220,7 +222,7 @@ export default function Login() {
     setError('')
     
     try {
-      const response = await api.post('/auth/verify-otp', { email, otp: otpCode })
+      const response = await api.post('/api/auth/verify-otp', { email, otp: otpCode })
       setResetToken(response.data.resetToken)
       setShowConfirmDialog(true)
     } catch (err) {
@@ -244,7 +246,7 @@ export default function Login() {
     setOtp(['', '', '', '', '', ''])
     
     try {
-      const response = await api.post('/auth/resend-otp', { email })
+      const response = await api.post('/api/auth/resend-otp', { email })
       setOtpExpiry(response.data.expiresAt)
       setSuccess('New OTP sent to your email')
     } catch (err) {
@@ -266,7 +268,7 @@ export default function Login() {
     setLoading(true)
     
     try {
-      await api.post('/auth/reset-password', {
+      await api.post('/api/auth/reset-password', {
         resetToken,
         newPassword,
         confirmPassword
@@ -723,3 +725,6 @@ export default function Login() {
     </div>
   )
 }
+
+
+

@@ -1,3 +1,4 @@
+// Production server with API routes and static client.
 import express from 'express'
 import cors from 'cors'
 import mongoose from 'mongoose'
@@ -45,3 +46,5 @@ app.get('*', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Production server running on port ${PORT}`)
 })
+
+

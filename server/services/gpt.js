@@ -1,5 +1,7 @@
+// OpenAI helper for rephrasing error messages.
 import OpenAI from 'openai'
 
+// Service logic for Gpt.
 let openai = null
 
 if (process.env.OPENAI_API_KEY) {
@@ -72,3 +74,6 @@ function generateBasicHint(errorMessage, language) {
 
   return 'There\'s an error in your code. Review your logic and syntax carefully.'
 }
+
+
+
