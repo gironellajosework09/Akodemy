@@ -377,7 +377,7 @@ export default function Login() {
               </div>
             )}
 
-            {error && (
+            {error && mode !== 'login' && (
               <div className="bg-red-500/10 border border-red-500/50 text-red-400 p-3 rounded-lg mb-4 text-sm flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 {error}
@@ -426,6 +426,12 @@ export default function Login() {
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
+                  {loginError && error && (
+                    <div className="mt-2 flex items-center gap-2 text-xs text-red-400">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      <span>{error}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex justify-end">

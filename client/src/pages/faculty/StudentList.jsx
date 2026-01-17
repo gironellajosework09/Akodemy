@@ -1,16 +1,20 @@
 // Faculty page: Student List.
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, User, Trophy, Award, Eye } from 'lucide-react'
+import { Search, User, Trophy, Award, Eye, Download } from 'lucide-react'
 import Layout from '../../components/Layout'
 import LoadingSpinner from '../../components/LoadingSpinner'
 import api from '../../services/api'
+import html2canvas from 'html2canvas'
+import jsPDF from 'jspdf'
 
 export default function StudentList() {
   const navigate = useNavigate()
   const [students, setStudents] = useState([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
+  const [downloading, setDownloading] = useState(false)
+  const pdfRef = useRef(null)
 
   useEffect(() => {
     fetchStudents()
@@ -39,6 +43,58 @@ export default function StudentList() {
     return 'text-gray-500'
   }
 
+  const getProgressBadgeColor = (value) => {
+    if (value >= 80) return 'bg-green-100 text-green-700'
+    if (value >= 50) return 'bg-yellow-100 text-yellow-700'
+    if (value > 0) return 'bg-orange-100 text-orange-700'
+    return 'bg-gray-100 text-gray-600'
+  }
+
+  const getAverageProgress = (student) => {
+    const js = Number(student.progress?.javascript || 0)
+    const py = Number(student.progress?.python || 0)
+    const java = Number(student.progress?.java || 0)
+    return Math.round((js + py + java) / 3)
+  }
+
+  const downloadPDF = async () => {
+    if (!pdfRef.current) return
+    setDownloading(true)
+
+    try {
+      const pages = Array.from(pdfRef.current.querySelectorAll('[data-pdf-page]'))
+      if (pages.length === 0) return
+
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const pdfWidth = pdf.internal.pageSize.getWidth()
+      const pdfHeight = pdf.internal.pageSize.getHeight()
+      const margin = 10
+      const imgWidth = pdfWidth - margin * 2
+      const maxHeight = pdfHeight - margin * 2
+
+      for (let i = 0; i < pages.length; i++) {
+        const canvas = await html2canvas(pages[i], {
+          backgroundColor: '#ffffff',
+          scale: 2,
+          useCORS: true
+        })
+
+        const imgHeight = (canvas.height * imgWidth) / canvas.width
+        const imgData = canvas.toDataURL('image/png')
+        const finalHeight = Math.min(imgHeight, maxHeight)
+
+        if (i > 0) pdf.addPage()
+        pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, finalHeight)
+      }
+
+      pdf.save('student-analytics-summary.pdf')
+    } catch (error) {
+      console.error('Failed to generate PDF:', error)
+    } finally {
+      setDownloading(false)
+    }
+  }
+
   if (loading) {
     return (
       <Layout>
@@ -47,20 +103,62 @@ export default function StudentList() {
     )
   }
 
+  const languages = ['javascript', 'python', 'java']
+  const pdfDate = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit'
+  })
+  const totalStudents = students.length
+  const averageProgress = totalStudents
+    ? Math.round(students.reduce((sum, student) => sum + getAverageProgress(student), 0) / totalStudents)
+    : 0
+  const averageBadges = totalStudents
+    ? (students.reduce((sum, student) => sum + (student.badgeCount || 0), 0) / totalStudents).toFixed(1)
+    : '0.0'
+  const languageStats = languages.map((lang) => {
+    const values = students.map(student => Number(student.progress?.[lang] || 0))
+    const avg = values.length ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length) : 0
+    const mastered = values.filter(value => value >= 80).length
+    const developing = values.filter(value => value >= 50 && value < 80).length
+    const needsPractice = values.filter(value => value > 0 && value < 50).length
+    const notStarted = values.filter(value => value === 0).length
+
+    return { lang, avg, mastered, developing, needsPractice, notStarted }
+  })
+  const topPerformers = [...students]
+    .sort((a, b) => getAverageProgress(b) - getAverageProgress(a))
+    .slice(0, 3)
+  const rowsPerPage = 20
+  const studentChunks = []
+  for (let i = 0; i < students.length; i += rowsPerPage) {
+    studentChunks.push(students.slice(i, i + rowsPerPage))
+  }
+
   return (
     <Layout>
       <div className="container mx-auto px-4 sm:px-8 py-6 sm:py-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-white mb-4 sm:mb-6">Student List</h1>
 
-        <div className="relative mb-4 sm:mb-6 w-full sm:max-w-md">
-          <input
-            type="text"
-            placeholder="Search by name or email..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg pr-10 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-akodemy-purple focus:border-transparent"
-          />
-          <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-6">
+          <div className="relative w-full sm:max-w-md">
+            <input
+              type="text"
+              placeholder="Search by name or email..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg pr-10 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-akodemy-purple focus:border-transparent"
+            />
+            <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
+          </div>
+          <button
+            onClick={downloadPDF}
+            disabled={downloading || students.length === 0}
+            className="flex items-center justify-center gap-2 bg-akodemy-purple text-white px-4 py-2.5 rounded-lg font-semibold hover:bg-purple-700 disabled:opacity-50 transition text-sm"
+          >
+            <Download className="w-4 h-4" />
+            {downloading ? 'Generating...' : 'Download PDF'}
+          </button>
         </div>
 
         <div className="hidden lg:block bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
@@ -297,6 +395,161 @@ export default function StudentList() {
             Showing {filteredStudents.length} of {students.length} students
           </p>
         )}
+
+        <div
+          ref={pdfRef}
+          className="fixed left-[-9999px] top-0 w-[794px] bg-white text-gray-900 p-10"
+        >
+          <div data-pdf-page>
+            <div className="flex items-start justify-between border-b border-gray-200 pb-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Akodemy</p>
+                <h1 className="text-2xl font-bold text-gray-900">Student Analytics Summary</h1>
+                <p className="text-xs text-gray-500">Generated {pdfDate}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-gray-500">Total Students</p>
+                <p className="text-lg font-semibold text-gray-900">{totalStudents}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 mt-5">
+              <div className="border border-gray-200 rounded-lg p-3">
+                <p className="text-xs text-gray-500">Average Progress</p>
+                <p className="text-lg font-semibold text-gray-900">{averageProgress}%</p>
+              </div>
+              <div className="border border-gray-200 rounded-lg p-3">
+                <p className="text-xs text-gray-500">Average Badges</p>
+                <p className="text-lg font-semibold text-gray-900">{averageBadges}</p>
+              </div>
+              <div className="border border-gray-200 rounded-lg p-3">
+                <p className="text-xs text-gray-500">Top Performer</p>
+                <p className="text-sm font-semibold text-gray-900">{topPerformers[0]?.name || 'N/A'}</p>
+                <p className="text-xs text-gray-500">{topPerformers[0] ? `${getAverageProgress(topPerformers[0])}% avg` : ''}</p>
+              </div>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              <h2 className="text-sm font-semibold text-gray-700 uppercase">Language Performance</h2>
+              <div className="grid grid-cols-3 gap-4">
+                {languageStats.map((stat) => (
+                  <div key={stat.lang} className="border border-gray-200 rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold uppercase text-gray-700">{stat.lang}</span>
+                      <span className="text-xs text-gray-500">{stat.avg}% avg</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
+                      <div
+                        className="h-full bg-akodemy-purple"
+                        style={{ width: `${stat.avg}%` }}
+                      ></div>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-gray-500">
+                      <span>Mastered: {stat.mastered}</span>
+                      <span>Developing: {stat.developing}</span>
+                      <span>Needs practice: {stat.needsPractice}</span>
+                      <span>Not started: {stat.notStarted}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <h2 className="text-sm font-semibold text-gray-700 uppercase mb-3">Top Performers</h2>
+              <div className="grid grid-cols-3 gap-3">
+                {topPerformers.map((student, index) => (
+                  <div key={`${student._id}-top`} className="border border-gray-200 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] uppercase text-gray-400">Rank {index + 1}</span>
+                      <span className="text-[10px] text-gray-500">{getAverageProgress(student)}% avg</span>
+                    </div>
+                    <p className="text-xs font-semibold text-gray-900">{student.name}</p>
+                    <p className="text-[10px] text-gray-500">{student.email}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {studentChunks.length === 0 ? (
+            <div data-pdf-page className="mt-6">
+              <h2 className="text-sm font-semibold text-gray-700 uppercase mb-3">Student Breakdown</h2>
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                <table className="w-full text-[11px]">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="text-left px-3 py-2 text-gray-600">Student</th>
+                      <th className="text-center px-2 py-2 text-gray-600">JS</th>
+                      <th className="text-center px-2 py-2 text-gray-600">Python</th>
+                      <th className="text-center px-2 py-2 text-gray-600">Java</th>
+                      <th className="text-center px-2 py-2 text-gray-600">Avg</th>
+                      <th className="text-center px-2 py-2 text-gray-600">Badges</th>
+                      <th className="text-left px-3 py-2 text-gray-600">Title</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td colSpan={7} className="px-3 py-6 text-center text-gray-500">
+                        No students found
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            studentChunks.map((chunk, chunkIndex) => (
+              <div key={`chunk-${chunkIndex}`} data-pdf-page className="mt-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-sm font-semibold text-gray-700 uppercase">Student Breakdown</h2>
+                  <span className="text-xs text-gray-400">Page {chunkIndex + 1} of {studentChunks.length}</span>
+                </div>
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <table className="w-full text-[11px]">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="text-left px-3 py-2 text-gray-600">Student</th>
+                        <th className="text-center px-2 py-2 text-gray-600">JS</th>
+                        <th className="text-center px-2 py-2 text-gray-600">Python</th>
+                        <th className="text-center px-2 py-2 text-gray-600">Java</th>
+                        <th className="text-center px-2 py-2 text-gray-600">Avg</th>
+                        <th className="text-center px-2 py-2 text-gray-600">Badges</th>
+                        <th className="text-left px-3 py-2 text-gray-600">Title</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {chunk.map((student, index) => {
+                        const js = Number(student.progress?.javascript || 0)
+                        const py = Number(student.progress?.python || 0)
+                        const java = Number(student.progress?.java || 0)
+                        const avg = getAverageProgress(student)
+                        return (
+                          <tr key={`${student._id}-pdf-${chunkIndex}-${index}`} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                            <td className="px-3 py-2 text-gray-800">
+                              <div className="font-semibold">{student.name}</div>
+                              <div className="text-[10px] text-gray-500">{student.email}</div>
+                            </td>
+                            <td className="text-center px-2 py-2 text-gray-700">{js}%</td>
+                            <td className="text-center px-2 py-2 text-gray-700">{py}%</td>
+                            <td className="text-center px-2 py-2 text-gray-700">{java}%</td>
+                            <td className="text-center px-2 py-2">
+                              <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${getProgressBadgeColor(avg)}`}>
+                                {avg}%
+                              </span>
+                            </td>
+                            <td className="text-center px-2 py-2 text-gray-700">{student.badgeCount || 0}</td>
+                            <td className="px-3 py-2 text-gray-700">{student.equippedTitle?.badgeName || '-'}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </Layout>
   )

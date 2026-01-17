@@ -27,7 +27,7 @@ export default function Profile() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [downloading, setDownloading] = useState(false)
-  const achievementsRef = useRef(null)
+  const pdfRef = useRef(null)
 
   useEffect(() => {
     fetchProgress()
@@ -93,23 +93,62 @@ export default function Profile() {
   }
 
   const downloadPDF = async () => {
-    if (!achievementsRef.current) return
+    if (!pdfRef.current) return
     setDownloading(true)
     
     try {
-      const canvas = await html2canvas(achievementsRef.current, {
-        backgroundColor: '#111827',
-        scale: 2
+      const canvas = await html2canvas(pdfRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true
       })
-      
-      const imgData = canvas.toDataURL('image/png')
+
       const pdf = new jsPDF('p', 'mm', 'a4')
       const pdfWidth = pdf.internal.pageSize.getWidth()
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width
-      
-      pdf.setFillColor(17, 24, 39)
-      pdf.rect(0, 0, pdfWidth, pdf.internal.pageSize.getHeight(), 'F')
-      pdf.addImage(imgData, 'PNG', 0, 10, pdfWidth, pdfHeight)
+      const pdfHeight = pdf.internal.pageSize.getHeight()
+      const margin = 10
+      const imgWidth = pdfWidth - margin * 2
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      const pageHeight = pdfHeight - margin * 2
+
+      if (imgHeight <= pageHeight) {
+        const imgData = canvas.toDataURL('image/png')
+        pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight)
+      } else {
+        const pageHeightPx = Math.floor(canvas.width * pageHeight / imgWidth)
+        let offsetY = 0
+        let pageIndex = 0
+
+        while (offsetY < canvas.height) {
+          const pageCanvas = document.createElement('canvas')
+          const pageHeightPxActual = Math.min(pageHeightPx, canvas.height - offsetY)
+          pageCanvas.width = canvas.width
+          pageCanvas.height = pageHeightPxActual
+
+          const ctx = pageCanvas.getContext('2d')
+          if (!ctx) break
+          ctx.drawImage(
+            canvas,
+            0,
+            offsetY,
+            canvas.width,
+            pageHeightPxActual,
+            0,
+            0,
+            canvas.width,
+            pageHeightPxActual
+          )
+
+          const pageImgData = pageCanvas.toDataURL('image/png')
+          const pageImgHeight = (pageCanvas.height * imgWidth) / pageCanvas.width
+
+          if (pageIndex > 0) pdf.addPage()
+          pdf.addImage(pageImgData, 'PNG', margin, margin, imgWidth, pageImgHeight)
+          offsetY += pageHeightPx
+          pageIndex++
+        }
+      }
+
       pdf.save(`${user?.name || 'student'}-achievements.pdf`)
     } catch (error) {
       console.error('Failed to generate PDF:', error)
@@ -119,6 +158,11 @@ export default function Profile() {
   }
 
   const languages = ['javascript', 'python', 'java']
+  const pdfDate = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit'
+  })
 
   const getMasteryInfo = (percentage, hasActivity) => {
     if (!hasActivity || percentage === 0) {
@@ -307,7 +351,7 @@ export default function Profile() {
                   </button>
                 </div>
 
-                <div ref={achievementsRef} className="space-y-8 sm:space-y-12">
+                <div className="space-y-8 sm:space-y-12">
                   {loading ? (
                     <div className="flex justify-center py-12">
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-akodemy-purple"></div>
@@ -385,6 +429,104 @@ export default function Profile() {
                       )
                     })
                   )}
+                </div>
+
+                <div
+                  ref={pdfRef}
+                  className="fixed left-[-9999px] top-0 w-[794px] bg-white text-gray-900 p-10"
+                >
+                  <div className="flex items-start justify-between border-b border-gray-200 pb-4">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Akodemy</p>
+                      <h1 className="text-2xl font-bold text-gray-900">Achievement Report</h1>
+                      <p className="text-xs text-gray-500">Generated {pdfDate}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold text-gray-900">{user?.name || 'Student'}</p>
+                      <p className="text-xs text-gray-500">{user?.email || ''}</p>
+                      <p className="text-xs text-gray-500">UID: {user?._id?.slice(-10) || 'XXXXXXXXXX'}</p>
+                      <p className="text-xs text-gray-500">Badge: {equippedBadge?.badgeName || 'None'}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3 mt-5">
+                    {languages.map((lang) => {
+                      const summary = progress?.summary?.[lang] || { completed: 0, total: 0 }
+                      return (
+                        <div key={`${lang}-summary`} className="border border-gray-200 rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-semibold uppercase text-gray-700">{lang}</span>
+                            <span className="text-xs text-gray-500">{summary.completed}/{summary.total}</span>
+                          </div>
+                          <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
+                            <div
+                              className="h-full bg-akodemy-purple"
+                              style={{ width: summary.total > 0 ? `${Math.round((summary.completed / summary.total) * 100)}%` : '0%' }}
+                            ></div>
+                          </div>
+                          <p className="text-[11px] text-gray-500 mt-2">Completed challenges</p>
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  <div className="mt-6 space-y-6">
+                    {loading ? (
+                      <p className="text-sm text-gray-500">Loading achievement data...</p>
+                    ) : (
+                      languages.map((lang) => {
+                        const langProgress = progress?.competencies?.[lang] || []
+                        const summary = progress?.summary?.[lang] || { completed: 0, total: 0 }
+
+                        return (
+                          <div key={`${lang}-details`} className="border border-gray-200 rounded-xl p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6">
+                                  <img
+                                    src={getLanguageIcon(lang)}
+                                    alt={lang}
+                                    className="w-full h-full object-contain"
+                                  />
+                                </div>
+                                <h2 className="text-sm font-semibold uppercase text-gray-800">{lang}</h2>
+                              </div>
+                              <span className="text-xs text-gray-500">{summary.completed} / {summary.total} completed</span>
+                            </div>
+
+                            {langProgress.length === 0 ? (
+                              <p className="text-xs text-gray-500">No activity yet.</p>
+                            ) : (
+                              <div className="space-y-2">
+                                {langProgress.map((comp) => {
+                                  const mastery = getMasteryInfo(comp.percentage, comp.hasActivity)
+
+                                  return (
+                                    <div key={`${lang}-${comp.index}`} className="flex items-center gap-3">
+                                      <span className="text-xs text-gray-700 w-44">{comp.name}</span>
+                                      <div className="flex-1">
+                                        <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
+                                          {comp.percentage > 0 && (
+                                            <div
+                                              className={`h-full ${mastery.color}`}
+                                              style={{ width: `${comp.percentage}%` }}
+                                            ></div>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <span className="text-xs text-gray-500 w-14 text-right">
+                                        {comp.completed}/{comp.total}
+                                      </span>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })
+                    )}
+                  </div>
                 </div>
               </div>
             )}

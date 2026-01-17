@@ -123,7 +123,6 @@ export default function StudentProfileView() {
   }
 
   const badgeCounts = getBadgeCounts()
-
   return (
     <Layout>
       <div className="container mx-auto px-4 py-4 lg:px-8 lg:py-8">
@@ -173,7 +172,7 @@ export default function StudentProfileView() {
               </div>
             </div>
 
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 lg:p-6">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 lg:p-6 mt-0">
               <div className="flex items-center gap-2 mb-4">
                 <Award className="w-5 h-5 text-akodemy-gold" />
                 <h3 className="font-semibold text-white">Badge Summary</h3>
@@ -224,10 +223,6 @@ export default function StudentProfileView() {
             </div>
 
             <div className={`space-y-4 ${activeTab !== 'badges' ? 'hidden lg:block' : ''}`}>
-              <div className="flex items-center gap-2 mb-4">
-                <Trophy className="w-6 h-6 text-akodemy-gold" />
-                <h2 className="text-xl font-bold text-white">Badges & Achievements</h2>
-              </div>
 
               {languages.map((lang) => {
                 const langInfo = LANGUAGE_DISPLAY[lang]
@@ -278,7 +273,7 @@ export default function StudentProfileView() {
                         return (
                           <div
                             key={badge.key}
-                            className={`flex items-center justify-between gap-4 p-4 rounded-lg border ${
+                            className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 rounded-lg border ${
                               badge.equipped
                                 ? 'bg-akodemy-gold/10 border-akodemy-gold/50'
                                 : isClaimed
@@ -288,7 +283,7 @@ export default function StudentProfileView() {
                                     : 'bg-gray-700/30 border-gray-600/50'
                             } ${isLocked ? 'opacity-70' : ''}`}
                           >
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0 w-full">
                               <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
                                 isLocked ? 'bg-gray-600' : langInfo.bgColor
                               }`}>
@@ -314,7 +309,7 @@ export default function StudentProfileView() {
                                 
                                 {isLocked && badge.total > 0 && (
                                   <div className="flex items-center gap-2 mt-1.5">
-                                    <div className="flex-1 max-w-[150px] bg-gray-600 rounded-full h-1.5 overflow-hidden">
+                                    <div className="flex-1 max-w-full sm:max-w-[150px] bg-gray-600 rounded-full h-1.5 overflow-hidden">
                                       <div
                                         className="h-full bg-akodemy-purple rounded-full"
                                         style={{ width: `${(badge.completed / badge.total) * 100}%` }}
@@ -328,7 +323,7 @@ export default function StudentProfileView() {
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-start sm:justify-end">
                               <span className={`inline-flex items-center text-xs px-2 py-1 rounded-full border ${diffChip.bgColor} ${diffChip.textColor} ${diffChip.borderColor}`}>
                                 {diffChip.label}
                               </span>
@@ -405,9 +400,9 @@ export default function StudentProfileView() {
                         {langData.length > 0 ? langData.map((comp) => {
                           const mastery = getMasteryLevel(comp.percentage, comp.hasActivity)
                           return (
-                            <div key={comp.name} className="flex items-center gap-4">
-                              <span className="w-48 text-sm text-gray-300 flex-shrink-0">{comp.name}</span>
-                              <div className="flex-1 bg-gray-700 rounded-full h-4 overflow-hidden">
+                            <div key={comp.name} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                              <span className="text-sm text-gray-300 sm:w-48 sm:flex-shrink-0">{comp.name}</span>
+                              <div className="w-full sm:flex-1 bg-gray-700 rounded-full h-4 overflow-hidden">
                                 {comp.percentage > 0 && (
                                   <div
                                     className={`h-4 rounded-full ${mastery.color} transition-all duration-500`}
@@ -415,7 +410,7 @@ export default function StudentProfileView() {
                                   />
                                 )}
                               </div>
-                              <span className="text-xs text-gray-400 w-12 text-right">
+                              <span className="text-xs text-gray-400 sm:w-12 sm:text-right self-end sm:self-auto">
                                 {comp.completed}/{comp.total}
                               </span>
                             </div>
@@ -425,7 +420,7 @@ export default function StudentProfileView() {
                         )}
                       </div>
                       
-                      <div className="flex items-center gap-6 mt-4 pt-4 border-t border-gray-700 justify-center">
+                      <div className="flex flex-wrap items-center gap-3 sm:gap-6 mt-4 pt-4 border-t border-gray-700 justify-center">
                         <div className="flex items-center gap-2">
                           <div className="w-3 h-3 rounded-full bg-gray-600"></div>
                           <span className="text-xs text-gray-500">Not Started</span>
