@@ -67,6 +67,27 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- January 17, 2026: Responsive Faculty Student Profile View
+  - Mobile (≤480px):
+    - Tab navigation to switch between Badges and Competencies sections
+    - Collapsible filter panel with toggle button
+    - Accordion-style competency sections (tap to expand/collapse)
+    - Smaller fonts, padding, and icons for better fit
+    - Stacked layout (profile sidebar on top, content below)
+    - Single-column badge grid
+  - Tablet (481-1024px):
+    - Two-column badge grid
+    - Sidebar and content stack vertically
+    - Inline competency progress bars
+    - Filters visible inline
+  - Desktop (≥1025px):
+    - Three-column badge grid
+    - Two-column layout (fixed sidebar + main content)
+    - All filters visible inline
+    - Full competency details always visible
+  - Clear Filters button when filters are active
+  - All elements scale proportionally with responsive spacing
+
 - January 17, 2026: Enhanced Faculty Dashboard & Student List
   - New analytics API endpoints (faculty-only):
     - GET /api/faculty/analytics/overview - KPIs with date range filtering (7/30/90 days)
