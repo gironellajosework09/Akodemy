@@ -67,6 +67,12 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- January 17, 2026: UX Improvements - Navigation Flow & Transitions
+  - Next Challenge Flow: "Next" button in result modal now shows instructions first (same as "Retry")
+  - Smooth Transitions: Added CSS animations (fade-in, modal-in, slide-up, shake) to all modals
+  - Accessibility: Animations respect prefers-reduced-motion preference
+  - Login Error UX: Error messages shown without clearing inputs, red border and shake on error, focus management
+
 - January 17, 2026: Gamified Badging & Title System
   - Badge Model: Stores badges with status (claimable/claimed) and equipped flag
   - Badge States: locked -> claimable (on completion) -> claimed (manual) -> equipped (active title)
