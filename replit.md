@@ -1,0 +1,65 @@
+# Akodemy
+
+## Overview
+
+Akodemy is a coding challenge platform designed for learning and practicing programming skills. It provides interactive coding exercises sourced from Exercism, supports multiple programming languages (JavaScript, Python, Java), and includes features for both students and faculty. The platform enables code execution, automated grading, progress tracking, and competency-based learning paths.
+
+## User Preferences
+
+Preferred communication style: Simple, everyday language.
+
+## System Architecture
+
+### Frontend Architecture
+- **Framework**: React 18 with Vite as the build tool
+- **Styling**: Tailwind CSS with custom color theme (purple/gold branding)
+- **Code Editor**: Monaco Editor (@monaco-editor/react) for in-browser coding
+- **Routing**: React Router DOM for client-side navigation
+- **HTTP Client**: Axios with interceptors for API calls and auth token handling
+- **Charts**: Recharts for progress visualization
+- **Icons**: Lucide React for UI icons
+
+### Backend Architecture
+- **Runtime**: Node.js with Express.js
+- **API Design**: RESTful endpoints organized by domain (auth, challenges, execute, progress, faculty, grading)
+- **Authentication**: JWT-based with middleware for protected routes and role-based access (student/faculty)
+- **Code Execution**: Integration with Judge0 API for sandboxed code execution
+- **AI Integration**: OpenAI GPT for rephrasing error messages into beginner-friendly hints
+
+### Data Storage
+- **Database**: MongoDB with Mongoose ODM
+- **Collections**:
+  - Users (with competency tracking per language)
+  - Challenges (with test cases, starter code, difficulty levels)
+  - Submissions (code attempts with status and results)
+  - ChallengeAnswers/LatestAnswers (tracking student progress)
+  - OTPs (for password reset functionality)
+
+### External Content Sync
+- **Exercism Integration**: Scripts to sync exercises, tests, and templates from Exercism's GitHub repositories
+- **Canonical Test Cache**: Local cache of Exercism's canonical test data in `server/canonical-cache/`
+- **Test Formats**: Support for TOML-based test specifications and language-specific test file formats
+
+### Key Design Patterns
+- **Monorepo Structure**: Single repository with separate client/server packages
+- **Proxy Configuration**: Vite dev server proxies `/api` requests to backend (port 5175)
+- **Competency Indexing**: Challenges mapped to 6 competency areas per language
+- **Multi-language Support**: Unified grading system with language-specific test generators
+
+## External Dependencies
+
+### Third-Party APIs
+- **Judge0**: Code execution sandbox service for running student code safely
+- **OpenAI**: GPT-3.5 for generating helpful error message hints
+- **GitHub API**: Fetching Exercism exercise content and test specifications
+
+### Email Service
+- **Nodemailer**: Gmail SMTP for sending OTP codes during password reset
+- **Environment Variables**: `GMAIL_APP_PASSWORD` and optional `GMAIL_USER`
+
+### Database
+- **MongoDB**: Primary data store (connection via `MONGODB_URI` environment variable)
+
+### Content Source
+- **Exercism**: Open-source coding exercises from exercism.org repositories
+- **Canonical Data**: JSON-formatted test specifications cached locally for offline grading
