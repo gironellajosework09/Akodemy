@@ -67,6 +67,31 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- January 17, 2026: Enhanced Faculty Dashboard & Student List
+  - New analytics API endpoints (faculty-only):
+    - GET /api/faculty/analytics/overview - KPIs with date range filtering (7/30/90 days)
+    - GET /api/faculty/analytics/trends - Submission volume over time by date
+    - GET /api/faculty/analytics/challenges - Most attempted/hardest challenges with language filter
+    - GET /api/faculty/analytics/students - Top performers, needs attention, recent activity
+    - GET /api/faculty/analytics/badges - Badge distribution by language/difficulty
+  - Faculty Dashboard UI:
+    - Overview KPIs: total students, submissions, challenges, pass rate, badges claimed
+    - Charts: submission trends (line/bar), badge distribution (donut/bar)
+    - Challenge analytics: most attempted, hardest, highest fail rate
+    - Student insights: top performers, needs help, recently active
+    - Date range and language filters
+  - Student List improvements:
+    - Title column showing equipped badge title with gold styling
+    - Responsive design: desktop (full table), tablet (condensed), mobile (cards)
+    - Search functionality for name/email
+  - LoadingSpinner component:
+    - Three variants: LoadingSpinner (centered), InlineSpinner, ContentSpinner
+    - Valid Tailwind classes with border-t-transparent for proper animation
+  - Performance optimization:
+    - All faculty endpoints use Promise.all for batched queries
+    - No N+1 query patterns in student profile or list endpoints
+    - Analytics endpoints filter before sorting/limiting for accuracy
+
 - January 17, 2026: Faculty Student Profile with Badges
   - New API endpoint: GET /api/faculty/students/:studentId/profile
   - Returns student info, equippedTitle, badges array, and badgeProgress for all 9 badge slots
