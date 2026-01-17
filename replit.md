@@ -70,22 +70,21 @@ Preferred communication style: Simple, everyday language.
 - January 17, 2026: Responsive Faculty Student Profile View
   - Mobile (≤480px):
     - Tab navigation to switch between Badges and Competencies sections
-    - Collapsible filter panel with toggle button
-    - Accordion-style competency sections (tap to expand/collapse)
+    - Accordion-style sections for both Badges and Competencies (tap to expand/collapse)
     - Smaller fonts, padding, and icons for better fit
     - Stacked layout (profile sidebar on top, content below)
-    - Single-column badge grid
-  - Tablet (481-1024px):
-    - Two-column badge grid
-    - Sidebar and content stack vertically
-    - Inline competency progress bars
-    - Filters visible inline
-  - Desktop (≥1025px):
-    - Three-column badge grid
-    - Two-column layout (fixed sidebar + main content)
-    - All filters visible inline
-    - Full competency details always visible
-  - Clear Filters button when filters are active
+  - Tablet/Desktop:
+    - Sidebar and content side-by-side on desktop
+    - All accordions work smoothly
+  - Badges Section Refactored (Accordion Layout):
+    - Languages (JavaScript, Python, Java) as clickable accordion headers
+    - Inside each language: 3 badge rows (Easy/Intermediate/Advanced)
+    - Badge row design:
+      - Left: Badge icon + badge name + EQUIPPED tag if equipped
+      - Right: Level chip (Easy/Intermediate/Advanced) + Status chip (Claimed/Claimable/Locked)
+      - Progress bar for locked badges showing completion
+    - Always shows all 9 badges (3 per language) with fallback default names
+  - Competencies Section: Same accordion pattern per language
   - All elements scale proportionally with responsive spacing
 
 - January 17, 2026: Enhanced Faculty Dashboard & Student List
