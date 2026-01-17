@@ -87,13 +87,28 @@ function flattenCases(data, results = [], parentDesc = '') {
   return results
 }
 
+function normalizeValue(value) {
+  if (value === null || value === undefined) return null
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value
+  if (Array.isArray(value)) return value.map(normalizeValue)
+  if (typeof value === 'object') {
+    if (value.error !== undefined) return { error: String(value.error) }
+    const normalized = {}
+    for (const [k, v] of Object.entries(value)) {
+      normalized[k] = normalizeValue(v)
+    }
+    return normalized
+  }
+  return value
+}
+
 function convertToTestCase(canonicalCase) {
   return {
     uuid: canonicalCase.uuid,
     description: canonicalCase.description || 'Test case',
     property: canonicalCase.property,
-    input: canonicalCase.input,
-    expected: canonicalCase.expected
+    input: normalizeValue(canonicalCase.input),
+    expected: normalizeValue(canonicalCase.expected)
   }
 }
 
