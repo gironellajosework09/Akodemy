@@ -63,3 +63,21 @@ Preferred communication style: Simple, everyday language.
 ### Content Source
 - **Exercism**: Open-source coding exercises from exercism.org repositories
 - **Canonical Data**: JSON-formatted test specifications cached locally for offline grading
+
+## Recent Changes
+
+- January 17, 2026: Enhanced Autograder Pipeline
+  - Test Alignment Analyzer: Compares platform tests vs Exercism canonical data
+  - Canonical Test Converter: Strict normalization and sync from canonical-data.json
+  - Execution Contract: Defines strict input/output/error handling and scoring rules
+  - Score Verification Service: Detects score mismatches between stored and computed values
+  - ScoreMismatchLog Model: Persists mismatch events to MongoDB for audit
+  - New API endpoints (faculty-only):
+    - POST /api/grading/analyze-alignment - Analyze test alignment
+    - POST /api/grading/convert-tests - Convert and sync tests for exercise
+    - POST /api/grading/sync-all-tests - Sync all tests for language
+    - POST /api/grading/verify-scores - Verify recent submissions
+    - POST /api/grading/verify-submission/:id - Verify specific submission
+    - GET /api/grading/mismatch-logs - View score mismatch logs
+    - GET /api/grading/execution-contract - View grading contract spec
+  - Unit tests for converter and execution contract logic

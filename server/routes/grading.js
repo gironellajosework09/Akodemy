@@ -3,6 +3,11 @@ import express from 'express'
 import { authenticateToken } from '../middleware/auth.js'
 import { gradeSubmission } from '../services/canonical/gradingEngine.js'
 import { getTestCases, getCacheStats as getCanonicalCacheStats } from '../services/canonical/testFetcher.js'
+import { TestAlignmentAnalyzer, runTestAlignment } from '../services/canonical/testAlignment.js'
+import { CanonicalTestConverter, convertAndSync, syncAllForLanguage } from '../services/canonical/testConverter.js'
+import { ScoreVerificationService, verifyAndReport, ensureVerificationIndexes } from '../services/canonical/scoreVerification.js'
+import ScoreMismatchLog from '../models/ScoreMismatchLog.js'
+import { EXECUTION_CONTRACT } from '../services/canonical/executionContract.js'
 import Challenge from '../models/Challenge.js'
 
 // Route handlers for Grading APIs.
@@ -161,6 +166,174 @@ router.get('/sync-status', authenticateToken, async (req, res) => {
     })
   } catch (error) {
     res.status(500).json({ message: 'Failed to get sync status', error: error.message })
+  }
+})
+
+router.get('/execution-contract', authenticateToken, (req, res) => {
+  res.json(EXECUTION_CONTRACT)
+})
+
+router.post('/analyze-alignment', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'faculty') {
+      return res.status(403).json({ message: 'Faculty access required' })
+    }
+
+    const { language, exerciseSlug } = req.body
+
+    if (!language) {
+      return res.status(400).json({ message: 'Language is required' })
+    }
+
+    const result = await runTestAlignment(language, exerciseSlug)
+    res.json(result)
+  } catch (error) {
+    console.error('Alignment analysis error:', error)
+    res.status(500).json({ message: 'Analysis failed', error: error.message })
+  }
+})
+
+router.post('/convert-tests', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'faculty') {
+      return res.status(403).json({ message: 'Faculty access required' })
+    }
+
+    const { exerciseSlug, language } = req.body
+
+    if (!exerciseSlug || !language) {
+      return res.status(400).json({ message: 'Exercise slug and language are required' })
+    }
+
+    const result = await convertAndSync(exerciseSlug, language)
+    res.json(result)
+  } catch (error) {
+    console.error('Test conversion error:', error)
+    res.status(500).json({ message: 'Conversion failed', error: error.message })
+  }
+})
+
+router.post('/sync-all-tests', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'faculty') {
+      return res.status(403).json({ message: 'Faculty access required' })
+    }
+
+    const { language } = req.body
+
+    if (!language) {
+      return res.status(400).json({ message: 'Language is required' })
+    }
+
+    res.json({ message: 'Sync started. Check server logs for progress.' })
+
+    syncAllForLanguage(language).then(result => {
+      console.log(`Test sync completed for ${language}:`, result)
+    }).catch(err => {
+      console.error(`Test sync failed for ${language}:`, err)
+    })
+  } catch (error) {
+    console.error('Sync error:', error)
+    res.status(500).json({ message: 'Failed to start sync', error: error.message })
+  }
+})
+
+router.post('/verify-scores', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'faculty') {
+      return res.status(403).json({ message: 'Faculty access required' })
+    }
+
+    const { limit, language, exerciseSlug, debugMode, autoCorrect } = req.body
+
+    const report = await verifyAndReport({
+      limit: limit || 50,
+      language,
+      exerciseSlug,
+      debugMode: debugMode || false,
+      autoCorrect: autoCorrect || false
+    })
+
+    res.json(report)
+  } catch (error) {
+    console.error('Score verification error:', error)
+    res.status(500).json({ message: 'Verification failed', error: error.message })
+  }
+})
+
+router.post('/verify-submission/:submissionId', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'faculty') {
+      return res.status(403).json({ message: 'Faculty access required' })
+    }
+
+    const { submissionId } = req.params
+    const { debugMode, autoCorrect } = req.body
+
+    const service = new ScoreVerificationService({
+      debugMode: debugMode || false,
+      autoCorrect: autoCorrect || false
+    })
+
+    const result = await service.verifySubmission(submissionId)
+    res.json(result)
+  } catch (error) {
+    console.error('Submission verification error:', error)
+    res.status(500).json({ message: 'Verification failed', error: error.message })
+  }
+})
+
+router.post('/ensure-indexes', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'faculty') {
+      return res.status(403).json({ message: 'Faculty access required' })
+    }
+
+    await ensureVerificationIndexes()
+    res.json({ message: 'Indexes created successfully' })
+  } catch (error) {
+    console.error('Index creation error:', error)
+    res.status(500).json({ message: 'Index creation failed', error: error.message })
+  }
+})
+
+router.get('/mismatch-logs', authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== 'faculty') {
+      return res.status(403).json({ message: 'Faculty access required' })
+    }
+
+    const { limit = 50, language, exerciseSlug, corrected } = req.query
+    
+    const query = {}
+    if (language) query.language = language
+    if (exerciseSlug) query.exerciseSlug = exerciseSlug
+    if (corrected !== undefined) query.corrected = corrected === 'true'
+
+    const logs = await ScoreMismatchLog.find(query)
+      .sort({ detectedAt: -1 })
+      .limit(parseInt(limit))
+      .lean()
+
+    const stats = await ScoreMismatchLog.aggregate([
+      { $match: query },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
+          corrected: { $sum: { $cond: ['$corrected', 1, 0] } },
+          avgScoreDiff: { $avg: { $abs: '$scoreDiff' } }
+        }
+      }
+    ])
+
+    res.json({
+      logs,
+      stats: stats[0] || { total: 0, corrected: 0, avgScoreDiff: 0 }
+    })
+  } catch (error) {
+    console.error('Mismatch logs error:', error)
+    res.status(500).json({ message: 'Failed to fetch logs', error: error.message })
   }
 })
 
