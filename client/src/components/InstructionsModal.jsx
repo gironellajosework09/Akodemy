@@ -17,8 +17,8 @@ export default function InstructionsModal({ isOpen, challenge, onClose, onStartC
   const instructions = parseInstructions(challenge.description)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
-      <div className="bg-gray-800 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-gray-700 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 animate-page-in">
+      <div className="bg-gray-800 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-gray-700 shadow-2xl animate-modal-in">
         <div className="flex items-center justify-between p-5 border-b border-gray-700">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-akodemy-purple/20 rounded-xl flex items-center justify-center">

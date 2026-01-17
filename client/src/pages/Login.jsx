@@ -119,6 +119,7 @@ export default function Login() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
+  const [loginError, setLoginError] = useState(false)
   
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [otpError, setOtpError] = useState(false)
@@ -128,6 +129,8 @@ export default function Login() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   
   const otpRefs = useRef([])
+  const emailRef = useRef(null)
+  const passwordRef = useRef(null)
   const { login, register } = useAuth()
   const navigate = useNavigate()
 
@@ -147,15 +150,27 @@ export default function Login() {
   const handleLoginSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    setLoginError(false)
     setLoading(true)
     
     try {
       const user = await login(email, password)
+      setEmail('')
+      setPassword('')
       navigate(user.role === 'faculty' ? '/faculty' : '/dashboard')
     } catch (err) {
-      setError(err.response?.data?.message || 'An error occurred')
+      setError(err.response?.data?.message || 'Invalid email or password')
+      setLoginError(true)
+      passwordRef.current?.focus()
     } finally {
       setLoading(false)
+    }
+  }
+  
+  const clearLoginError = () => {
+    if (loginError) {
+      setLoginError(false)
+      setError('')
     }
   }
 
@@ -381,10 +396,11 @@ export default function Login() {
                 <div>
                   <label className="block text-gray-300 mb-2 text-sm font-medium">Email</label>
                   <input
+                    ref={emailRef}
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-akodemy-purple focus:border-transparent transition"
+                    onChange={(e) => { setEmail(e.target.value); clearLoginError(); }}
+                    className={`w-full px-4 py-3 bg-gray-900 border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-akodemy-purple focus:border-transparent transition ${loginError ? 'border-red-500' : 'border-gray-700'}`}
                     placeholder="Enter your email"
                     required
                   />
@@ -394,10 +410,11 @@ export default function Login() {
                   <label className="block text-gray-300 mb-2 text-sm font-medium">Password</label>
                   <div className="relative">
                     <input
+                      ref={passwordRef}
                       type={showPassword ? 'text' : 'password'}
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-akodemy-purple focus:border-transparent pr-12 transition"
+                      onChange={(e) => { setPassword(e.target.value); clearLoginError(); }}
+                      className={`w-full px-4 py-3 bg-gray-900 border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-akodemy-purple focus:border-transparent pr-12 transition ${loginError ? 'border-red-500 animate-shake' : 'border-gray-700'}`}
                       placeholder="Enter your password"
                       required
                     />

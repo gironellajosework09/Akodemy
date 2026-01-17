@@ -6,9 +6,9 @@ export default function ConfirmDialog({ isOpen, title, message, onConfirm, onCan
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center animate-page-in">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel}></div>
-      <div className="relative bg-gray-800 border border-gray-700 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+      <div className="relative bg-gray-800 border border-gray-700 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl animate-modal-in">
         <button
           onClick={onCancel}
           className="absolute top-4 right-4 text-gray-400 hover:text-white transition"

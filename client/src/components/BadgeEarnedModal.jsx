@@ -37,8 +37,8 @@ export default function BadgeUnlockedModal({ badge, onClose, onClaim }) {
   if (!info) return null
   
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="relative bg-gray-800 border border-gray-700 rounded-2xl p-8 max-w-md w-full text-center animate-in fade-in zoom-in duration-300">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-page-in">
+      <div className="relative bg-gray-800 border border-gray-700 rounded-2xl p-8 max-w-md w-full text-center animate-modal-in">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-white transition"

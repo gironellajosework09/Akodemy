@@ -233,8 +233,10 @@ export default function ChallengeEditor() {
       const challenges = response.data
       const currentIndex = challenges.findIndex(c => c._id === challengeId)
       if (currentIndex >= 0 && currentIndex < challenges.length - 1) {
-        navigate(`/challenge/${challenges[currentIndex + 1]._id}`)
-        window.location.reload()
+        const nextChallengeId = challenges[currentIndex + 1]._id
+        navigate(`/challenges/${challenge?.language}/${challenge?.difficulty}`, {
+          state: { retryChallengeId: nextChallengeId }
+        })
       } else {
         navigate(`/challenges/${challenge?.language}/${challenge?.difficulty}`)
       }

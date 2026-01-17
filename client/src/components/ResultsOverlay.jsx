@@ -39,8 +39,8 @@ export default function ResultsOverlay({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 overflow-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-      <div className="w-full max-w-lg max-h-[95vh] overflow-y-auto scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4 overflow-auto scrollbar-hide animate-page-in" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+      <div className="w-full max-w-lg max-h-[95vh] overflow-y-auto scrollbar-hide animate-slide-up" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         <div className="flex flex-col items-center mb-6">
           <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${allPassed ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
             {allPassed ? (

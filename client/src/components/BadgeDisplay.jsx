@@ -311,8 +311,8 @@ function ClaimSuccessModal({ badge, onClose }) {
   if (!info) return null
   
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="relative bg-gray-800 border border-gray-700 rounded-2xl p-8 max-w-md w-full text-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-page-in">
+      <div className="relative bg-gray-800 border border-gray-700 rounded-2xl p-8 max-w-md w-full text-center animate-modal-in">
         <div className="mb-6">
           <div className="text-4xl mb-4">🎉</div>
           <h2 className="text-2xl font-bold text-white mb-2">Badge Claimed!</h2>
