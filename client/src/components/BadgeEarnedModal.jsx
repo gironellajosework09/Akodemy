@@ -30,7 +30,7 @@ const LANGUAGE_LABELS = {
   java: 'Java'
 }
 
-export default function BadgeEarnedModal({ badge, onClose }) {
+export default function BadgeUnlockedModal({ badge, onClose, onClaim }) {
   if (!badge) return null
   
   const info = BADGE_INFO[badge.language]?.[badge.difficulty]
@@ -50,8 +50,9 @@ export default function BadgeEarnedModal({ badge, onClose }) {
           <div className="flex justify-center mb-4">
             <Sparkles className="w-8 h-8 text-yellow-400 animate-pulse" />
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2">Badge Earned!</h2>
-          <p className="text-gray-400">Congratulations on your achievement</p>
+          <h2 className="text-2xl font-bold text-white mb-2">Congratulations!</h2>
+          <p className="text-gray-400">You have completed all challenges with correct answers.</p>
+          <p className="text-green-400 font-medium mt-2">Your badge is now ready to be claimed.</p>
         </div>
         
         <div className="mb-6">
@@ -71,12 +72,21 @@ export default function BadgeEarnedModal({ badge, onClose }) {
           <span>You completed all {DIFFICULTY_LABELS[badge.difficulty].toLowerCase()} challenges!</span>
         </div>
         
-        <button
-          onClick={onClose}
-          className="w-full bg-akodemy-purple text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition"
-        >
-          Continue
-        </button>
+        <div className="space-y-3">
+          <button
+            onClick={onClaim}
+            className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition flex items-center justify-center gap-2"
+          >
+            <Award className="w-5 h-5" />
+            Claim Badge
+          </button>
+          <button
+            onClick={onClose}
+            className="w-full bg-gray-700 text-gray-300 py-3 rounded-lg font-semibold hover:bg-gray-600 transition"
+          >
+            Claim Later
+          </button>
+        </div>
       </div>
     </div>
   )

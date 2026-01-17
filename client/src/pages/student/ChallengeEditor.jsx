@@ -8,7 +8,7 @@ import ConfirmDialog from '../../components/ConfirmDialog'
 import ResultsOverlay from '../../components/ResultsOverlay'
 import LatestSubmissionModal from '../../components/LatestSubmissionModal'
 import HistoryPanel from '../../components/HistoryPanel'
-import BadgeEarnedModal from '../../components/BadgeEarnedModal'
+import BadgeUnlockedModal from '../../components/BadgeEarnedModal'
 
 // Student page logic for Challenge Editor.
 export default function ChallengeEditor() {
@@ -36,7 +36,7 @@ export default function ChallengeEditor() {
   const [startedAt] = useState(new Date())
   const [attemptNumber, setAttemptNumber] = useState(1)
   const [clipboardToast, setClipboardToast] = useState(false)
-  const [earnedBadge, setEarnedBadge] = useState(null)
+  const [unlockedBadge, setUnlockedBadge] = useState(null)
   const timerRef = useRef(null)
   const containerRef = useRef(null)
   const editorRef = useRef(null)
@@ -273,8 +273,8 @@ export default function ChallengeEditor() {
         setTestResults(response.data.testResults)
       }
 
-      if (response.data.badgeEarned) {
-        setEarnedBadge(response.data.badgeEarned)
+      if (response.data.badgeUnlocked) {
+        setUnlockedBadge(response.data.badgeUnlocked)
       }
 
       if (isMobile) {
@@ -594,9 +594,20 @@ export default function ChallengeEditor() {
         submission={latestSubmission}
       />
 
-      <BadgeEarnedModal
-        badge={earnedBadge}
-        onClose={() => setEarnedBadge(null)}
+      <BadgeUnlockedModal
+        badge={unlockedBadge}
+        onClose={() => setUnlockedBadge(null)}
+        onClaim={async () => {
+          try {
+            await api.post('/api/badges/claim', {
+              language: unlockedBadge.language,
+              difficulty: unlockedBadge.difficulty
+            })
+            setUnlockedBadge(null)
+          } catch (error) {
+            console.error('Failed to claim badge:', error)
+          }
+        }}
       />
 
       {!allowClipboard && clipboardToast && (

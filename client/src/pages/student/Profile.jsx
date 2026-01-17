@@ -15,6 +15,7 @@ export default function Profile() {
   const [progress, setProgress] = useState(null)
   const [badges, setBadges] = useState([])
   const [badgeProgress, setBadgeProgress] = useState({})
+  const [equippedBadge, setEquippedBadge] = useState(null)
   const [loading, setLoading] = useState(true)
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -58,12 +59,14 @@ export default function Profile() {
 
   const fetchBadges = async () => {
     try {
-      const [badgesRes, progressRes] = await Promise.all([
+      const [badgesRes, progressRes, equippedRes] = await Promise.all([
         api.get('/api/badges/my-badges'),
-        api.get('/api/badges/progress')
+        api.get('/api/badges/progress'),
+        api.get('/api/badges/equipped')
       ])
       setBadges(badgesRes.data.badges || [])
       setBadgeProgress(progressRes.data.progress || {})
+      setEquippedBadge(equippedRes.data.badge || null)
     } catch (error) {
       console.error('Failed to fetch badges:', error)
     }
@@ -191,6 +194,12 @@ export default function Profile() {
                   </div>
                   <div className="text-center sm:text-left">
                     <h3 className="text-lg sm:text-xl font-semibold text-white">{user?.name || 'Student Name'}</h3>
+                    {equippedBadge && (
+                      <p className="text-yellow-400 text-sm font-medium flex items-center justify-center sm:justify-start gap-1">
+                        <Award className="w-3 h-3" />
+                        {equippedBadge.badgeName}
+                      </p>
+                    )}
                     <p className="text-gray-500 text-sm">UID: {user?._id?.slice(-10) || 'XXXXXXXXXX'}</p>
                   </div>
                 </div>
@@ -381,7 +390,7 @@ export default function Profile() {
             )}
             {activeTab === 'badges' && (
               <div>
-                <BadgeDisplay badges={badges} progress={badgeProgress} />
+                <BadgeDisplay badges={badges} progress={badgeProgress} onRefresh={fetchBadges} />
               </div>
             )}
           </div>

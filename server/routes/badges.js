@@ -1,7 +1,11 @@
 import express from 'express'
 import { authenticateToken } from '../middleware/auth.js'
 import {
-  checkAndAwardBadge,
+  checkAndUnlockBadge,
+  claimBadge,
+  equipBadge,
+  unequipBadge,
+  getEquippedBadge,
   getUserBadges,
   getBadgeProgress,
   checkAllBadgesForUser,
@@ -30,6 +34,16 @@ router.get('/progress', authenticateToken, async (req, res) => {
   }
 })
 
+router.get('/equipped', authenticateToken, async (req, res) => {
+  try {
+    const badge = await getEquippedBadge(req.user._id)
+    res.json({ badge })
+  } catch (error) {
+    console.error('Error fetching equipped badge:', error)
+    res.status(500).json({ message: 'Failed to fetch equipped badge' })
+  }
+})
+
 router.post('/check', authenticateToken, async (req, res) => {
   try {
     const { language, difficulty } = req.body
@@ -40,7 +54,7 @@ router.post('/check', authenticateToken, async (req, res) => {
       })
     }
     
-    const result = await checkAndAwardBadge(
+    const result = await checkAndUnlockBadge(
       req.user._id, 
       language, 
       difficulty
@@ -53,6 +67,62 @@ router.post('/check', authenticateToken, async (req, res) => {
   }
 })
 
+router.post('/claim', authenticateToken, async (req, res) => {
+  try {
+    const { language, difficulty } = req.body
+    
+    if (!language || !difficulty) {
+      return res.status(400).json({ 
+        message: 'Language and difficulty are required' 
+      })
+    }
+    
+    const result = await claimBadge(req.user._id, language, difficulty)
+    
+    if (!result.success) {
+      return res.status(400).json(result)
+    }
+    
+    res.json(result)
+  } catch (error) {
+    console.error('Error claiming badge:', error)
+    res.status(500).json({ message: 'Failed to claim badge' })
+  }
+})
+
+router.post('/equip', authenticateToken, async (req, res) => {
+  try {
+    const { language, difficulty } = req.body
+    
+    if (!language || !difficulty) {
+      return res.status(400).json({ 
+        message: 'Language and difficulty are required' 
+      })
+    }
+    
+    const result = await equipBadge(req.user._id, language, difficulty)
+    
+    if (!result.success) {
+      return res.status(400).json(result)
+    }
+    
+    res.json(result)
+  } catch (error) {
+    console.error('Error equipping badge:', error)
+    res.status(500).json({ message: 'Failed to equip badge' })
+  }
+})
+
+router.post('/unequip', authenticateToken, async (req, res) => {
+  try {
+    const result = await unequipBadge(req.user._id)
+    res.json(result)
+  } catch (error) {
+    console.error('Error unequipping badge:', error)
+    res.status(500).json({ message: 'Failed to unequip badge' })
+  }
+})
+
 router.post('/check-all', authenticateToken, async (req, res) => {
   try {
     const newBadges = await checkAllBadgesForUser(req.user._id)
@@ -61,7 +131,7 @@ router.post('/check-all', authenticateToken, async (req, res) => {
     res.json({
       newBadges,
       allBadges,
-      newBadgesAwarded: newBadges.length
+      newBadgesUnlocked: newBadges.length
     })
   } catch (error) {
     console.error('Error checking all badges:', error)

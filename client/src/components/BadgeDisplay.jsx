@@ -1,4 +1,6 @@
-import { Award, Lock, CheckCircle } from 'lucide-react'
+import { useState } from 'react'
+import { Award, Lock, CheckCircle, Star, Loader2 } from 'lucide-react'
+import api from '../services/api'
 
 const BADGE_INFO = {
   java: {
@@ -24,22 +26,61 @@ const DIFFICULTY_LABELS = {
   advanced: 'Advanced'
 }
 
-function BadgeCard({ language, difficulty, earned, progress }) {
+function BadgeCard({ language, difficulty, badgeData, progress, onClaim, onEquip, onUnequip }) {
+  const [claiming, setClaiming] = useState(false)
+  const [equipping, setEquipping] = useState(false)
+  
   const info = BADGE_INFO[language]?.[difficulty]
   if (!info) return null
   
-  const { completed = 0, total = 0 } = progress || {}
+  const { completed = 0, total = 0, status = 'locked', equipped = false } = progress || {}
   const percentage = total > 0 ? Math.round((completed / total) * 100) : 0
+  
+  const isClaimable = status === 'claimable'
+  const isClaimed = status === 'claimed'
+  const isLocked = status === 'locked'
+  
+  const handleClaim = async () => {
+    setClaiming(true)
+    try {
+      await onClaim(language, difficulty)
+    } finally {
+      setClaiming(false)
+    }
+  }
+  
+  const handleEquip = async () => {
+    setEquipping(true)
+    try {
+      if (equipped) {
+        await onUnequip()
+      } else {
+        await onEquip(language, difficulty)
+      }
+    } finally {
+      setEquipping(false)
+    }
+  }
   
   return (
     <div 
       className={`relative bg-gray-800 border rounded-xl p-4 transition-all duration-300 ${
-        earned 
-          ? 'border-akodemy-purple shadow-lg shadow-akodemy-purple/20' 
-          : 'border-gray-700 opacity-75 hover:opacity-100'
+        isClaimed 
+          ? equipped 
+            ? 'border-yellow-500 shadow-lg shadow-yellow-500/20 ring-2 ring-yellow-500/50' 
+            : 'border-akodemy-purple shadow-lg shadow-akodemy-purple/20'
+          : isClaimable
+            ? 'border-green-500 shadow-lg shadow-green-500/20 animate-pulse'
+            : 'border-gray-700 opacity-75 hover:opacity-100'
       }`}
     >
-      {earned && (
+      {equipped && (
+        <div className="absolute -top-2 -right-2">
+          <Star className="w-6 h-6 text-yellow-400 fill-yellow-400 bg-gray-800 rounded-full" />
+        </div>
+      )}
+      
+      {isClaimed && !equipped && (
         <div className="absolute -top-2 -right-2">
           <CheckCircle className="w-6 h-6 text-green-400 bg-gray-800 rounded-full" />
         </div>
@@ -48,15 +89,15 @@ function BadgeCard({ language, difficulty, earned, progress }) {
       <div className="flex flex-col items-center text-center">
         <div 
           className={`w-16 h-16 rounded-full flex items-center justify-center text-3xl mb-3 ${
-            earned 
+            isClaimable || isClaimed
               ? `bg-gradient-to-br ${info.color}` 
               : 'bg-gray-700'
           }`}
         >
-          {earned ? info.icon : <Lock className="w-6 h-6 text-gray-500" />}
+          {isClaimable || isClaimed ? info.icon : <Lock className="w-6 h-6 text-gray-500" />}
         </div>
         
-        <h4 className={`font-semibold mb-1 ${earned ? 'text-white' : 'text-gray-400'}`}>
+        <h4 className={`font-semibold mb-1 ${isClaimable || isClaimed ? 'text-white' : 'text-gray-400'}`}>
           {info.name}
         </h4>
         
@@ -64,8 +105,8 @@ function BadgeCard({ language, difficulty, earned, progress }) {
           {DIFFICULTY_LABELS[difficulty]}
         </p>
         
-        {!earned && total > 0 && (
-          <div className="w-full">
+        {isLocked && total > 0 && (
+          <div className="w-full mb-2">
             <div className="flex justify-between text-xs text-gray-500 mb-1">
               <span>{completed}/{total}</span>
               <span>{percentage}%</span>
@@ -79,18 +120,56 @@ function BadgeCard({ language, difficulty, earned, progress }) {
           </div>
         )}
         
-        {earned && (
-          <span className="text-xs text-green-400 font-medium">Earned</span>
+        {isClaimable && (
+          <button
+            onClick={handleClaim}
+            disabled={claiming}
+            className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white text-xs py-2 px-3 rounded-lg font-semibold transition flex items-center justify-center gap-1"
+          >
+            {claiming ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <>
+                <Award className="w-3 h-3" />
+                Claim Badge
+              </>
+            )}
+          </button>
+        )}
+        
+        {isClaimed && (
+          <div className="w-full mt-2 space-y-1">
+            <span className="block text-xs text-green-400 font-medium">Claimed</span>
+            <button
+              onClick={handleEquip}
+              disabled={equipping}
+              className={`w-full text-xs py-1.5 px-3 rounded-lg font-medium transition flex items-center justify-center gap-1 ${
+                equipped
+                  ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
+                  : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+              }`}
+            >
+              {equipping ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : equipped ? (
+                <>
+                  <Star className="w-3 h-3 fill-current" />
+                  Equipped
+                </>
+              ) : (
+                'Equip as Title'
+              )}
+            </button>
+          </div>
         )}
       </div>
     </div>
   )
 }
 
-function LanguageBadgeSection({ language, badges, progress }) {
+function LanguageBadgeSection({ language, badges, progress, onClaim, onEquip, onUnequip }) {
   const difficulties = ['beginner', 'intermediate', 'advanced']
-  const earnedBadges = badges.filter(b => b.language === language)
-  const earnedSet = new Set(earnedBadges.map(b => b.difficulty))
+  const claimedBadges = badges.filter(b => b.language === language && b.status === 'claimed')
   
   const languageLabels = {
     javascript: 'JavaScript',
@@ -104,7 +183,7 @@ function LanguageBadgeSection({ language, badges, progress }) {
     java: '/images/java-logo.png'
   }
   
-  const totalEarned = earnedSet.size
+  const totalClaimed = claimedBadges.length
   
   return (
     <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4 sm:p-6">
@@ -117,28 +196,68 @@ function LanguageBadgeSection({ language, badges, progress }) {
         />
         <div>
           <h3 className="text-lg font-semibold text-white">{languageLabels[language]}</h3>
-          <p className="text-xs text-gray-500">{totalEarned}/3 badges earned</p>
+          <p className="text-xs text-gray-500">{totalClaimed}/3 badges claimed</p>
         </div>
       </div>
       
       <div className="grid grid-cols-3 gap-3">
-        {difficulties.map(difficulty => (
-          <BadgeCard
-            key={`${language}-${difficulty}`}
-            language={language}
-            difficulty={difficulty}
-            earned={earnedSet.has(difficulty)}
-            progress={progress?.[language]?.[difficulty]}
-          />
-        ))}
+        {difficulties.map(difficulty => {
+          const badgeData = badges.find(
+            b => b.language === language && b.difficulty === difficulty
+          )
+          return (
+            <BadgeCard
+              key={`${language}-${difficulty}`}
+              language={language}
+              difficulty={difficulty}
+              badgeData={badgeData}
+              progress={progress?.[language]?.[difficulty]}
+              onClaim={onClaim}
+              onEquip={onEquip}
+              onUnequip={onUnequip}
+            />
+          )
+        })}
       </div>
     </div>
   )
 }
 
-export default function BadgeDisplay({ badges = [], progress = {} }) {
+export default function BadgeDisplay({ badges = [], progress = {}, onRefresh }) {
+  const [showClaimModal, setShowClaimModal] = useState(null)
   const languages = ['javascript', 'python', 'java']
-  const totalBadges = badges.length
+  const claimedBadges = badges.filter(b => b.status === 'claimed')
+  const equippedBadge = badges.find(b => b.equipped)
+  
+  const handleClaim = async (language, difficulty) => {
+    try {
+      const response = await api.post('/badges/claim', { language, difficulty })
+      if (response.data.success) {
+        setShowClaimModal({ language, difficulty, badgeName: response.data.badge.badgeName })
+        if (onRefresh) onRefresh()
+      }
+    } catch (error) {
+      console.error('Failed to claim badge:', error)
+    }
+  }
+  
+  const handleEquip = async (language, difficulty) => {
+    try {
+      await api.post('/badges/equip', { language, difficulty })
+      if (onRefresh) onRefresh()
+    } catch (error) {
+      console.error('Failed to equip badge:', error)
+    }
+  }
+  
+  const handleUnequip = async () => {
+    try {
+      await api.post('/badges/unequip')
+      if (onRefresh) onRefresh()
+    } catch (error) {
+      console.error('Failed to unequip badge:', error)
+    }
+  }
   
   return (
     <div>
@@ -149,9 +268,18 @@ export default function BadgeDisplay({ badges = [], progress = {} }) {
           </div>
           <div>
             <h2 className="text-xl font-bold text-white">Badges</h2>
-            <p className="text-sm text-gray-500">{totalBadges}/9 earned</p>
+            <p className="text-sm text-gray-500">{claimedBadges.length}/9 claimed</p>
           </div>
         </div>
+        
+        {equippedBadge && (
+          <div className="flex items-center gap-2 bg-yellow-600/20 border border-yellow-500/30 rounded-lg px-3 py-2">
+            <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+            <span className="text-sm text-yellow-400 font-medium">
+              {equippedBadge.badgeName}
+            </span>
+          </div>
+        )}
       </div>
       
       <div className="space-y-4">
@@ -161,8 +289,54 @@ export default function BadgeDisplay({ badges = [], progress = {} }) {
             language={language}
             badges={badges}
             progress={progress}
+            onClaim={handleClaim}
+            onEquip={handleEquip}
+            onUnequip={handleUnequip}
           />
         ))}
+      </div>
+      
+      {showClaimModal && (
+        <ClaimSuccessModal 
+          badge={showClaimModal} 
+          onClose={() => setShowClaimModal(null)} 
+        />
+      )}
+    </div>
+  )
+}
+
+function ClaimSuccessModal({ badge, onClose }) {
+  const info = BADGE_INFO[badge.language]?.[badge.difficulty]
+  if (!info) return null
+  
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+      <div className="relative bg-gray-800 border border-gray-700 rounded-2xl p-8 max-w-md w-full text-center">
+        <div className="mb-6">
+          <div className="text-4xl mb-4">🎉</div>
+          <h2 className="text-2xl font-bold text-white mb-2">Badge Claimed!</h2>
+          <p className="text-gray-400">You've earned a new title</p>
+        </div>
+        
+        <div className="mb-6">
+          <div 
+            className={`w-24 h-24 mx-auto rounded-full flex items-center justify-center text-5xl mb-4 bg-gradient-to-br ${info.color} shadow-lg`}
+          >
+            {info.icon}
+          </div>
+          <h3 className="text-xl font-bold text-white mb-1">{info.name}</h3>
+          <p className="text-sm text-gray-400">
+            You can now equip this as your profile title!
+          </p>
+        </div>
+        
+        <button
+          onClick={onClose}
+          className="w-full bg-akodemy-purple text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition"
+        >
+          Awesome!
+        </button>
       </div>
     </div>
   )

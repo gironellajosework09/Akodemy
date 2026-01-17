@@ -7,7 +7,7 @@ import { runOfficialTests } from '../services/officialTestsRunner.js'
 import { normalizeToExercismSlug } from '../services/exercismTestSync.js'
 import { getTestCases } from '../services/canonical/testFetcher.js'
 import { runTests } from '../services/testRunner.js'
-import { checkAndAwardBadge } from '../services/badgeService.js'
+import { checkAndUnlockBadge } from '../services/badgeService.js'
 import Submission from '../models/Submission.js'
 import Challenge from '../models/Challenge.js'
 
@@ -188,21 +188,22 @@ router.post('/', authenticateToken, async (req, res) => {
       }
     }
 
-    let badgeEarned = null
+    let badgeUnlocked = null
     if (passed && challengeId) {
       try {
         const challenge = await Challenge.findById(challengeId)
         if (challenge) {
-          const badgeResult = await checkAndAwardBadge(
+          const badgeResult = await checkAndUnlockBadge(
             req.user._id,
             challenge.language,
             challenge.difficulty
           )
-          if (badgeResult.award) {
-            badgeEarned = {
+          if (badgeResult.unlocked) {
+            badgeUnlocked = {
               badgeName: badgeResult.badgeName,
               language: badgeResult.language,
-              difficulty: badgeResult.difficulty
+              difficulty: badgeResult.difficulty,
+              status: 'claimable'
             }
           }
         }
@@ -220,7 +221,7 @@ router.post('/', authenticateToken, async (req, res) => {
       memory: result.memory,
       testResults,
       passed,
-      badgeEarned
+      badgeUnlocked
     })
   } catch (error) {
     console.error('Execute error:', error)

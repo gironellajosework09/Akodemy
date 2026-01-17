@@ -67,19 +67,25 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-- January 17, 2026: Badging System Implementation
-  - Badge Model: Stores earned badges per user/language/difficulty with unique constraint
-  - Badge Service: checkAndAwardBadge(), getUserBadges(), getBadgeProgress() functions
-  - Badge Routes: /api/badges/my-badges, /api/badges/progress, /api/badges/check, /api/badges/check-all
+- January 17, 2026: Gamified Badging & Title System
+  - Badge Model: Stores badges with status (claimable/claimed) and equipped flag
+  - Badge States: locked -> claimable (on completion) -> claimed (manual) -> equipped (active title)
+  - Badge Service Functions:
+    - checkAndUnlockBadge(): Unlocks badge when all challenges completed (does NOT auto-claim)
+    - claimBadge(): Manual claim via button click
+    - equipBadge()/unequipBadge(): Set/unset badge as profile title (only one at a time)
+    - getEquippedBadge(): Get currently equipped badge
+  - Badge Routes: /api/badges/my-badges, /api/badges/progress, /api/badges/equipped, /api/badges/claim, /api/badges/equip, /api/badges/unequip
   - Badge Mapping:
     - Java: Java Barista (beginner), Java Brewer (intermediate), Java Roast Master (advanced)
     - Python: Python Catcher (beginner), Python Handler (intermediate), Python Expert (advanced)
     - JavaScript: Script Starter (beginner), Script Engineer (intermediate), Script Architect (advanced)
-  - BadgeDisplay Component: Matches platform design with progress tracking per language/difficulty
-  - BadgeEarnedModal: Celebratory modal shown when badge is earned
-  - Profile Integration: New Badges tab in student profile showing all 9 badges with progress
-  - Auto-award: Badges checked and awarded automatically after challenge completion
-  - Test Challenges: 9 challenges set up (1 per difficulty per language) for testing
+  - UI Components:
+    - BadgeDisplay: Shows all 9 badges with Claim buttons for claimable, Equip toggle for claimed
+    - BadgeUnlockedModal: Congratulations modal with Claim Badge button when tier completed
+    - ClaimSuccessModal: Celebratory modal after claiming
+  - Profile Integration: Equipped badge title shown under user name
+  - Gamified Flow: Complete challenges -> Badge unlocked -> Manual claim -> Equip as title
 
 - January 17, 2026: Complete Test Case Sync from Exercism
   - Full test sync: 417/417 challenges (100%) now have test cases

@@ -20,13 +20,13 @@ const BADGE_MAPPING = {
   }
 }
 
-export async function checkAndAwardBadge(userId, language, difficulty) {
+export async function checkAndUnlockBadge(userId, language, difficulty) {
   const challenges = await Challenge.find({ language, difficulty })
   
   if (challenges.length === 0) {
     return {
-      award: false,
-      alreadyAwarded: false,
+      unlocked: false,
+      alreadyExists: false,
       badgeName: null,
       language,
       difficulty,
@@ -38,12 +38,13 @@ export async function checkAndAwardBadge(userId, language, difficulty) {
   const existingBadge = await Badge.findOne({ userId, language, difficulty })
   if (existingBadge) {
     return {
-      award: false,
-      alreadyAwarded: true,
+      unlocked: false,
+      alreadyExists: true,
+      badge: existingBadge,
       badgeName: existingBadge.badgeName,
       language,
       difficulty,
-      reason: 'Badge already awarded.',
+      reason: existingBadge.status === 'claimed' ? 'Badge already claimed.' : 'Badge already unlocked and ready to claim.',
       missingOrIncorrect: []
     }
   }
@@ -76,8 +77,8 @@ export async function checkAndAwardBadge(userId, language, difficulty) {
 
   if (missingOrIncorrect.length > 0) {
     return {
-      award: false,
-      alreadyAwarded: false,
+      unlocked: false,
+      alreadyExists: false,
       badgeName: null,
       language,
       difficulty,
@@ -93,8 +94,8 @@ export async function checkAndAwardBadge(userId, language, difficulty) {
   const badgeName = BADGE_MAPPING[language]?.[difficulty]
   if (!badgeName) {
     return {
-      award: false,
-      alreadyAwarded: false,
+      unlocked: false,
+      alreadyExists: false,
       badgeName: null,
       language,
       difficulty,
@@ -107,23 +108,105 @@ export async function checkAndAwardBadge(userId, language, difficulty) {
     userId,
     badgeName,
     language,
-    difficulty
+    difficulty,
+    status: 'claimable',
+    equipped: false,
+    unlockedAt: new Date()
   })
 
   return {
-    award: true,
-    alreadyAwarded: false,
+    unlocked: true,
+    alreadyExists: false,
     badgeName,
     language,
     difficulty,
-    reason: 'All challenges in this tier are completed and correct.',
+    reason: 'All challenges completed! Badge is now ready to claim.',
     missingOrIncorrect: [],
     badge: newBadge
   }
 }
 
+export async function claimBadge(userId, language, difficulty) {
+  const badge = await Badge.findOne({ userId, language, difficulty })
+  
+  if (!badge) {
+    return {
+      success: false,
+      reason: 'Badge not found. Complete all challenges first.'
+    }
+  }
+  
+  if (badge.status === 'claimed') {
+    return {
+      success: false,
+      reason: 'Badge already claimed.',
+      badge
+    }
+  }
+  
+  badge.status = 'claimed'
+  badge.claimedAt = new Date()
+  await badge.save()
+  
+  return {
+    success: true,
+    reason: 'Badge claimed successfully!',
+    badge
+  }
+}
+
+export async function equipBadge(userId, language, difficulty) {
+  const badge = await Badge.findOne({ userId, language, difficulty })
+  
+  if (!badge) {
+    return {
+      success: false,
+      reason: 'Badge not found.'
+    }
+  }
+  
+  if (badge.status !== 'claimed') {
+    return {
+      success: false,
+      reason: 'Badge must be claimed before equipping.'
+    }
+  }
+  
+  await Badge.updateMany(
+    { userId, equipped: true },
+    { equipped: false }
+  )
+  
+  badge.equipped = true
+  await badge.save()
+  
+  return {
+    success: true,
+    reason: 'Badge equipped as your title!',
+    badge
+  }
+}
+
+export async function unequipBadge(userId) {
+  const result = await Badge.updateMany(
+    { userId, equipped: true },
+    { equipped: false }
+  )
+  
+  return {
+    success: true,
+    reason: 'Title removed from profile.',
+    unequippedCount: result.modifiedCount
+  }
+}
+
+export async function getEquippedBadge(userId) {
+  const badge = await Badge.findOne({ userId, equipped: true })
+  return badge
+}
+
 export async function getUserBadges(userId) {
-  const badges = await Badge.find({ userId }).sort({ awardedAt: -1 })
+  const badges = await Badge.find({ userId }).sort({ unlockedAt: -1 })
   return badges
 }
 
@@ -155,8 +238,11 @@ export async function getBadgeProgress(userId) {
       progress[language][difficulty] = {
         completed: completedIds.size,
         total: challenges.length,
-        badgeEarned: !!existingBadge,
-        badgeName: BADGE_MAPPING[language]?.[difficulty] || null
+        badgeName: BADGE_MAPPING[language]?.[difficulty] || null,
+        status: existingBadge?.status || 'locked',
+        equipped: existingBadge?.equipped || false,
+        claimable: existingBadge?.status === 'claimable',
+        claimed: existingBadge?.status === 'claimed'
       }
     }
   }
@@ -171,8 +257,8 @@ export async function checkAllBadgesForUser(userId) {
   
   for (const language of languages) {
     for (const difficulty of difficulties) {
-      const result = await checkAndAwardBadge(userId, language, difficulty)
-      if (result.award) {
+      const result = await checkAndUnlockBadge(userId, language, difficulty)
+      if (result.unlocked) {
         results.push(result)
       }
     }
