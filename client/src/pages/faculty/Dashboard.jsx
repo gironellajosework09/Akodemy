@@ -1,73 +1,73 @@
-// Faculty page: Dashboard.
+// Faculty page: Enhanced Dashboard with Analytics.
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
-import { Users, Trophy, Code, ArrowRight } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts'
+import LoadingSpinner from '../../components/LoadingSpinner'
+import { 
+  Users, Trophy, Code, ArrowRight, TrendingUp, Award, 
+  Activity, AlertTriangle, CheckCircle, XCircle, Clock,
+  BarChart3, Target, Calendar
+} from 'lucide-react'
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
+  ResponsiveContainer, Legend, LineChart, Line, AreaChart, Area,
+  PieChart, Pie, Cell
+} from 'recharts'
 import api from '../../services/api'
 
-// Faculty page logic for Dashboard.
+const COLORS = ['#8b5cf6', '#eab308', '#22c55e', '#ef4444', '#3b82f6', '#f97316']
+
 export default function FacultyDashboard() {
   const navigate = useNavigate()
-  const [stats, setStats] = useState({
-    totalStudents: 0,
-    completionists: 0,
-    languagesActive: 3
-  })
-  const [languageData, setLanguageData] = useState([])
-  const [competencyDistribution, setCompetencyDistribution] = useState(null)
-  const [perCompetencyDistribution, setPerCompetencyDistribution] = useState([])
   const [loading, setLoading] = useState(true)
+  const [dateRange, setDateRange] = useState(30)
+  const [languageFilter, setLanguageFilter] = useState('')
+  
+  const [overview, setOverview] = useState({})
+  const [trends, setTrends] = useState({ dailySubmissions: [], badgesClaimed: [] })
+  const [challenges, setChallenges] = useState({ mostAttempted: [], hardestChallenges: [] })
+  const [students, setStudents] = useState({ topPerformers: [], needsAttention: [], recentActivity: [], recentBadges: [] })
+  const [badges, setBadges] = useState({ distribution: {} })
+  const [competencyDistribution, setCompetencyDistribution] = useState(null)
 
   useEffect(() => {
-    fetchAnalytics()
-    fetchCompetencyDistribution()
-    fetchPerCompetencyDistribution()
-  }, [])
+    fetchAllData()
+  }, [dateRange, languageFilter])
 
-  const fetchAnalytics = async () => {
+  const fetchAllData = async () => {
+    setLoading(true)
     try {
-      const response = await api.get('/api/faculty/analytics')
-      setStats(response.data.stats || stats)
-      const engagement = response.data.languageEngagement || []
-      setLanguageData(engagement.length > 0 ? engagement : [
-        { name: 'JavaScript', students: 0 },
-        { name: 'Python', students: 0 },
-        { name: 'Java', students: 0 }
+      const params = `?days=${dateRange}${languageFilter ? `&language=${languageFilter}` : ''}`
+      
+      const [overviewRes, trendsRes, challengesRes, studentsRes, badgesRes, competencyRes] = await Promise.all([
+        api.get(`/api/faculty/analytics/overview${params}`),
+        api.get(`/api/faculty/analytics/trends${params}`),
+        api.get(`/api/faculty/analytics/challenges${params}`),
+        api.get(`/api/faculty/analytics/students${params}`),
+        api.get('/api/faculty/analytics/badges'),
+        api.get('/api/faculty/competency-distribution')
       ])
+
+      setOverview(overviewRes.data)
+      setTrends(trendsRes.data)
+      setChallenges(challengesRes.data)
+      setStudents(studentsRes.data)
+      setBadges(badgesRes.data)
+      setCompetencyDistribution(competencyRes.data)
     } catch (error) {
       console.error('Failed to fetch analytics:', error)
-      setLanguageData([
-        { name: 'JavaScript', students: 0 },
-        { name: 'Python', students: 0 },
-        { name: 'Java', students: 0 }
-      ])
     } finally {
       setLoading(false)
     }
   }
 
-  const fetchCompetencyDistribution = async () => {
-    try {
-      const response = await api.get('/api/faculty/competency-distribution')
-      setCompetencyDistribution(response.data)
-    } catch (error) {
-      console.error('Failed to fetch competency distribution:', error)
-    }
-  }
-
-  const fetchPerCompetencyDistribution = async () => {
-    try {
-      const response = await api.get('/api/faculty/competency-student-distribution')
-      setPerCompetencyDistribution(response.data)
-    } catch (error) {
-      console.error('Failed to fetch per-competency distribution:', error)
-    }
+  const formatDate = (dateString) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
 
   const getCompetencyChartData = () => {
     if (!competencyDistribution) return []
-    
     return [
       {
         name: 'JavaScript',
@@ -93,103 +93,264 @@ export default function FacultyDashboard() {
     ]
   }
 
+  const getBadgeDistributionData = () => {
+    const data = []
+    const dist = badges.distribution || {}
+    Object.entries(dist).forEach(([lang, difficulties]) => {
+      Object.entries(difficulties).forEach(([diff, count]) => {
+        if (count > 0) {
+          data.push({
+            name: `${lang.charAt(0).toUpperCase() + lang.slice(1)} ${diff.charAt(0).toUpperCase() + diff.slice(1)}`,
+            value: count
+          })
+        }
+      })
+    })
+    return data
+  }
+
+  if (loading) {
+    return (
+      <Layout>
+        <LoadingSpinner />
+      </Layout>
+    )
+  }
+
   return (
     <Layout>
-      <div className="container mx-auto px-4 sm:px-8 py-6 sm:py-8">
-        <div className="mb-6 sm:mb-8">
-          <p className="text-akodemy-purple text-base sm:text-lg mb-2">Faculty Dashboard</p>
-          <h1 className="text-2xl sm:text-4xl font-bold text-white mb-2">Welcome to <span className="text-akodemy-purple">Akodemy</span></h1>
-          <p className="text-gray-400 text-sm sm:text-base">Monitor student progress and track engagement</p>
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div>
+            <p className="text-akodemy-purple text-sm sm:text-base mb-1">Faculty Dashboard</p>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white">
+              Welcome to <span className="text-akodemy-purple">Akodemy</span>
+            </h1>
+          </div>
+          
+          <div className="flex flex-wrap gap-2 sm:gap-3">
+            <select
+              value={dateRange}
+              onChange={(e) => setDateRange(parseInt(e.target.value))}
+              className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-akodemy-purple"
+            >
+              <option value={7}>Last 7 days</option>
+              <option value={30}>Last 30 days</option>
+              <option value={90}>Last 90 days</option>
+            </select>
+            
+            <select
+              value={languageFilter}
+              onChange={(e) => setLanguageFilter(e.target.value)}
+              className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-akodemy-purple"
+            >
+              <option value="">All Languages</option>
+              <option value="javascript">JavaScript</option>
+              <option value="python">Python</option>
+              <option value="java">Java</option>
+            </select>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6">
           <button 
             onClick={() => navigate('/faculty/students')}
-            className="bg-gray-800 border border-gray-700 p-4 sm:p-6 rounded-xl flex flex-col items-center cursor-pointer hover:border-akodemy-purple transition group"
+            className="bg-gray-800 border border-gray-700 p-3 sm:p-4 rounded-xl flex flex-col items-center cursor-pointer hover:border-akodemy-purple transition group"
           >
-            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-akodemy-purple/20 rounded-xl flex items-center justify-center mb-2 sm:mb-3">
-              <Users className="w-6 h-6 sm:w-7 sm:h-7 text-akodemy-purple" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-akodemy-purple/20 rounded-xl flex items-center justify-center mb-2">
+              <Users className="w-5 h-5 sm:w-6 sm:h-6 text-akodemy-purple" />
             </div>
-            <p className="text-gray-400 text-xs sm:text-sm mb-1">Total Students</p>
-            <p className="text-3xl sm:text-4xl font-bold text-white">{stats.totalStudents}</p>
-            <p className="text-xs text-akodemy-purple mt-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-              View All <ArrowRight className="w-3 h-3" />
-            </p>
+            <p className="text-gray-400 text-xs mb-1">Total Students</p>
+            <p className="text-xl sm:text-2xl font-bold text-white">{overview.totalStudents || 0}</p>
           </button>
-          <div className="bg-gray-800 border border-gray-700 p-4 sm:p-6 rounded-xl flex flex-col items-center">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-yellow-500/20 rounded-xl flex items-center justify-center mb-2 sm:mb-3">
-              <Trophy className="w-6 h-6 sm:w-7 sm:h-7 text-yellow-400" />
+
+          <div className="bg-gray-800 border border-gray-700 p-3 sm:p-4 rounded-xl flex flex-col items-center">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-500/20 rounded-xl flex items-center justify-center mb-2">
+              <Activity className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
             </div>
-            <p className="text-gray-400 text-xs sm:text-sm mb-1">Completionists</p>
-            <p className="text-3xl sm:text-4xl font-bold text-white">{stats.completionists}</p>
+            <p className="text-gray-400 text-xs mb-1">Active (7d)</p>
+            <p className="text-xl sm:text-2xl font-bold text-white">{overview.activeStudents || 0}</p>
           </div>
-          <div className="bg-gray-800 border border-gray-700 p-4 sm:p-6 rounded-xl flex flex-col items-center">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 bg-blue-500/20 rounded-xl flex items-center justify-center mb-2 sm:mb-3">
-              <Code className="w-6 h-6 sm:w-7 sm:h-7 text-blue-400" />
+
+          <div className="bg-gray-800 border border-gray-700 p-3 sm:p-4 rounded-xl flex flex-col items-center">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500/20 rounded-xl flex items-center justify-center mb-2">
+              <Code className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
             </div>
-            <p className="text-gray-400 text-xs sm:text-sm mb-1">Languages</p>
-            <p className="text-3xl sm:text-4xl font-bold text-white">{stats.languagesActive}</p>
+            <p className="text-gray-400 text-xs mb-1">Submissions</p>
+            <p className="text-xl sm:text-2xl font-bold text-white">{overview.totalSubmissions || 0}</p>
+          </div>
+
+          <div className="bg-gray-800 border border-gray-700 p-3 sm:p-4 rounded-xl flex flex-col items-center">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-500/20 rounded-xl flex items-center justify-center mb-2">
+              <Target className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400" />
+            </div>
+            <p className="text-gray-400 text-xs mb-1">Pass Rate</p>
+            <p className="text-xl sm:text-2xl font-bold text-white">{overview.passRate || 0}%</p>
+          </div>
+
+          <div className="bg-gray-800 border border-gray-700 p-3 sm:p-4 rounded-xl flex flex-col items-center">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-akodemy-gold/20 rounded-xl flex items-center justify-center mb-2">
+              <Award className="w-5 h-5 sm:w-6 sm:h-6 text-akodemy-gold" />
+            </div>
+            <p className="text-gray-400 text-xs mb-1">Badges</p>
+            <p className="text-xl sm:text-2xl font-bold text-white">{overview.totalBadgesClaimed || 0}</p>
+          </div>
+
+          <div className="bg-gray-800 border border-gray-700 p-3 sm:p-4 rounded-xl flex flex-col items-center">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-500/20 rounded-xl flex items-center justify-center mb-2">
+              <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-orange-400" />
+            </div>
+            <p className="text-gray-400 text-xs mb-1">Top Language</p>
+            <p className="text-lg sm:text-xl font-bold text-white capitalize truncate w-full text-center">
+              {overview.topLanguage || 'N/A'}
+            </p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
           <div className="bg-gray-800 border border-gray-700 p-4 sm:p-6 rounded-xl">
-            <h3 className="text-base sm:text-lg font-bold text-white mb-4">Language Engagement</h3>
+            <h3 className="text-sm sm:text-base font-bold text-white mb-4 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5 text-akodemy-purple" />
+              Submission Trends
+            </h3>
             <div className="h-48 sm:h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={languageData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="name" stroke="#9ca3af" tick={{ fontSize: 12 }} />
-                  <YAxis stroke="#9ca3af" tick={{ fontSize: 12 }} />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: '#1f2937', 
-                      border: '1px solid #374151',
-                      borderRadius: '8px',
-                      color: '#fff'
-                    }} 
-                  />
-                  <Bar dataKey="students" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {trends.dailySubmissions.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={trends.dailySubmissions}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                    <XAxis 
+                      dataKey="date" 
+                      stroke="#9ca3af" 
+                      tick={{ fontSize: 10 }}
+                      tickFormatter={formatDate}
+                    />
+                    <YAxis stroke="#9ca3af" tick={{ fontSize: 10 }} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#1f2937', 
+                        border: '1px solid #374151',
+                        borderRadius: '8px',
+                        color: '#fff',
+                        fontSize: '12px'
+                      }}
+                      labelFormatter={formatDate}
+                    />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    <Area type="monotone" dataKey="passed" name="Passed" stackId="1" stroke="#22c55e" fill="#22c55e" fillOpacity={0.6} />
+                    <Area type="monotone" dataKey="failed" name="Failed" stackId="1" stroke="#ef4444" fill="#ef4444" fillOpacity={0.6} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-gray-500">
+                  No submission data available
+                </div>
+              )}
             </div>
           </div>
+
           <div className="bg-gray-800 border border-gray-700 p-4 sm:p-6 rounded-xl">
-            <h3 className="text-base sm:text-lg font-bold text-white mb-4">Quick Stats</h3>
-            <div className="space-y-3 sm:space-y-4">
-              <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-900 rounded-lg">
-                <span className="text-gray-400 text-sm">Active Languages</span>
-                <span className="text-white font-semibold text-sm">JavaScript, Python, Java</span>
-              </div>
-              <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-900 rounded-lg">
-                <span className="text-gray-400 text-sm">Completion Rate</span>
-                <span className="text-green-400 font-semibold">
-                  {stats.totalStudents > 0 
-                    ? Math.round((stats.completionists / stats.totalStudents) * 100) 
-                    : 0}%
-                </span>
-              </div>
-              <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-900 rounded-lg">
-                <span className="text-gray-400 text-sm">Most Popular</span>
-                <span className="text-akodemy-purple font-semibold">
-                  {languageData.length > 0 
-                    ? languageData.reduce((a, b) => a.students > b.students ? a : b).name 
-                    : 'N/A'}
-                </span>
-              </div>
+            <h3 className="text-sm sm:text-base font-bold text-white mb-4 flex items-center gap-2">
+              <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-akodemy-gold" />
+              Badge Distribution
+            </h3>
+            <div className="h-48 sm:h-64">
+              {getBadgeDistributionData().length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={getBadgeDistributionData()}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={40}
+                      outerRadius={80}
+                      paddingAngle={2}
+                      dataKey="value"
+                      label={({ name, value }) => `${name}: ${value}`}
+                      labelLine={false}
+                    >
+                      {getBadgeDistributionData().map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#1f2937', 
+                        border: '1px solid #374151',
+                        borderRadius: '8px',
+                        color: '#fff'
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex items-center justify-center text-gray-500">
+                  No badges claimed yet
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        <div className="bg-gray-800 border border-gray-700 p-4 sm:p-6 rounded-xl">
-          <h3 className="text-base sm:text-lg font-bold text-white mb-4">Student Competency Distribution by Language</h3>
-          <p className="text-gray-400 text-sm mb-4">Percentage of students at each mastery level</p>
-          <div className="h-64 sm:h-80">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
+          <div className="bg-gray-800 border border-gray-700 p-4 sm:p-6 rounded-xl">
+            <h3 className="text-sm sm:text-base font-bold text-white mb-4 flex items-center gap-2">
+              <Target className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
+              Most Attempted Challenges
+            </h3>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {challenges.mostAttempted.length > 0 ? (
+                challenges.mostAttempted.slice(0, 5).map((challenge, idx) => (
+                  <div key={challenge._id} className="flex items-center justify-between p-3 bg-gray-900 rounded-lg">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-gray-500 font-mono text-sm w-6">{idx + 1}.</span>
+                      <div className="min-w-0">
+                        <p className="text-white text-sm truncate">{challenge.title}</p>
+                        <p className="text-gray-500 text-xs capitalize">{challenge.language} - {challenge.difficulty}</p>
+                      </div>
+                    </div>
+                    <span className="text-akodemy-purple font-semibold text-sm">{challenge.attempts}</span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500 text-sm text-center py-4">No data available</p>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-gray-800 border border-gray-700 p-4 sm:p-6 rounded-xl">
+            <h3 className="text-sm sm:text-base font-bold text-white mb-4 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-red-400" />
+              Hardest Challenges (Low Pass Rate)
+            </h3>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {challenges.hardestChallenges.length > 0 ? (
+                challenges.hardestChallenges.slice(0, 5).map((challenge, idx) => (
+                  <div key={challenge._id} className="flex items-center justify-between p-3 bg-gray-900 rounded-lg">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-gray-500 font-mono text-sm w-6">{idx + 1}.</span>
+                      <div className="min-w-0">
+                        <p className="text-white text-sm truncate">{challenge.title}</p>
+                        <p className="text-gray-500 text-xs capitalize">{challenge.language} - {challenge.difficulty}</p>
+                      </div>
+                    </div>
+                    <span className="text-red-400 font-semibold text-sm">{challenge.passRate}%</span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500 text-sm text-center py-4">No data available</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gray-800 border border-gray-700 p-4 sm:p-6 rounded-xl mb-6">
+          <h3 className="text-sm sm:text-base font-bold text-white mb-4">Student Competency Distribution</h3>
+          <div className="h-48 sm:h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={getCompetencyChartData()} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis type="number" stroke="#9ca3af" tick={{ fontSize: 12 }} domain={[0, 100]} unit="%" />
-                <YAxis type="category" dataKey="name" stroke="#9ca3af" tick={{ fontSize: 12 }} width={80} />
+                <XAxis type="number" stroke="#9ca3af" tick={{ fontSize: 10 }} domain={[0, 100]} unit="%" />
+                <YAxis type="category" dataKey="name" stroke="#9ca3af" tick={{ fontSize: 10 }} width={80} />
                 <Tooltip 
                   contentStyle={{ 
                     backgroundColor: '#1f2937', 
@@ -199,7 +360,7 @@ export default function FacultyDashboard() {
                   }}
                   formatter={(value) => `${value}%`}
                 />
-                <Legend wrapperStyle={{ paddingTop: '10px' }} />
+                <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
                 <Bar dataKey="Not Started" stackId="a" fill="#4b5563" />
                 <Bar dataKey="Needs Practice" stackId="a" fill="#ef4444" />
                 <Bar dataKey="Developing" stackId="a" fill="#eab308" />
@@ -209,37 +370,105 @@ export default function FacultyDashboard() {
           </div>
         </div>
 
-        <div className="bg-gray-800 border border-gray-700 p-4 sm:p-6 rounded-xl mt-6">
-          <h3 className="text-base sm:text-lg font-bold text-white mb-4">Student Distribution per Competency</h3>
-          <p className="text-gray-400 text-sm mb-4">Percentage of students at each mastery level per competency category</p>
-          <div className="h-80 sm:h-96">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={perCompetencyDistribution} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis type="number" stroke="#9ca3af" tick={{ fontSize: 12 }} domain={[0, 100]} unit="%" />
-                <YAxis type="category" dataKey="name" stroke="#9ca3af" tick={{ fontSize: 10 }} width={120} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#1f2937', 
-                    border: '1px solid #374151',
-                    borderRadius: '8px',
-                    color: '#fff'
-                  }}
-                  formatter={(value) => `${value}%`}
-                />
-                <Legend wrapperStyle={{ paddingTop: '10px' }} />
-                <Bar dataKey="notStarted" name="Not Started" stackId="a" fill="#4b5563" />
-                <Bar dataKey="needsPractice" name="Needs Practice" stackId="a" fill="#ef4444" />
-                <Bar dataKey="developing" name="Developing" stackId="a" fill="#eab308" />
-                <Bar dataKey="mastered" name="Mastered" stackId="a" fill="#22c55e" />
-              </BarChart>
-            </ResponsiveContainer>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
+          <div className="bg-gray-800 border border-gray-700 p-4 sm:p-6 rounded-xl">
+            <h3 className="text-sm sm:text-base font-bold text-white mb-4 flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
+              Top Performers
+            </h3>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {students.topPerformers.length > 0 ? (
+                students.topPerformers.slice(0, 5).map((student, idx) => (
+                  <div 
+                    key={student._id} 
+                    className="flex items-center justify-between p-3 bg-gray-900 rounded-lg cursor-pointer hover:bg-gray-700/50 transition"
+                    onClick={() => navigate(`/faculty/student/${student._id}`)}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-akodemy-gold font-mono text-sm w-5">{idx + 1}</span>
+                      <span className="text-white text-sm truncate">{student.name}</span>
+                    </div>
+                    <span className="text-green-400 font-semibold text-sm">{student.passRate}%</span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500 text-sm text-center py-4">No data available</p>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-gray-800 border border-gray-700 p-4 sm:p-6 rounded-xl">
+            <h3 className="text-sm sm:text-base font-bold text-white mb-4 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
+              Needs Attention
+            </h3>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {students.needsAttention.length > 0 ? (
+                students.needsAttention.slice(0, 5).map((student) => (
+                  <div 
+                    key={student._id} 
+                    className="flex items-center justify-between p-3 bg-gray-900 rounded-lg cursor-pointer hover:bg-gray-700/50 transition"
+                    onClick={() => navigate(`/faculty/student/${student._id}`)}
+                  >
+                    <span className="text-white text-sm truncate flex-1 min-w-0">{student.name}</span>
+                    <span className="text-red-400 font-semibold text-sm ml-2">{student.failRate}% fail</span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500 text-sm text-center py-4">All students on track!</p>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-gray-800 border border-gray-700 p-4 sm:p-6 rounded-xl">
+            <h3 className="text-sm sm:text-base font-bold text-white mb-4 flex items-center gap-2">
+              <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
+              Recent Activity
+            </h3>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {students.recentActivity.length > 0 ? (
+                students.recentActivity.slice(0, 5).map((activity, idx) => (
+                  <div key={idx} className="flex items-center gap-2 p-2 bg-gray-900 rounded-lg">
+                    {activity.status === 'accepted' ? (
+                      <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+                    ) : (
+                      <XCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-white text-xs truncate">{activity.studentName}</p>
+                      <p className="text-gray-500 text-xs truncate">{activity.challengeTitle}</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500 text-sm text-center py-4">No recent activity</p>
+              )}
+            </div>
           </div>
         </div>
+
+        {students.recentBadges.length > 0 && (
+          <div className="bg-gray-800 border border-gray-700 p-4 sm:p-6 rounded-xl">
+            <h3 className="text-sm sm:text-base font-bold text-white mb-4 flex items-center gap-2">
+              <Award className="w-4 h-4 sm:w-5 sm:h-5 text-akodemy-gold" />
+              Recent Badge Claims
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {students.recentBadges.slice(0, 8).map((badge, idx) => (
+                <div key={idx} className="flex items-center gap-3 p-3 bg-gray-900 rounded-lg">
+                  <div className="w-10 h-10 bg-akodemy-gold/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Trophy className="w-5 h-5 text-akodemy-gold" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-white text-sm font-medium truncate">{badge.studentName}</p>
+                    <p className="text-akodemy-gold text-xs truncate">{badge.badgeName}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   )
 }
-
-
-

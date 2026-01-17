@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ChevronLeft, User, Award, Trophy, Star, Lock } from 'lucide-react'
 import Layout from '../../components/Layout'
+import LoadingSpinner from '../../components/LoadingSpinner'
 import api from '../../services/api'
 
 const BADGE_ICONS = {
@@ -128,9 +129,7 @@ export default function StudentProfileView() {
   if (loading) {
     return (
       <Layout>
-        <div className="flex-1 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-akodemy-purple"></div>
-        </div>
+        <LoadingSpinner />
       </Layout>
     )
   }

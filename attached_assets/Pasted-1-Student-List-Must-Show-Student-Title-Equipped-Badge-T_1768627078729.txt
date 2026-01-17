@@ -1,0 +1,149 @@
+1) Student List Must Show Student Title (Equipped Badge Title)
+
+Currently, the faculty can view students in a list/table, but it does not display the student’s equipped title.
+
+Requirements
+
+In the Faculty → Students list, add a new column/field: Title
+
+This Title must reflect the student’s currently equipped badge/title (ex: “Java Roast Master ☕”).
+
+If the student has no equipped title:
+
+Display “—” or “No title equipped”
+
+Ensure the title is visible in:
+
+Desktop table view
+
+Mobile card view (responsive layout)
+
+Data requirements
+
+Update the student list API to include equippedTitle in the response.
+
+Faculty endpoint example:
+
+GET /api/faculty/students
+
+Each student should return at least:
+
+id, name, email, equippedTitle, badgeCount (optional)
+
+Performance
+
+Avoid N+1 queries (don’t fetch each student title individually).
+
+Use optimized query or a single aggregation/lookup.
+
+2) Fix Faculty UI Responsiveness (Mobile/Tablet/Desktop Friendly)
+
+Improve the faculty dashboard layout to be user-friendly on different devices.
+
+Requirements
+
+Use responsive breakpoints:
+
+Mobile (≤ 480px)
+
+Tablet (481–1024px)
+
+Desktop (≥ 1025px)
+
+Student list behavior:
+
+Desktop: table with columns (Name, Email, Title, Progress, Actions)
+
+Tablet: condensed table or stacked rows
+
+Mobile: card layout per student (Name, Title, Email, action buttons)
+
+Ensure:
+
+No horizontal scrolling unless absolutely necessary
+
+Buttons are tap-friendly
+
+Font sizes and spacing adapt properly
+
+Sidebar collapses into hamburger menu on small screens (if sidebar exists)
+
+3) Fix Loading Spinner: Center It on Screen Properly
+
+Currently the loading spinner is not properly centered.
+
+Requirements
+
+Create a reusable loading component that:
+
+Centers horizontally and vertically on the viewport
+
+Works on all pages and screen sizes
+
+Supports loading overlays (optional), but default is full-screen centered
+
+Must not jump around when content loads.
+
+If using a layout wrapper, spinner should appear above the page content.
+
+4) Build a More Detailed Faculty Dashboard (Analytics + Quick Insights)
+
+We want a better faculty dashboard that summarizes important platform/student analytics.
+
+Dashboard Must Include
+
+A. Overview KPI Cards (Top Row)
+
+Total students
+
+Active students (last 7 days)
+
+Total submissions (last 7 days / 30 days)
+
+Average pass rate
+
+Total badges claimed
+
+Top language by activity (Java/Python/JavaScript)
+
+B. Charts / Trends (Middle Section)
+
+Submissions over time (daily/weekly)
+
+Pass vs Fail trend
+
+Most attempted challenges
+
+Hardest challenges (lowest pass rate)
+
+Badge progression distribution (how many have Easy/Intermediate/Advanced badges)
+
+C. Student Insights (Bottom Section)
+
+Top performing students (by pass rate or completed challenges)
+
+Students needing attention (low activity / repeated failures)
+
+Recent student activity feed (latest submissions, new badges claimed)
+
+Filters
+
+Date range filter (7 days, 30 days, custom)
+
+Filter by language
+
+Filter by difficulty
+
+Data rules
+
+Dashboard must pull from backend endpoints designed for analytics:
+
+GET /api/faculty/analytics/overview
+
+GET /api/faculty/analytics/trends
+
+GET /api/faculty/analytics/challenges
+
+GET /api/faculty/analytics/students
+
+Ensure faculty-only access and role validation.
