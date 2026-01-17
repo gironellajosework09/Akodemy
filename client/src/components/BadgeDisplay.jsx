@@ -231,7 +231,7 @@ export default function BadgeDisplay({ badges = [], progress = {}, onRefresh }) 
   
   const handleClaim = async (language, difficulty) => {
     try {
-      const response = await api.post('/badges/claim', { language, difficulty })
+      const response = await api.post('/api/badges/claim', { language, difficulty })
       if (response.data.success) {
         setShowClaimModal({ language, difficulty, badgeName: response.data.badge.badgeName })
         if (onRefresh) onRefresh()
@@ -243,7 +243,7 @@ export default function BadgeDisplay({ badges = [], progress = {}, onRefresh }) 
   
   const handleEquip = async (language, difficulty) => {
     try {
-      await api.post('/badges/equip', { language, difficulty })
+      await api.post('/api/badges/equip', { language, difficulty })
       if (onRefresh) onRefresh()
     } catch (error) {
       console.error('Failed to equip badge:', error)
@@ -252,7 +252,7 @@ export default function BadgeDisplay({ badges = [], progress = {}, onRefresh }) 
   
   const handleUnequip = async () => {
     try {
-      await api.post('/badges/unequip')
+      await api.post('/api/badges/unequip')
       if (onRefresh) onRefresh()
     } catch (error) {
       console.error('Failed to unequip badge:', error)
