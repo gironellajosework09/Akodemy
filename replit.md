@@ -34,6 +34,7 @@ Preferred communication style: Simple, everyday language.
   - Submissions (code attempts with status and results)
   - ChallengeAnswers/LatestAnswers (tracking student progress)
   - OTPs (for password reset functionality)
+  - Badges (achievement badges earned by users per language/difficulty)
 
 ### External Content Sync
 - **Exercism Integration**: Scripts to sync exercises, tests, and templates from Exercism's GitHub repositories
@@ -65,6 +66,20 @@ Preferred communication style: Simple, everyday language.
 - **Canonical Data**: JSON-formatted test specifications cached locally for offline grading
 
 ## Recent Changes
+
+- January 17, 2026: Badging System Implementation
+  - Badge Model: Stores earned badges per user/language/difficulty with unique constraint
+  - Badge Service: checkAndAwardBadge(), getUserBadges(), getBadgeProgress() functions
+  - Badge Routes: /api/badges/my-badges, /api/badges/progress, /api/badges/check, /api/badges/check-all
+  - Badge Mapping:
+    - Java: Java Barista (beginner), Java Brewer (intermediate), Java Roast Master (advanced)
+    - Python: Python Catcher (beginner), Python Handler (intermediate), Python Expert (advanced)
+    - JavaScript: Script Starter (beginner), Script Engineer (intermediate), Script Architect (advanced)
+  - BadgeDisplay Component: Matches platform design with progress tracking per language/difficulty
+  - BadgeEarnedModal: Celebratory modal shown when badge is earned
+  - Profile Integration: New Badges tab in student profile showing all 9 badges with progress
+  - Auto-award: Badges checked and awarded automatically after challenge completion
+  - Test Challenges: 9 challenges set up (1 per difficulty per language) for testing
 
 - January 17, 2026: Complete Test Case Sync from Exercism
   - Full test sync: 417/417 challenges (100%) now have test cases

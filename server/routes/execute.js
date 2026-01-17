@@ -7,6 +7,7 @@ import { runOfficialTests } from '../services/officialTestsRunner.js'
 import { normalizeToExercismSlug } from '../services/exercismTestSync.js'
 import { getTestCases } from '../services/canonical/testFetcher.js'
 import { runTests } from '../services/testRunner.js'
+import { checkAndAwardBadge } from '../services/badgeService.js'
 import Submission from '../models/Submission.js'
 import Challenge from '../models/Challenge.js'
 
@@ -187,6 +188,29 @@ router.post('/', authenticateToken, async (req, res) => {
       }
     }
 
+    let badgeEarned = null
+    if (passed && challengeId) {
+      try {
+        const challenge = await Challenge.findById(challengeId)
+        if (challenge) {
+          const badgeResult = await checkAndAwardBadge(
+            req.user._id,
+            challenge.language,
+            challenge.difficulty
+          )
+          if (badgeResult.award) {
+            badgeEarned = {
+              badgeName: badgeResult.badgeName,
+              language: badgeResult.language,
+              difficulty: badgeResult.difficulty
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to check badge:', err)
+      }
+    }
+
     res.json({
       output: output || error,
       error: error || null,
@@ -195,7 +219,8 @@ router.post('/', authenticateToken, async (req, res) => {
       time: result.time,
       memory: result.memory,
       testResults,
-      passed
+      passed,
+      badgeEarned
     })
   } catch (error) {
     console.error('Execute error:', error)

@@ -8,6 +8,7 @@ import ConfirmDialog from '../../components/ConfirmDialog'
 import ResultsOverlay from '../../components/ResultsOverlay'
 import LatestSubmissionModal from '../../components/LatestSubmissionModal'
 import HistoryPanel from '../../components/HistoryPanel'
+import BadgeEarnedModal from '../../components/BadgeEarnedModal'
 
 // Student page logic for Challenge Editor.
 export default function ChallengeEditor() {
@@ -35,6 +36,7 @@ export default function ChallengeEditor() {
   const [startedAt] = useState(new Date())
   const [attemptNumber, setAttemptNumber] = useState(1)
   const [clipboardToast, setClipboardToast] = useState(false)
+  const [earnedBadge, setEarnedBadge] = useState(null)
   const timerRef = useRef(null)
   const containerRef = useRef(null)
   const editorRef = useRef(null)
@@ -269,6 +271,10 @@ export default function ChallengeEditor() {
 
       if (response.data.testResults) {
         setTestResults(response.data.testResults)
+      }
+
+      if (response.data.badgeEarned) {
+        setEarnedBadge(response.data.badgeEarned)
       }
 
       if (isMobile) {
@@ -586,6 +592,11 @@ export default function ChallengeEditor() {
         isOpen={showLatestModal}
         onClose={() => setShowLatestModal(false)}
         submission={latestSubmission}
+      />
+
+      <BadgeEarnedModal
+        badge={earnedBadge}
+        onClose={() => setEarnedBadge(null)}
       />
 
       {!allowClipboard && clipboardToast && (

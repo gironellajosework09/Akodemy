@@ -2,16 +2,19 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import Layout from '../../components/Layout'
-import { User, Trophy, Save, Check, Download } from 'lucide-react'
+import { User, Trophy, Save, Check, Download, Award } from 'lucide-react'
 import api from '../../services/api'
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
+import BadgeDisplay from '../../components/BadgeDisplay'
 
 // Student page logic for Profile.
 export default function Profile() {
   const { user, setUser } = useAuth()
   const [activeTab, setActiveTab] = useState('info')
   const [progress, setProgress] = useState(null)
+  const [badges, setBadges] = useState([])
+  const [badgeProgress, setBadgeProgress] = useState({})
   const [loading, setLoading] = useState(true)
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -27,6 +30,7 @@ export default function Profile() {
 
   useEffect(() => {
     fetchProgress()
+    fetchBadges()
   }, [])
 
   useEffect(() => {
@@ -49,6 +53,19 @@ export default function Profile() {
       console.error('Failed to fetch progress:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchBadges = async () => {
+    try {
+      const [badgesRes, progressRes] = await Promise.all([
+        api.get('/api/badges/my-badges'),
+        api.get('/api/badges/progress')
+      ])
+      setBadges(badgesRes.data.badges || [])
+      setBadgeProgress(progressRes.data.progress || {})
+    } catch (error) {
+      console.error('Failed to fetch badges:', error)
     }
   }
 
@@ -151,11 +168,22 @@ export default function Profile() {
                 <Trophy className="w-4 h-4 lg:w-5 lg:h-5" />
                 <span className="hidden sm:inline lg:inline">Achievements</span>
               </button>
+              <button
+                onClick={() => setActiveTab('badges')}
+                className={`flex-1 lg:flex-none flex items-center justify-center lg:justify-start gap-2 lg:gap-3 px-3 lg:px-4 py-2 rounded-lg transition text-sm lg:text-base ${
+                  activeTab === 'badges' 
+                    ? 'bg-akodemy-purple text-white' 
+                    : 'text-gray-400 hover:bg-gray-700 hover:text-white'
+                }`}
+              >
+                <Award className="w-4 h-4 lg:w-5 lg:h-5" />
+                <span className="hidden sm:inline lg:inline">Badges</span>
+              </button>
             </nav>
           </div>
 
           <div className="flex-1 bg-gray-800 border border-gray-700 rounded-xl p-4 sm:p-6 lg:p-8">
-            {activeTab === 'info' ? (
+            {activeTab === 'info' && (
               <div>
                 <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 mb-6 sm:mb-8">
                   <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-700 rounded-full flex items-center justify-center">
@@ -255,7 +283,8 @@ export default function Profile() {
                   </button>
                 </div>
               </div>
-            ) : (
+            )}
+            {activeTab === 'achievements' && (
               <div>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                   <h3 className="text-lg sm:text-xl font-bold text-white">My Achievements</h3>
@@ -348,6 +377,11 @@ export default function Profile() {
                     })
                   )}
                 </div>
+              </div>
+            )}
+            {activeTab === 'badges' && (
+              <div>
+                <BadgeDisplay badges={badges} progress={badgeProgress} />
               </div>
             )}
           </div>
