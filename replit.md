@@ -67,6 +67,20 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- January 17, 2026: Faculty Student Profile with Badges
+  - New API endpoint: GET /api/faculty/students/:studentId/profile
+  - Returns student info, equippedTitle, badges array, and badgeProgress for all 9 badge slots
+  - Faculty-only access with authentication and role verification
+  - StudentProfileView UI updates:
+    - Equipped title displayed prominently under student name with gold styling
+    - All 9 badges shown (3 languages x 3 difficulties) with status labels
+    - Locked badges show progress bar (X/Y challenges completed)
+    - Claimable badges show "Ready to Claim" status
+    - Claimed badges show "Claimed" status with Award icon
+    - Equipped badge highlighted with gold star "EQUIPPED" label
+    - Filtering by language, difficulty, and status
+    - Badge summary sidebar with counts
+
 - January 17, 2026: UX Improvements - Navigation Flow & Transitions
   - Next Challenge Flow: "Next" button in result modal now shows instructions first (same as "Retry")
   - Smooth Transitions: Added CSS animations (fade-in, modal-in, slide-up, shake) to all modals
