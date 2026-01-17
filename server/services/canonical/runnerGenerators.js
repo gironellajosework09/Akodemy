@@ -214,8 +214,14 @@ def deep_equal(a, b):
 def get_input_args(input_obj):
     if not input_obj:
         return [], {}
-    keys = list(input_obj.keys())
-    return [input_obj[k] for k in keys], {}
+    # Convert camelCase keys to snake_case for Python functions
+    snake_input = {}
+    for k, v in input_obj.items():
+        snake_key = camel_to_snake(k)
+        snake_input[snake_key] = v
+    keys = list(snake_input.keys())
+    # Pass as keyword arguments for Python functions
+    return [], snake_input
 
 def camel_to_snake(name):
     import re
