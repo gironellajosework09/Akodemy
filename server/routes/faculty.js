@@ -4,6 +4,8 @@ import { authenticateToken, requireRole } from '../middleware/auth.js'
 import User from '../models/User.js'
 import Submission from '../models/Submission.js'
 import Challenge from '../models/Challenge.js'
+import Badge from '../models/Badge.js'
+import { BADGE_MAPPING } from '../services/badgeService.js'
 
 // Route handlers for Faculty APIs.
 const router = express.Router()
@@ -202,6 +204,83 @@ router.get('/student/:id', authenticateToken, requireRole('faculty'), async (req
   } catch (error) {
     console.error('Fetch student error:', error)
     res.status(500).json({ message: 'Failed to fetch student' })
+  }
+})
+
+router.get('/students/:studentId/profile', authenticateToken, requireRole('faculty'), async (req, res) => {
+  try {
+    const { studentId } = req.params
+
+    const student = await User.findById(studentId).select('-password')
+    if (!student || student.role !== 'student') {
+      return res.status(404).json({ message: 'Student not found' })
+    }
+
+    const badges = await Badge.find({ userId: studentId }).sort({ unlockedAt: -1 })
+
+    const equippedBadge = badges.find(b => b.equipped)
+
+    const languages = ['javascript', 'python', 'java']
+    const difficulties = ['beginner', 'intermediate', 'advanced']
+    const badgeProgress = {}
+
+    for (const language of languages) {
+      badgeProgress[language] = {}
+      for (const difficulty of difficulties) {
+        const challenges = await Challenge.find({ language, difficulty })
+        const challengeIds = challenges.map(c => c._id)
+        
+        const completedSubmissions = await Submission.find({
+          userId: studentId,
+          challengeId: { $in: challengeIds },
+          status: 'accepted'
+        })
+        
+        const completedIds = new Set(completedSubmissions.map(s => s.challengeId.toString()))
+        const existingBadge = badges.find(b => b.language === language && b.difficulty === difficulty)
+        
+        badgeProgress[language][difficulty] = {
+          completed: completedIds.size,
+          total: challenges.length,
+          badgeName: BADGE_MAPPING[language]?.[difficulty] || null,
+          status: existingBadge?.status || 'locked',
+          equipped: existingBadge?.equipped || false,
+          unlockedAt: existingBadge?.unlockedAt || null,
+          claimedAt: existingBadge?.claimedAt || null
+        }
+      }
+    }
+
+    res.json({
+      student: {
+        _id: student._id,
+        name: student.name,
+        email: student.email,
+        phone: student.phone,
+        sex: student.sex,
+        birthdate: student.birthdate
+      },
+      equippedTitle: equippedBadge ? {
+        badgeKey: `${equippedBadge.language}-${equippedBadge.difficulty}`,
+        displayName: equippedBadge.badgeName,
+        language: equippedBadge.language,
+        difficulty: equippedBadge.difficulty
+      } : null,
+      badges: badges.map(b => ({
+        _id: b._id,
+        badgeName: b.badgeName,
+        language: b.language,
+        difficulty: b.difficulty,
+        status: b.status,
+        equipped: b.equipped,
+        unlockedAt: b.unlockedAt,
+        claimedAt: b.claimedAt
+      })),
+      badgeProgress
+    })
+  } catch (error) {
+    console.error('Fetch student profile error:', error)
+    res.status(500).json({ message: 'Failed to fetch student profile' })
   }
 })
 
