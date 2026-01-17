@@ -211,6 +211,11 @@ def deep_equal(a, b):
         return all(deep_equal(x, y) for x, y in zip(a, b))
     return a == b
 
+def camel_to_snake(name):
+    import re
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\\1_\\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\\1_\\2', s1).lower().replace('-', '_')
+
 def get_input_args(input_obj):
     if not input_obj:
         return [], {}
@@ -219,14 +224,8 @@ def get_input_args(input_obj):
     for k, v in input_obj.items():
         snake_key = camel_to_snake(k)
         snake_input[snake_key] = v
-    keys = list(snake_input.keys())
     # Pass as keyword arguments for Python functions
     return [], snake_input
-
-def camel_to_snake(name):
-    import re
-    s1 = re.sub('(.)([A-Z][a-z]+)', r'\\1_\\2', name)
-    return re.sub('([a-z0-9])([A-Z])', r'\\1_\\2', s1).lower().replace('-', '_')
 
 passed = 0
 total = len(test_cases)
