@@ -357,8 +357,8 @@ export default function ChallengeEditor() {
             <span className="hidden sm:inline">Back</span>
           </button>
           <div className="text-center flex-1 mx-2">
-            <h1 className="font-bold text-sm sm:text-lg text-white truncate">{challenge?.title}</h1>
-            <p className="text-lg sm:text-2xl font-bold text-akodemy-purple">{formatTime(time)}</p>
+            <h1 className="font-bold text-base sm:text-xl text-white truncate">{challenge?.title}</h1>
+            <p className="text-sm sm:text-lg font-bold text-white">{formatTime(time)}</p>
           </div>
           <button
             onClick={finishChallenge}

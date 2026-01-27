@@ -152,7 +152,7 @@ export default function FacultyDashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-6">
+        <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-4 mb-6">
           <button 
             onClick={() => navigate('/faculty/students')}
             className="bg-gray-800 border border-gray-700 p-3 sm:p-4 rounded-xl flex flex-col items-center cursor-pointer hover:border-akodemy-purple transition group"
@@ -165,35 +165,11 @@ export default function FacultyDashboard() {
           </button>
 
           <div className="bg-gray-800 border border-gray-700 p-3 sm:p-4 rounded-xl flex flex-col items-center">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-500/20 rounded-xl flex items-center justify-center mb-2">
-              <Activity className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
-            </div>
-            <p className="text-gray-400 text-xs mb-1">Active (7d)</p>
-            <p className="text-xl sm:text-2xl font-bold text-white">{overview.activeStudents || 0}</p>
-          </div>
-
-          <div className="bg-gray-800 border border-gray-700 p-3 sm:p-4 rounded-xl flex flex-col items-center">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500/20 rounded-xl flex items-center justify-center mb-2">
-              <Code className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
-            </div>
-            <p className="text-gray-400 text-xs mb-1">Submissions</p>
-            <p className="text-xl sm:text-2xl font-bold text-white">{overview.totalSubmissions || 0}</p>
-          </div>
-
-          <div className="bg-gray-800 border border-gray-700 p-3 sm:p-4 rounded-xl flex flex-col items-center">
             <div className="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-500/20 rounded-xl flex items-center justify-center mb-2">
               <Target className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400" />
             </div>
             <p className="text-gray-400 text-xs mb-1">Pass Rate</p>
             <p className="text-xl sm:text-2xl font-bold text-white">{overview.passRate || 0}%</p>
-          </div>
-
-          <div className="bg-gray-800 border border-gray-700 p-3 sm:p-4 rounded-xl flex flex-col items-center">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-akodemy-gold/20 rounded-xl flex items-center justify-center mb-2">
-              <Award className="w-5 h-5 sm:w-6 sm:h-6 text-akodemy-gold" />
-            </div>
-            <p className="text-gray-400 text-xs mb-1">Badges</p>
-            <p className="text-xl sm:text-2xl font-bold text-white">{overview.totalBadgesClaimed || 0}</p>
           </div>
 
           <div className="bg-gray-800 border border-gray-700 p-3 sm:p-4 rounded-xl flex flex-col items-center">

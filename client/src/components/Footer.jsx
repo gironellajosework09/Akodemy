@@ -10,11 +10,11 @@ export default function Footer() {
           {/* <div className="w-6 h-6 bg-akodemy-purple rounded flex items-center justify-center">
             <Code2 className="w-4 h-4 text-white" />
           </div> */}
-          <div className="w-6 h-6 bg-white rounded flex items-center justify-center overflow-hidden">
+          <div className="w-6 h-6 rounded flex items-center justify-center overflow-hidden">
             <img
               src="/images/akodemy-logo.png"  // path to your logo in public/images
               alt="Akodemy Logo"
-              className="w-4 h-4 object-contain"
+              className="w-6 h-6 object-contain"
             />
           </div>
           <span className="font-semibold text-white">Akodemy</span>

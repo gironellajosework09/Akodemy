@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ChevronLeft, ChevronDown, ChevronUp, User, Award, Trophy, Star, Lock } from 'lucide-react'
+import { ChevronLeft, ChevronDown, ChevronUp, User, Award, Trophy, Star, Lock, Download } from 'lucide-react'
 import Layout from '../../components/Layout'
 import LoadingSpinner from '../../components/LoadingSpinner'
 import api from '../../services/api'
+import html2canvas from 'html2canvas'
+import jsPDF from 'jspdf'
 
 const DIFFICULTY_CHIPS = {
   beginner: { label: 'Easy', bgColor: 'bg-green-500/20', textColor: 'text-green-400', borderColor: 'border-green-500/30' },
@@ -27,6 +29,8 @@ export default function StudentProfileView() {
   const [activeTab, setActiveTab] = useState('badges')
   const [expandedBadgeLang, setExpandedBadgeLang] = useState(null)
   const [expandedCompLang, setExpandedCompLang] = useState(null)
+  const [downloading, setDownloading] = useState(false)
+  const pdfRef = useRef(null)
 
   useEffect(() => {
     fetchStudentData()
@@ -114,6 +118,71 @@ export default function StudentProfileView() {
     return { total: badges.length, claimed, claimable }
   }
 
+  const downloadPDF = async () => {
+    if (!pdfRef.current) return
+    setDownloading(true)
+
+    try {
+      const canvas = await html2canvas(pdfRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true
+      })
+
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const pdfWidth = pdf.internal.pageSize.getWidth()
+      const pdfHeight = pdf.internal.pageSize.getHeight()
+      const margin = 10
+      const imgWidth = pdfWidth - margin * 2
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      const pageHeight = pdfHeight - margin * 2
+
+      if (imgHeight <= pageHeight) {
+        const imgData = canvas.toDataURL('image/png')
+        pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight)
+      } else {
+        const pageHeightPx = Math.floor(canvas.width * pageHeight / imgWidth)
+        let offsetY = 0
+        let pageIndex = 0
+
+        while (offsetY < canvas.height) {
+          const pageCanvas = document.createElement('canvas')
+          const pageHeightPxActual = Math.min(pageHeightPx, canvas.height - offsetY)
+          pageCanvas.width = canvas.width
+          pageCanvas.height = pageHeightPxActual
+
+          const ctx = pageCanvas.getContext('2d')
+          if (!ctx) break
+          ctx.drawImage(
+            canvas,
+            0,
+            offsetY,
+            canvas.width,
+            pageHeightPxActual,
+            0,
+            0,
+            canvas.width,
+            pageHeightPxActual
+          )
+
+          const pageImgData = pageCanvas.toDataURL('image/png')
+          const pageImgHeight = (pageCanvas.height * imgWidth) / pageCanvas.width
+
+          if (pageIndex > 0) pdf.addPage()
+          pdf.addImage(pageImgData, 'PNG', margin, margin, imgWidth, pageImgHeight)
+          offsetY += pageHeightPx
+          pageIndex++
+        }
+      }
+
+      pdf.save(`${student?.name || 'Student'} - Akodemy Competency Report.pdf`)
+    } catch (error) {
+      console.error('Failed to generate PDF:', error)
+    } finally {
+      setDownloading(false)
+    }
+  }
+
   if (loading) {
     return (
       <Layout>
@@ -122,17 +191,32 @@ export default function StudentProfileView() {
     )
   }
 
+  const pdfProgress = competencyData ? {
+    competencies: {
+      javascript: competencyData.javascript || [],
+      python: competencyData.python || [],
+      java: competencyData.java || []
+    },
+    summary: competencyData.summary || {}
+  } : null
+  const pdfDate = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit'
+  })
   const badgeCounts = getBadgeCounts()
   return (
     <Layout>
       <div className="container mx-auto px-4 py-4 lg:px-8 lg:py-8">
-        <button
-          onClick={() => navigate('/faculty/students')}
-          className="flex items-center gap-1 text-gray-400 hover:text-white transition mb-6"
-        >
-          <ChevronLeft className="w-5 h-5" />
-          Back to Students
-        </button>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+          <button
+            onClick={() => navigate('/faculty/students')}
+            className="flex items-center gap-1 text-gray-400 hover:text-white transition"
+          >
+            <ChevronLeft className="w-5 h-5" />
+            Back to Students
+          </button>
+        </div>
 
         <div className="flex flex-col gap-4 lg:flex-row lg:gap-8">
           <div className="w-full space-y-4 lg:w-72 lg:space-y-6">
@@ -199,6 +283,16 @@ export default function StudentProfileView() {
           </div>
 
           <div className="flex-1 space-y-4 lg:space-y-8">
+            <div className="flex justify-end">
+              <button
+                onClick={downloadPDF}
+                disabled={downloading || !pdfProgress}
+                className="flex w-full items-center justify-center gap-2 bg-akodemy-purple text-white px-4 py-2.5 rounded-lg font-semibold hover:bg-purple-700 disabled:opacity-50 transition text-sm sm:w-auto"
+              >
+                <Download className="w-4 h-4" />
+                {downloading ? 'Generating...' : 'Download PDF'}
+              </button>
+            </div>
             <div className="flex gap-2 lg:hidden">
               <button
                 onClick={() => setActiveTab('badges')}
@@ -223,6 +317,10 @@ export default function StudentProfileView() {
             </div>
 
             <div className={`space-y-4 ${activeTab !== 'badges' ? 'hidden lg:block' : ''}`}>
+              <div className="flex items-center gap-2 mb-4 hidden lg:flex">
+                <Award className="w-6 h-6 text-akodemy-gold" />
+                <h2 className="text-xl font-bold text-white">Badges</h2>
+              </div>
 
               {languages.map((lang) => {
                 const langInfo = LANGUAGE_DISPLAY[lang]
@@ -238,7 +336,7 @@ export default function StudentProfileView() {
                           <img
                             src={getLanguageIcon(lang)}
                             alt={lang}
-                            className="w-full h-full object-contain"
+                            className="w-10 h-10 lg:w-12 lg:h-12 object-contain"
                           />
                         </div>
                         <div className="text-left">
@@ -360,6 +458,7 @@ export default function StudentProfileView() {
               </div>
 
               {languages.map((lang) => {
+                const langInfo = LANGUAGE_DISPLAY[lang]
                 const langData = competencyData?.[lang] || []
                 const isExpanded = expandedCompLang === lang
                 
@@ -367,15 +466,15 @@ export default function StudentProfileView() {
                   <div key={lang} className="bg-gray-800 border border-gray-700 rounded-xl p-4 lg:p-6">
                     <div className="flex items-center justify-between lg:mb-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-lg flex items-center justify-center">
+                        <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-lg flex items-center justify-center">
                           <img
                             src={getLanguageIcon(lang)}
                             alt={lang}
-                            className="w-full h-full object-contain"
+                            className="w-10 h-10 lg:w-12 lg:h-12 object-contain"
                           />
                         </div>
                         <div>
-                          <h3 className="text-lg lg:text-xl font-bold text-white uppercase">{lang}</h3>
+                          <h3 className="text-lg lg:text-xl font-bold text-white">{langInfo.name}</h3>
                           <p className="text-sm text-gray-500 lg:hidden">
                             {langData.length > 0 ? `${langData.length} competencies` : 'No activity yet'}
                           </p>
@@ -443,6 +542,104 @@ export default function StudentProfileView() {
                 )
               })}
             </div>
+          </div>
+        </div>
+
+        <div
+          ref={pdfRef}
+          className="fixed left-[-9999px] top-0 w-[794px] bg-white text-gray-900 p-10"
+        >
+          <div className="flex items-start justify-between border-b border-gray-200 pb-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-gray-500">Akodemy</p>
+              <h1 className="text-2xl font-bold text-gray-900">Competency Report</h1>
+              <p className="text-xs text-gray-500">Generated {pdfDate}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-semibold text-gray-900">{student?.name || 'Student'}</p>
+              <p className="text-xs text-gray-500">{student?.email || ''}</p>
+              <p className="text-xs text-gray-500">Student ID: {student?.student_id || 'N/A'}</p>
+              <p className="text-xs text-gray-500">Badge: {profileData?.equippedTitle?.displayName || 'None'}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 mt-5">
+            {languages.map((lang) => {
+              const summary = pdfProgress?.summary?.[lang] || { completed: 0, total: 0 }
+              return (
+                <div key={`${lang}-summary`} className="border border-gray-200 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold uppercase text-gray-700">{lang}</span>
+                    <span className="text-xs text-gray-500">{summary.completed}/{summary.total}</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
+                    <div
+                      className="h-full bg-akodemy-purple"
+                      style={{ width: summary.total > 0 ? `${Math.round((summary.completed / summary.total) * 100)}%` : '0%' }}
+                    ></div>
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-2">Completed challenges</p>
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="mt-6 space-y-6">
+            {pdfProgress ? (
+              languages.map((lang) => {
+                const langProgress = pdfProgress?.competencies?.[lang] || []
+                const summary = pdfProgress?.summary?.[lang] || { completed: 0, total: 0 }
+
+                return (
+                  <div key={`${lang}-details`} className="border border-gray-200 rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6">
+                          <img
+                            src={getLanguageIcon(lang)}
+                            alt={lang}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                        <h2 className="text-sm font-semibold uppercase text-gray-800">{lang}</h2>
+                      </div>
+                      <span className="text-xs text-gray-500">{summary.completed} / {summary.total} completed</span>
+                    </div>
+
+                    {langProgress.length === 0 ? (
+                      <p className="text-xs text-gray-500">No activity yet.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {langProgress.map((comp) => {
+                          const mastery = getMasteryLevel(comp.percentage, comp.hasActivity)
+
+                          return (
+                            <div key={`${lang}-${comp.index}`} className="flex items-center gap-3">
+                              <span className="text-xs text-gray-700 w-44">{comp.name}</span>
+                              <div className="flex-1">
+                                <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
+                                  {comp.percentage > 0 && (
+                                    <div
+                                      className={`h-full ${mastery.color}`}
+                                      style={{ width: `${comp.percentage}%` }}
+                                    ></div>
+                                  )}
+                                </div>
+                              </div>
+                              <span className="text-xs text-gray-500 w-14 text-right">
+                                {comp.completed}/{comp.total}
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              })
+            ) : (
+              <p className="text-sm text-gray-500">Loading achievement data...</p>
+            )}
           </div>
         </div>
       </div>

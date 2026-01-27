@@ -2,6 +2,9 @@
   "name": "akodemy",
   "version": "1.0.0",
   "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "client": "cd client && npm run dev",
@@ -14,12 +17,11 @@
     "start:prod": "node server/production.js"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^9.2.1"
   },
   "dependencies": {
     "dotenv": "^17.2.3",
     "html2canvas": "^1.4.1",
-    "jspdf": "^3.0.4",
     "nodemailer": "^7.0.12"
   }
 }

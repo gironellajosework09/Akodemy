@@ -120,6 +120,9 @@ export default function Login() {
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
   const [loginError, setLoginError] = useState(false)
+  const [lockoutUntil, setLockoutUntil] = useState(null)
+  const [lockoutRemaining, setLockoutRemaining] = useState(0)
+  const [lockoutEmail, setLockoutEmail] = useState('')
   
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [otpError, setOtpError] = useState(false)
@@ -147,6 +150,21 @@ export default function Login() {
     }
   }, [otpExpiry])
 
+  useEffect(() => {
+    if (!lockoutUntil) return undefined
+    const tick = () => {
+      const remaining = Math.max(0, Math.floor((new Date(lockoutUntil) - new Date()) / 1000))
+      setLockoutRemaining(remaining)
+      if (remaining === 0) {
+        setLockoutUntil(null)
+        setLockoutEmail('')
+      }
+    }
+    tick()
+    const interval = setInterval(tick, 1000)
+    return () => clearInterval(interval)
+  }, [lockoutUntil])
+
   const handleLoginSubmit = async (e) => {
     e.preventDefault()
     setError('')
@@ -154,11 +172,25 @@ export default function Login() {
     setLoading(true)
     
     try {
+      const normalizedEmail = email.trim().toLowerCase()
+      if (lockoutRemaining > 0 && lockoutEmail && lockoutEmail === normalizedEmail) {
+        setError(`This account is locked. Try again in ${formatTime(lockoutRemaining)}.`)
+        setLoginError(true)
+        setLoading(false)
+        return
+      }
       const user = await login(email, password)
       setEmail('')
       setPassword('')
+      setLockoutUntil(null)
+      setLockoutEmail('')
       navigate(user.role === 'faculty' ? '/faculty' : '/dashboard')
     } catch (err) {
+      const lockoutUntilValue = err.response?.data?.lockoutUntil
+      if (lockoutUntilValue) {
+        setLockoutUntil(lockoutUntilValue)
+        setLockoutEmail(email.trim().toLowerCase())
+      }
       setError(err.response?.data?.message || 'Invalid email or password')
       setLoginError(true)
       passwordRef.current?.focus()
@@ -317,18 +349,22 @@ export default function Login() {
       <nav className="px-6 py-4 border-b border-gray-800">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-akodemy-purple rounded-lg flex items-center justify-center">
-              <Code2 className="w-5 h-5 text-white" />
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center">
+              <img
+                  src="/images/akodemy-logo.png"
+                  alt="Akodemy Logo"
+                  className="w-8 h-8 sm:w-8 sm:h-8 object-contain"
+                />
             </div>
             <span className="text-xl font-bold text-white">Akodemy</span>
           </Link>
-          <Link 
+          {/* <Link 
             to="/" 
             className="text-gray-400 hover:text-white transition flex items-center gap-2 text-sm"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Home
-          </Link>
+          </Link> */}
         </div>
       </nav>
 
@@ -393,15 +429,33 @@ export default function Login() {
 
             {mode === 'login' && (
               <form onSubmit={handleLoginSubmit} className="space-y-4">
+                {lockoutRemaining > 0 && lockoutEmail === email.trim().toLowerCase() && (
+                  <div className="bg-yellow-500/10 border border-yellow-500/40 text-yellow-300 p-3 rounded-lg text-sm flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                    <span>
+                      Too many failed attempts. You are locked out for 3 minutes.
+                      {' '}Try again in {formatTime(lockoutRemaining)}.
+                    </span>
+                  </div>
+                )}
                 <div>
-                  <label className="block text-gray-300 mb-2 text-sm font-medium">Email</label>
+                  <label className="block text-gray-300 mb-2 text-sm font-medium">Email or Username</label>
                   <input
                     ref={emailRef}
-                    type="email"
+                    type="text"
                     value={email}
-                    onChange={(e) => { setEmail(e.target.value); clearLoginError(); }}
+                    onChange={(e) => {
+                      const nextValue = e.target.value
+                      setEmail(nextValue)
+                      if (lockoutEmail && nextValue.trim().toLowerCase() !== lockoutEmail) {
+                        setLockoutUntil(null)
+                        setLockoutEmail('')
+                        setLockoutRemaining(0)
+                      }
+                      clearLoginError()
+                    }}
                     className={`w-full px-4 py-3 bg-gray-900 border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-akodemy-purple focus:border-transparent transition ${loginError ? 'border-red-500' : 'border-gray-700'}`}
-                    placeholder="Enter your email"
+                    placeholder="Enter your email or username"
                     required
                   />
                 </div>
@@ -446,7 +500,7 @@ export default function Login() {
 
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || (lockoutRemaining > 0 && lockoutEmail === email.trim().toLowerCase())}
                   className="w-full bg-akodemy-purple text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {loading ? (

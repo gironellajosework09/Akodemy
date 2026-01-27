@@ -12,6 +12,8 @@ export default function StudentList() {
   const navigate = useNavigate()
   const [students, setStudents] = useState([])
   const [search, setSearch] = useState('')
+  const [yearSectionFilter, setYearSectionFilter] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
   const [loading, setLoading] = useState(true)
   const [downloading, setDownloading] = useState(false)
   const pdfRef = useRef(null)
@@ -19,6 +21,10 @@ export default function StudentList() {
   useEffect(() => {
     fetchStudents()
   }, [])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, yearSectionFilter])
 
   const fetchStudents = async () => {
     try {
@@ -31,10 +37,51 @@ export default function StudentList() {
     }
   }
 
-  const filteredStudents = students.filter(student =>
-    student.name.toLowerCase().includes(search.toLowerCase()) ||
-    student.email.toLowerCase().includes(search.toLowerCase())
-  )
+  const yearSectionOptions = [...new Set(
+    students
+      .map(student => (student.yearSection || '').trim())
+      .filter(Boolean)
+      .map(value => value.toUpperCase())
+  )].sort()
+
+  const filteredStudents = students.filter(student => {
+    const query = search.toLowerCase()
+    const matchesSearch = student.name.toLowerCase().includes(query) ||
+      student.email.toLowerCase().includes(query)
+    const matchesYearSection = yearSectionFilter
+      ? (student.yearSection || '').toUpperCase() === yearSectionFilter
+      : true
+    return matchesSearch && matchesYearSection
+  })
+
+  const pageSize = 10
+  const totalPages = Math.max(1, Math.ceil(filteredStudents.length / pageSize))
+  const safePage = Math.min(currentPage, totalPages)
+  const pageStartIndex = (safePage - 1) * pageSize
+  const pageEndIndex = pageStartIndex + pageSize
+  const pagedStudents = filteredStudents.slice(pageStartIndex, pageEndIndex)
+
+  useEffect(() => {
+    if (currentPage !== safePage) {
+      setCurrentPage(safePage)
+    }
+  }, [currentPage, safePage])
+
+  const pageNumbers = (() => {
+    if (totalPages <= 5) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1)
+    }
+    const pages = [1]
+    if (safePage > 3) pages.push('ellipsis-start')
+    const start = Math.max(2, safePage - 1)
+    const end = Math.min(totalPages - 1, safePage + 1)
+    for (let i = start; i <= end; i += 1) {
+      pages.push(i)
+    }
+    if (safePage < totalPages - 2) pages.push('ellipsis-end')
+    pages.push(totalPages)
+    return pages
+  })()
 
   const getProgressColor = (value) => {
     if (value >= 80) return 'text-green-400'
@@ -141,15 +188,27 @@ export default function StudentList() {
         <h1 className="text-2xl sm:text-3xl font-bold text-white mb-4 sm:mb-6">Student List</h1>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-6">
-          <div className="relative w-full sm:max-w-md">
-            <input
-              type="text"
-              placeholder="Search by name or email..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg pr-10 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-akodemy-purple focus:border-transparent"
-            />
-            <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:max-w-2xl">
+            <div className="relative w-full sm:max-w-md">
+              <input
+                type="text"
+                placeholder="Search by name or email..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg pr-10 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-akodemy-purple focus:border-transparent"
+              />
+              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
+            </div>
+            <select
+              value={yearSectionFilter}
+              onChange={(e) => setYearSectionFilter(e.target.value)}
+              className="w-full sm:w-44 px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-akodemy-purple focus:border-transparent"
+            >
+              <option value="">Year & Section</option>
+              {yearSectionOptions.map(option => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
           </div>
           <button
             onClick={downloadPDF}
@@ -182,7 +241,7 @@ export default function StudentList() {
                   </td>
                 </tr>
               ) : (
-                filteredStudents.map((student) => (
+                pagedStudents.map((student) => (
                   <tr
                     key={student._id}
                     className="border-t border-gray-700 hover:bg-gray-700/50 transition"
@@ -234,7 +293,7 @@ export default function StudentList() {
                     <td className="px-4 py-4 text-center">
                       <button
                         onClick={() => navigate(`/faculty/student/${student._id}`)}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-akodemy-purple/20 text-akodemy-purple rounded-lg hover:bg-akodemy-purple/30 transition text-sm"
+                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-akodemy-purple/20 text-white rounded-lg hover:bg-akodemy-purple/30 transition text-sm"
                       >
                         <Eye className="w-4 h-4" />
                         View
@@ -265,7 +324,7 @@ export default function StudentList() {
                   </td>
                 </tr>
               ) : (
-                filteredStudents.map((student) => {
+                pagedStudents.map((student) => {
                   const avgProgress = Math.round(
                     ((student.progress?.javascript || 0) + 
                      (student.progress?.python || 0) + 
@@ -306,7 +365,7 @@ export default function StudentList() {
                       <td className="px-3 py-3 text-center">
                         <button
                           onClick={() => navigate(`/faculty/student/${student._id}`)}
-                          className="p-2 bg-akodemy-purple/20 text-akodemy-purple rounded-lg hover:bg-akodemy-purple/30 transition"
+                          className="p-2 bg-akodemy-purple/20 text-white rounded-lg hover:bg-akodemy-purple/30 transition"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
@@ -319,29 +378,31 @@ export default function StudentList() {
           </table>
         </div>
 
-        <div className="sm:hidden space-y-3">
+        <div className="sm:hidden space-y-2.5">
           {filteredStudents.length === 0 ? (
-            <div className="bg-gray-800 border border-gray-700 rounded-xl p-8 text-center text-gray-500">
+            <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 text-center text-gray-500">
               No students found
             </div>
           ) : (
-            filteredStudents.map((student) => (
-              <div
+            pagedStudents.map((student) => (
+              <button
                 key={student._id}
-                className="bg-gray-800 border border-gray-700 rounded-xl p-4"
+                type="button"
+                onClick={() => navigate(`/faculty/student/${student._id}`)}
+                className="w-full text-left bg-gray-800 border border-gray-700 rounded-xl p-3 hover:bg-gray-700/40 transition"
               >
-                <div className="flex items-start justify-between mb-3">
+                <div className="flex items-start justify-between mb-2">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
-                      <User className="w-6 h-6 text-gray-400" />
+                    <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
+                      <User className="w-5 h-5 text-gray-400" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-white font-semibold">{student.name}</p>
-                      <p className="text-gray-500 text-sm truncate">{student.email}</p>
+                      <p className="text-white font-semibold text-sm">{student.name}</p>
+                      <p className="text-gray-500 text-xs truncate">{student.email}</p>
                     </div>
                   </div>
                   {student.badgeCount > 0 && (
-                    <div className="flex items-center gap-1 bg-akodemy-purple/20 px-2 py-1 rounded-full">
+                    <div className="flex items-center gap-1 bg-akodemy-purple/20 px-2 py-0.5 rounded-full">
                       <Award className="w-3 h-3 text-akodemy-purple" />
                       <span className="text-akodemy-purple text-xs">{student.badgeCount}</span>
                     </div>
@@ -349,51 +410,83 @@ export default function StudentList() {
                 </div>
 
                 {student.equippedTitle && (
-                  <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-akodemy-gold/10 rounded-lg">
-                    <Trophy className="w-4 h-4 text-akodemy-gold" />
-                    <span className="text-akodemy-gold text-sm font-medium">
+                  <div className="flex items-center gap-2 mb-2 px-2 py-1.5 bg-akodemy-gold/10 rounded-lg">
+                    <Trophy className="w-3.5 h-3.5 text-akodemy-gold" />
+                    <span className="text-akodemy-gold text-xs font-medium">
                       {student.equippedTitle.badgeName}
                     </span>
                   </div>
                 )}
 
-                <div className="grid grid-cols-3 gap-2 mb-4">
-                  <div className="bg-gray-900 rounded-lg p-2 text-center">
-                    <p className="text-gray-500 text-xs mb-1">JS</p>
-                    <p className={`font-semibold ${getProgressColor(student.progress?.javascript || 0)}`}>
+                <div className="grid grid-cols-3 gap-2 mb-3">
+                  <div className="bg-gray-900 rounded-lg p-1.5 text-center">
+                    <p className="text-gray-500 text-[11px] mb-0.5">JS</p>
+                    <p className={`text-sm font-semibold ${getProgressColor(student.progress?.javascript || 0)}`}>
                       {student.progress?.javascript || 0}%
                     </p>
                   </div>
-                  <div className="bg-gray-900 rounded-lg p-2 text-center">
-                    <p className="text-gray-500 text-xs mb-1">Python</p>
-                    <p className={`font-semibold ${getProgressColor(student.progress?.python || 0)}`}>
+                  <div className="bg-gray-900 rounded-lg p-1.5 text-center">
+                    <p className="text-gray-500 text-[11px] mb-0.5">Python</p>
+                    <p className={`text-sm font-semibold ${getProgressColor(student.progress?.python || 0)}`}>
                       {student.progress?.python || 0}%
                     </p>
                   </div>
-                  <div className="bg-gray-900 rounded-lg p-2 text-center">
-                    <p className="text-gray-500 text-xs mb-1">Java</p>
-                    <p className={`font-semibold ${getProgressColor(student.progress?.java || 0)}`}>
+                  <div className="bg-gray-900 rounded-lg p-1.5 text-center">
+                    <p className="text-gray-500 text-[11px] mb-0.5">Java</p>
+                    <p className={`text-sm font-semibold ${getProgressColor(student.progress?.java || 0)}`}>
                       {student.progress?.java || 0}%
                     </p>
                   </div>
                 </div>
-
-                <button
-                  onClick={() => navigate(`/faculty/student/${student._id}`)}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-akodemy-purple text-white rounded-lg hover:bg-akodemy-purple/80 transition"
-                >
-                  <Eye className="w-4 h-4" />
-                  View Profile
-                </button>
-              </div>
+              </button>
             ))
           )}
         </div>
 
         {filteredStudents.length > 0 && (
-          <p className="text-gray-500 text-sm mt-4 text-center sm:text-left">
-            Showing {filteredStudents.length} of {students.length} students
-          </p>
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-gray-500 text-sm text-center sm:text-left">
+              Showing {pageStartIndex + 1}-{Math.min(pageEndIndex, filteredStudents.length)} of {filteredStudents.length} students
+            </p>
+            <div className="flex items-center justify-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={safePage === 1}
+                className="px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-sm text-gray-300 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Prev
+              </button>
+              <div className="flex items-center gap-1">
+                {pageNumbers.map((page) => {
+                  if (page === 'ellipsis-start' || page === 'ellipsis-end') {
+                    return (
+                      <span key={page} className="px-2 text-gray-500 text-sm">…</span>
+                    )
+                  }
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-3 py-1.5 rounded-lg text-sm border ${
+                        page === safePage
+                          ? 'bg-akodemy-purple text-white border-akodemy-purple'
+                          : 'bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  )
+                })}
+              </div>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={safePage === totalPages}
+                className="px-3 py-1.5 rounded-lg bg-gray-800 border border-gray-700 text-sm text-gray-300 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          </div>
         )}
 
         <div

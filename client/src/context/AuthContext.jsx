@@ -18,24 +18,23 @@ export function AuthProvider({ children }) {
     setLoading(false)
   }, [])
 
-  const login = async (email, password) => {
-    const response = await api.post('/api/auth/login', { email, password })
-    const { token, user } = response.data
+  const setSession = ({ token, user }) => {
     localStorage.setItem('token', token)
     localStorage.setItem('user', JSON.stringify(user))
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`
     setUser(user)
-    return user
+  }
+
+  const login = async (email, password) => {
+    const response = await api.post('/api/auth/login', { email, password })
+    setSession(response.data)
+    return response.data.user
   }
 
   const register = async (userData) => {
     const response = await api.post('/api/auth/register', userData)
-    const { token, user } = response.data
-    localStorage.setItem('token', token)
-    localStorage.setItem('user', JSON.stringify(user))
-    api.defaults.headers.common['Authorization'] = `Bearer ${token}`
-    setUser(user)
-    return user
+    setSession(response.data)
+    return response.data.user
   }
 
   const logout = () => {
@@ -52,7 +51,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading, updateUser }}>
+    <AuthContext.Provider value={{ user, login, register, logout, loading, updateUser, setSession }}>
       {children}
     </AuthContext.Provider>
   )

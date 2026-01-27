@@ -2,6 +2,9 @@
   "name": "akodemy-server",
   "version": "1.0.0",
   "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

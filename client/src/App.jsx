@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext'
 import LandingPage from './pages/LandingPage'
 import Login from './pages/Login'
+import SsoCallback from './pages/SsoCallback'
 import StudentDashboard from './pages/student/Dashboard'
 import StudentProfile from './pages/student/Profile'
 import LanguageSelection from './pages/student/LanguageSelection'
@@ -42,6 +43,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to={user.role === 'faculty' ? '/faculty' : '/dashboard'} /> : <Login />} />
+      <Route path="/sso" element={<SsoCallback />} />
       
       <Route path="/dashboard" element={
         <ProtectedRoute allowedRole="student">
@@ -95,7 +97,7 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
       
-      <Route path="/" element={user ? <Navigate to={user.role === 'faculty' ? '/faculty' : '/dashboard'} /> : <LandingPage />} />
+      <Route path="/" element={user ? <Navigate to={user.role === 'faculty' ? '/faculty' : '/dashboard'} /> : <Login />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

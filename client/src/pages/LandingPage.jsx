@@ -63,8 +63,12 @@ export default function LandingPage() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-gray-900/90 backdrop-blur-sm border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-akodemy-purple rounded-lg flex items-center justify-center">
-              <Code2 className="w-5 h-5 text-white" />
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center">
+                <img
+                  src="/images/akodemy-logo.png"
+                  alt="Akodemy Logo"
+                  className="w-8 h-8 sm:w-8 sm:h-8 object-contain"
+                />
             </div>
             <span className="text-xl font-bold">Akodemy</span>
           </div>
@@ -251,8 +255,13 @@ export default function LandingPage() {
       <footer className="py-8 px-6 border-t border-gray-800">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-akodemy-purple rounded flex items-center justify-center">
-              <Code2 className="w-4 h-4 text-white" />
+            <div className="w-6 h-6 rounded flex items-center justify-center">
+              {/* emeee */}
+                  <img
+                    src="/images/akodemy-logo.png"
+                    alt="Akodemy Logo"
+                    className="w-8 h-8 sm:w-8 sm:h-8 object-contain"
+                  />
             </div>
             <span className="font-semibold">Akodemy</span>
           </div>

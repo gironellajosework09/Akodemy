@@ -136,7 +136,7 @@ router.get('/competency-distribution', authenticateToken, requireRole('faculty')
 router.get('/students', authenticateToken, requireRole('faculty'), async (req, res) => {
   try {
     const students = await User.find({ role: 'student' })
-      .select('name email')
+      .select('name email yearSection')
       .sort({ name: 1 })
 
     const studentIds = students.map(s => s._id)
@@ -203,6 +203,7 @@ router.get('/students', authenticateToken, requireRole('faculty'), async (req, r
         _id: s._id,
         name: s.name,
         email: s.email,
+        yearSection: s.yearSection || '',
         progress: progressMap[id] || {},
         equippedTitle: equippedMap[id] || null,
         badgeCount: badgeCountMap[id] || 0
@@ -289,6 +290,7 @@ router.get('/students/:studentId/profile', authenticateToken, requireRole('facul
     res.json({
       student: {
         _id: student._id,
+        student_id: student.student_id || null,
         name: student.name,
         email: student.email,
         phone: student.phone,

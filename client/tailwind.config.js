@@ -20,7 +20,7 @@ export default {
           900: '#4c1d95',
         },
         akodemy: {
-          purple: '#4A1D6B',
+          purple: '#AA00FF',
           gold: '#D4AF37',
           gray: '#F5F5F5',
         }

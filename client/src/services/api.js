@@ -16,6 +16,7 @@ api.interceptors.response.use(
       const authPaths = [
         '/api/auth/login',
         '/api/auth/register',
+        '/api/auth/sso',
         '/api/auth/forgot-password',
         '/api/auth/verify-otp',
         '/api/auth/resend-otp',

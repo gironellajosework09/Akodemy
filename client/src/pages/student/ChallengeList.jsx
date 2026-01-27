@@ -80,6 +80,15 @@ export default function ChallengeList() {
     }
   }
 
+  const getTitleHoverColor = (level) => {
+    switch (level) {
+      case 'beginner': return 'group-hover:text-green-400'
+      case 'intermediate': return 'group-hover:text-yellow-400'
+      case 'advanced': return 'group-hover:text-red-400'
+      default: return ''
+    }
+  }
+
   const getLanguageDisplay = () => {
     switch (language) {
       case 'javascript': return { icon: '/images/js-logo.png', name: 'JavaScript' }
@@ -142,7 +151,9 @@ export default function ChallengeList() {
                     }}
                     className="bg-gray-800 border border-gray-700 rounded-xl p-4 sm:p-6 text-left hover:border-akodemy-purple transition hover:-translate-y-1 group"
                   >
-                    <h3 className="text-base sm:text-lg font-bold text-white mb-2 sm:mb-3 group-hover:text-akodemy-purple transition line-clamp-2">{challenge.title}</h3>
+                    <h3 className={`text-base sm:text-lg font-bold text-white mb-2 sm:mb-3 transition-colors duration-200 line-clamp-2 ${getTitleHoverColor(challenge?.difficulty)}`}>
+                      {challenge.title}
+                    </h3>
                     <div className="flex items-center justify-between text-xs sm:text-sm text-gray-400">
                       <div className="flex items-center gap-2 sm:gap-4">
                         {challenge.userProgress?.bestTime && (

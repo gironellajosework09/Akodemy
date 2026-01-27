@@ -2,7 +2,15 @@
 import { X } from 'lucide-react'
 
 // Component logic for Confirm Dialog.
-export default function ConfirmDialog({ isOpen, title, message, onConfirm, onCancel }) {
+export default function ConfirmDialog({
+  isOpen,
+  title,
+  message,
+  onConfirm,
+  onCancel,
+  confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel'
+}) {
   if (!isOpen) return null
 
   return (
@@ -22,13 +30,13 @@ export default function ConfirmDialog({ isOpen, title, message, onConfirm, onCan
             onClick={onCancel}
             className="px-4 py-2 rounded-lg bg-gray-700 text-white hover:bg-gray-600 transition"
           >
-            Cancel
+            {cancelLabel}
           </button>
           <button
             onClick={onConfirm}
             className="px-4 py-2 rounded-lg bg-akodemy-purple text-white hover:bg-purple-700 transition"
           >
-            Confirm
+            {confirmLabel}
           </button>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Award, Lock, CheckCircle, Star, Loader2 } from 'lucide-react'
 import api from '../services/api'
 
@@ -19,6 +19,8 @@ const BADGE_INFO = {
     advanced: { name: 'Script Architect', icon: '🏗️', color: 'from-orange-500 to-yellow-700' }
   }
 }
+
+const BADGE_PLACEHOLDER_SRC = '/images/akodemy-logo.png'
 
 const DIFFICULTY_LABELS = {
   beginner: 'Beginner',
@@ -94,8 +96,16 @@ function BadgeCard({ language, difficulty, badgeData, progress, onClaim, onEquip
               : 'bg-gray-700'
           }`}
         >
-          {isClaimable || isClaimed ? info.icon : <Lock className="w-6 h-6 text-gray-500" />}
-        </div>
+        {isClaimable || isClaimed ? (
+          <img
+            src={BADGE_PLACEHOLDER_SRC}
+            alt={info.name}
+            className="w-8 h-8 object-contain"
+          />
+        ) : (
+          <Lock className="w-6 h-6 text-gray-500" />
+        )}
+      </div>
         
         <h4 className={`font-semibold mb-1 ${isClaimable || isClaimed ? 'text-white' : 'text-gray-400'}`}>
           {info.name}
@@ -143,7 +153,7 @@ function BadgeCard({ language, difficulty, badgeData, progress, onClaim, onEquip
             <button
               onClick={handleEquip}
               disabled={equipping}
-              className={`w-full text-xs py-1.5 px-3 rounded-lg font-medium transition flex items-center justify-center gap-1 ${
+              className={`w-full text-xs py-1.5 px-3 rounded-lg font-medium transition flex items-center justify-center gap-1 min-w-0 whitespace-nowrap ${
                 equipped
                   ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
                   : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
@@ -153,11 +163,14 @@ function BadgeCard({ language, difficulty, badgeData, progress, onClaim, onEquip
                 <Loader2 className="w-3 h-3 animate-spin" />
               ) : equipped ? (
                 <>
-                  <Star className="w-3 h-3 fill-current" />
-                  Equipped
+                  <Star className="w-3 h-3 fill-current hidden sm:inline" />
+                  <span className="truncate">Equipped</span>
                 </>
               ) : (
-                'Equip as Title'
+                <>
+                  <span className="sm:hidden">Equip</span>
+                  <span className="hidden sm:inline">Equip as Title</span>
+                </>
               )}
             </button>
           </div>
@@ -200,7 +213,7 @@ function LanguageBadgeSection({ language, badges, progress, onClaim, onEquip, on
         </div>
       </div>
       
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {difficulties.map(difficulty => {
           const badgeData = badges.find(
             b => b.language === language && b.difficulty === difficulty
@@ -225,9 +238,14 @@ function LanguageBadgeSection({ language, badges, progress, onClaim, onEquip, on
 
 export default function BadgeDisplay({ badges = [], progress = {}, onRefresh }) {
   const [showClaimModal, setShowClaimModal] = useState(null)
+  const [displayBadges, setDisplayBadges] = useState(badges)
   const languages = ['javascript', 'python', 'java']
-  const claimedBadges = badges.filter(b => b.status === 'claimed')
-  const equippedBadge = badges.find(b => b.equipped)
+  const claimedBadges = displayBadges.filter(b => b.status === 'claimed')
+  const equippedBadge = displayBadges.find(b => b.equipped)
+
+  useEffect(() => {
+    setDisplayBadges(badges)
+  }, [badges])
   
   const handleClaim = async (language, difficulty) => {
     try {
@@ -242,19 +260,28 @@ export default function BadgeDisplay({ badges = [], progress = {}, onRefresh }) 
   }
   
   const handleEquip = async (language, difficulty) => {
+    const snapshot = displayBadges
+    setDisplayBadges(prev => prev.map(badge => ({
+      ...badge,
+      equipped: badge.language === language && badge.difficulty === difficulty
+    })))
     try {
       await api.post('/api/badges/equip', { language, difficulty })
       if (onRefresh) onRefresh()
     } catch (error) {
+      setDisplayBadges(snapshot)
       console.error('Failed to equip badge:', error)
     }
   }
   
   const handleUnequip = async () => {
+    const snapshot = displayBadges
+    setDisplayBadges(prev => prev.map(badge => ({ ...badge, equipped: false })))
     try {
       await api.post('/api/badges/unequip')
       if (onRefresh) onRefresh()
     } catch (error) {
+      setDisplayBadges(snapshot)
       console.error('Failed to unequip badge:', error)
     }
   }
@@ -287,7 +314,7 @@ export default function BadgeDisplay({ badges = [], progress = {}, onRefresh }) 
           <LanguageBadgeSection
             key={language}
             language={language}
-            badges={badges}
+            badges={displayBadges}
             progress={progress}
             onClaim={handleClaim}
             onEquip={handleEquip}
@@ -320,10 +347,14 @@ function ClaimSuccessModal({ badge, onClose }) {
         </div>
         
         <div className="mb-6">
-          <div 
-            className={`w-24 h-24 mx-auto rounded-full flex items-center justify-center text-5xl mb-4 bg-gradient-to-br ${info.color} shadow-lg`}
+          <div
+            className={`w-24 h-24 mx-auto rounded-full flex items-center justify-center mb-4 bg-gradient-to-br ${info.color} shadow-lg`}
           >
-            {info.icon}
+            <img
+              src={BADGE_PLACEHOLDER_SRC}
+              alt={info.name}
+              className="w-12 h-12 object-contain"
+            />
           </div>
           <h3 className="text-xl font-bold text-white mb-1">{info.name}</h3>
           <p className="text-sm text-gray-400">
