@@ -17,7 +17,7 @@ export default defineConfig({
     allowedHosts: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:5176', //backend server
+        target: 'http://localhost:4000',
         changeOrigin: true
       }
     }
