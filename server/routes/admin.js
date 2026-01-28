@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs'
 import * as XLSX from 'xlsx'
 import User from '../models/User.js'
 import { authenticateToken, requireAdmin } from '../middleware/auth.js'
-import { sendAccountDeactivatedEmail, sendAccountReactivatedEmail } from '../services/emailService.js'
+import { sendAccountDeactivatedEmail, sendAccountReactivatedEmail, sendWelcomeEmail, generateRandomPassword } from '../services/emailService.js'
 
 const router = express.Router()
 
@@ -138,8 +138,8 @@ router.post('/users', async (req, res) => {
       ? `${normalizedLastName}, ${normalizedGivenName} ${normalizedMiddleName}`
       : `${normalizedLastName}, ${normalizedGivenName}`
 
-    const defaultPassword = normalizedUid
-    const hashedPassword = await bcrypt.hash(defaultPassword, 10)
+    const randomPassword = generateRandomPassword(12)
+    const hashedPassword = await bcrypt.hash(randomPassword, 10)
 
     const newUser = new User({
       uid: normalizedUid,
@@ -156,8 +156,12 @@ router.post('/users', async (req, res) => {
 
     await newUser.save()
 
+    sendWelcomeEmail(normalizedEmail, normalizedGivenName, normalizedUid, randomPassword).catch(err => {
+      console.error('Failed to send welcome email:', err)
+    })
+
     res.status(201).json({
-      message: 'User created successfully',
+      message: 'User created successfully. Welcome email sent.',
       user: {
         _id: newUser._id,
         uid: newUser.uid,
@@ -433,18 +437,27 @@ router.post('/users/bulk', async (req, res) => {
     }
 
     let insertedCount = 0
+    const createdUsers = []
     if (validUsers.length > 0) {
       const usersToInsert = await Promise.all(validUsers.map(async (user) => {
-        const hashedPassword = await bcrypt.hash(user.uid, 10)
+        const randomPassword = generateRandomPassword(12)
+        const hashedPassword = await bcrypt.hash(randomPassword, 10)
+        createdUsers.push({ ...user, plainPassword: randomPassword })
         return { ...user, password: hashedPassword }
       }))
       
       const result = await User.insertMany(usersToInsert, { ordered: false })
       insertedCount = result.length
+
+      for (const user of createdUsers) {
+        sendWelcomeEmail(user.email, user.givenName, user.uid, user.plainPassword).catch(err => {
+          console.error(`Failed to send welcome email to ${user.email}:`, err)
+        })
+      }
     }
 
     res.json({
-      message: `Successfully added ${insertedCount} users`,
+      message: `Successfully added ${insertedCount} users. Welcome emails sent.`,
       inserted: insertedCount,
       skipped: errors.length,
       errors: errors

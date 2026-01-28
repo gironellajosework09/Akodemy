@@ -82,6 +82,93 @@ export function generateOtp() {
   return otp;
 }
 
+export function generateRandomPassword(length = 12) {
+  const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const lowercase = "abcdefghijklmnopqrstuvwxyz";
+  const numbers = "0123456789";
+  const special = "!@#$%&*";
+  const allChars = uppercase + lowercase + numbers + special;
+  
+  let password = "";
+  password += uppercase.charAt(Math.floor(Math.random() * uppercase.length));
+  password += lowercase.charAt(Math.floor(Math.random() * lowercase.length));
+  password += numbers.charAt(Math.floor(Math.random() * numbers.length));
+  password += special.charAt(Math.floor(Math.random() * special.length));
+  
+  for (let i = 4; i < length; i++) {
+    password += allChars.charAt(Math.floor(Math.random() * allChars.length));
+  }
+  
+  return password.split('').sort(() => Math.random() - 0.5).join('');
+}
+
+export async function sendWelcomeEmail(toEmail, userName, uid, password) {
+  const gmailUser = process.env.GMAIL_USER || DEFAULT_GMAIL_USER;
+  let transporter;
+  try {
+    transporter = createTransporter(gmailUser);
+  } catch (error) {
+    console.error("Email configuration error:", error);
+    return { success: false, error: "Email service not configured" };
+  }
+
+  const mailOptions = {
+    from: `"Akodemy" <${gmailUser}>`,
+    to: toEmail,
+    subject: "Welcome to Akodemy - Your Account Has Been Created",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #8B5CF6; margin: 0;">Akodemy</h1>
+          <p style="color: #666; margin-top: 5px;">Coding Challenge Platform</p>
+        </div>
+        
+        <div style="background: #f5f5f5; border-radius: 10px; padding: 30px;">
+          <h2 style="color: #333; margin-top: 0;">Welcome to Akodemy!</h2>
+          <p style="color: #666;">Hello ${userName},</p>
+          <p style="color: #666;">
+            Your Akodemy account has been created. You can now start your coding journey with us!
+          </p>
+          
+          <div style="background: #EDE9FE; border-left: 4px solid #8B5CF6; padding: 15px; margin: 20px 0; border-radius: 4px;">
+            <p style="color: #5B21B6; margin: 0 0 10px 0; font-weight: 600;">Your Login Credentials:</p>
+            <p style="color: #5B21B6; margin: 5px 0;"><strong>UID:</strong> ${uid}</p>
+            <p style="color: #5B21B6; margin: 5px 0;"><strong>Email:</strong> ${toEmail}</p>
+            <p style="color: #5B21B6; margin: 5px 0;"><strong>Password:</strong> <code style="background: #DDD6FE; padding: 2px 8px; border-radius: 4px; font-family: monospace;">${password}</code></p>
+          </div>
+          
+          <div style="background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 15px; margin: 20px 0; border-radius: 4px;">
+            <p style="color: #92400E; margin: 0; font-weight: 500;">
+              For your security, please change your password after your first login.
+            </p>
+          </div>
+          
+          <p style="color: #666;">
+            You can log in using either your UID or email address along with the password provided above.
+          </p>
+          
+          <p style="color: #999; font-size: 14px; margin-top: 30px;">
+            If you have any questions, please reach out to your institution's administrator.
+          </p>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px; color: #999; font-size: 12px;">
+          <p>&copy; ${new Date().getFullYear()} Akodemy. All rights reserved.</p>
+        </div>
+      </div>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`Welcome email sent to ${toEmail}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to send welcome email:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function sendAccountReactivatedEmail(toEmail, userName) {
   const gmailUser = process.env.GMAIL_USER || DEFAULT_GMAIL_USER;
   let transporter;
