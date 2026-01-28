@@ -1,0 +1,71 @@
+This is a significant feature that involves updating the competency system to be dynamic and performance-based while keeping badges permanent. Let me first explore the current data models and logic:
+
+This is a comprehensive feature. Let me create a structured plan for implementing the competency calculation system with retake penalties and badge persistence:
+
+Let me start implementing. First, I'll create the new models for competency tracking:
+
+Now let me update the Challenge model with the new fields:
+
+Now let me create the competency calculation service with the retake penalty logic:
+
+Now let me update the submission flow in the progress routes to integrate competency calculation:
+
+Let me update the progress.js routes to integrate competency calculation:
+
+Now let me update the submit endpoint to include competency processing:
+
+Now let me add API endpoints for competency scores and history:
+
+Let me check the logs and find the frontend progress page:
+
+Let me check the Profile page for the competency display:
+
+I see the current competency display shows challenge completion percentages. I need to update it to show the dynamic competency scores. Let me update the Profile page to fetch and display the new competency scores:
+
+Now let me update the competencies display to show the dynamic scores. First, let me add a helper function for displaying competency scores and update the display:
+
+Now let me update the competencies display section to show the dynamic scores:
+
+Now let me update the legend to reflect the new mastery levels:
+
+Let me update the task list and add a startup migration to set targetCompetencies for existing challenges:
+
+Let me check the logs and then call the architect to review:
+
+The architect found some important issues. Let me fix them - I need to wire the migration and ensure competency scores get updated properly:
+
+The migration ran successfully - 45 challenges now have targetCompetencies set. Let me update the task list:
+
+I've implemented the complete Competency Calculation, Retake Penalty, and Badge Persistence system. Here's what's now in place:
+
+Competency Calculation System
+Dynamic Scores (0-100%)
+
+Each student's competency score is tracked per language (JavaScript, Python, Java) and per area (Variables, Control Structures, Functions, Arrays, OOP, Error Handling)
+Scores update based on submission performance, not just challenge completion
+Retake Penalty Logic
+
+If a student retakes a challenge and submits incorrectly, their competency score decreases
+The penalty only applies to competencies tied to that challenge
+Partial credit: If some tests pass, the penalty is reduced proportionally
+Correct Submission Behavior
+
+Correct submissions increase competency scores
+Diminishing returns apply after 3+ successful attempts on the same challenge
+Difficulty multipliers: Advanced challenges have more impact (1.3x), beginner less (0.8x)
+Badge Persistence
+
+Badges remain permanent once claimed - they're completely decoupled from competency scores
+Even if a student's competency drops later, their badges stay
+Audit Trail
+
+Every competency change is logged with:
+Previous and new scores
+Reason (first attempt, retake correct/incorrect, etc.)
+Test results and attempt number
+Updated Profile Page
+
+The Competencies tab now shows actual competency scores (0-100%) with color-coded mastery levels
+Challenge completion counts are shown alongside for reference
+A note explains that scores change based on performance
+The migration ran on startup and updated 45 existing challenges with their target competencies based on their competencyIndex values.
