@@ -1,6 +1,6 @@
 // Express routes for Grading endpoints.
 import express from 'express'
-import { authenticateToken } from '../middleware/auth.js'
+import { authenticateToken, requireRole } from '../middleware/auth.js'
 import { gradeSubmission } from '../services/canonical/gradingEngine.js'
 import { getTestCases, getCacheStats as getCanonicalCacheStats } from '../services/canonical/testFetcher.js'
 import { TestAlignmentAnalyzer, runTestAlignment } from '../services/canonical/testAlignment.js'
@@ -13,7 +13,10 @@ import Challenge from '../models/Challenge.js'
 // Route handlers for Grading APIs.
 const router = express.Router()
 
-router.post('/grade', authenticateToken, async (req, res) => {
+router.use(authenticateToken)
+router.use(requireRole('student', 'faculty'))
+
+router.post('/grade', async (req, res) => {
   try {
     const { code, language, challengeId, exerciseSlug } = req.body
 
@@ -78,7 +81,7 @@ router.post('/grade', authenticateToken, async (req, res) => {
   }
 })
 
-router.post('/fetch-tests', authenticateToken, async (req, res) => {
+router.post('/fetch-tests', async (req, res) => {
   try {
     const { exerciseSlug } = req.body
 
@@ -104,7 +107,7 @@ router.post('/fetch-tests', authenticateToken, async (req, res) => {
   }
 })
 
-router.get('/cache-stats', authenticateToken, async (req, res) => {
+router.get('/cache-stats', async (req, res) => {
   try {
     if (req.user.role !== 'faculty') {
       return res.status(403).json({ message: 'Faculty access required' })
@@ -117,7 +120,7 @@ router.get('/cache-stats', authenticateToken, async (req, res) => {
   }
 })
 
-router.post('/sync-canonical-tests', authenticateToken, async (req, res) => {
+router.post('/sync-canonical-tests', async (req, res) => {
   try {
     if (req.user.role !== 'faculty') {
       return res.status(403).json({ message: 'Faculty access required' })
@@ -138,7 +141,7 @@ router.post('/sync-canonical-tests', authenticateToken, async (req, res) => {
   }
 })
 
-router.get('/sync-status', authenticateToken, async (req, res) => {
+router.get('/sync-status', async (req, res) => {
   try {
     const stats = await Challenge.aggregate([
       {
@@ -169,11 +172,11 @@ router.get('/sync-status', authenticateToken, async (req, res) => {
   }
 })
 
-router.get('/execution-contract', authenticateToken, (req, res) => {
+router.get('/execution-contract', (req, res) => {
   res.json(EXECUTION_CONTRACT)
 })
 
-router.post('/analyze-alignment', authenticateToken, async (req, res) => {
+router.post('/analyze-alignment', async (req, res) => {
   try {
     if (req.user.role !== 'faculty') {
       return res.status(403).json({ message: 'Faculty access required' })
@@ -193,7 +196,7 @@ router.post('/analyze-alignment', authenticateToken, async (req, res) => {
   }
 })
 
-router.post('/convert-tests', authenticateToken, async (req, res) => {
+router.post('/convert-tests', async (req, res) => {
   try {
     if (req.user.role !== 'faculty') {
       return res.status(403).json({ message: 'Faculty access required' })
@@ -213,7 +216,7 @@ router.post('/convert-tests', authenticateToken, async (req, res) => {
   }
 })
 
-router.post('/sync-all-tests', authenticateToken, async (req, res) => {
+router.post('/sync-all-tests', async (req, res) => {
   try {
     if (req.user.role !== 'faculty') {
       return res.status(403).json({ message: 'Faculty access required' })
@@ -238,7 +241,7 @@ router.post('/sync-all-tests', authenticateToken, async (req, res) => {
   }
 })
 
-router.post('/verify-scores', authenticateToken, async (req, res) => {
+router.post('/verify-scores', async (req, res) => {
   try {
     if (req.user.role !== 'faculty') {
       return res.status(403).json({ message: 'Faculty access required' })
@@ -261,7 +264,7 @@ router.post('/verify-scores', authenticateToken, async (req, res) => {
   }
 })
 
-router.post('/verify-submission/:submissionId', authenticateToken, async (req, res) => {
+router.post('/verify-submission/:submissionId', async (req, res) => {
   try {
     if (req.user.role !== 'faculty') {
       return res.status(403).json({ message: 'Faculty access required' })
@@ -283,7 +286,7 @@ router.post('/verify-submission/:submissionId', authenticateToken, async (req, r
   }
 })
 
-router.post('/ensure-indexes', authenticateToken, async (req, res) => {
+router.post('/ensure-indexes', async (req, res) => {
   try {
     if (req.user.role !== 'faculty') {
       return res.status(403).json({ message: 'Faculty access required' })
@@ -297,7 +300,7 @@ router.post('/ensure-indexes', authenticateToken, async (req, res) => {
   }
 })
 
-router.get('/mismatch-logs', authenticateToken, async (req, res) => {
+router.get('/mismatch-logs', async (req, res) => {
   try {
     if (req.user.role !== 'faculty') {
       return res.status(403).json({ message: 'Faculty access required' })

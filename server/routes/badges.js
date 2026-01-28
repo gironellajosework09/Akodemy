@@ -1,5 +1,5 @@
 import express from 'express'
-import { authenticateToken } from '../middleware/auth.js'
+import { authenticateToken, requireRole } from '../middleware/auth.js'
 import {
   checkAndUnlockBadge,
   claimBadge,
@@ -14,7 +14,10 @@ import {
 
 const router = express.Router()
 
-router.get('/my-badges', authenticateToken, async (req, res) => {
+router.use(authenticateToken)
+router.use(requireRole('student', 'faculty'))
+
+router.get('/my-badges', async (req, res) => {
   try {
     const badges = await getUserBadges(req.user._id)
     res.json({ badges })
@@ -24,7 +27,7 @@ router.get('/my-badges', authenticateToken, async (req, res) => {
   }
 })
 
-router.get('/progress', authenticateToken, async (req, res) => {
+router.get('/progress', async (req, res) => {
   try {
     const progress = await getBadgeProgress(req.user._id)
     res.json({ progress })
@@ -34,7 +37,7 @@ router.get('/progress', authenticateToken, async (req, res) => {
   }
 })
 
-router.get('/equipped', authenticateToken, async (req, res) => {
+router.get('/equipped', async (req, res) => {
   try {
     const badge = await getEquippedBadge(req.user._id)
     res.json({ badge })
@@ -44,7 +47,7 @@ router.get('/equipped', authenticateToken, async (req, res) => {
   }
 })
 
-router.post('/check', authenticateToken, async (req, res) => {
+router.post('/check', async (req, res) => {
   try {
     const { language, difficulty } = req.body
     
@@ -67,7 +70,7 @@ router.post('/check', authenticateToken, async (req, res) => {
   }
 })
 
-router.post('/claim', authenticateToken, async (req, res) => {
+router.post('/claim', async (req, res) => {
   try {
     const { language, difficulty } = req.body
     
@@ -90,7 +93,7 @@ router.post('/claim', authenticateToken, async (req, res) => {
   }
 })
 
-router.post('/equip', authenticateToken, async (req, res) => {
+router.post('/equip', async (req, res) => {
   try {
     const { language, difficulty } = req.body
     
@@ -113,7 +116,7 @@ router.post('/equip', authenticateToken, async (req, res) => {
   }
 })
 
-router.post('/unequip', authenticateToken, async (req, res) => {
+router.post('/unequip', async (req, res) => {
   try {
     const result = await unequipBadge(req.user._id)
     res.json(result)
@@ -123,7 +126,7 @@ router.post('/unequip', authenticateToken, async (req, res) => {
   }
 })
 
-router.post('/check-all', authenticateToken, async (req, res) => {
+router.post('/check-all', async (req, res) => {
   try {
     const newBadges = await checkAllBadgesForUser(req.user._id)
     const allBadges = await getUserBadges(req.user._id)

@@ -14,6 +14,7 @@ import scoringRoutes from "./routes/scoring.js";
 import gradingRoutes from "./routes/grading.js";
 import badgeRoutes from "./routes/badges.js";
 import userRoutes from "./routes/users.js";
+import adminRoutes from "./routes/admin.js";
 
 dotenv.config();
 
@@ -41,6 +42,7 @@ app.use("/api/score", scoringRoutes);
 app.use("/api/grading", gradingRoutes);
 app.use("/api/badges", badgeRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/admin", adminRoutes);
 
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });

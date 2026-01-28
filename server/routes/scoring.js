@@ -1,6 +1,6 @@
 // Express routes for Scoring endpoints.
 import express from 'express'
-import { authenticateToken } from '../middleware/auth.js'
+import { authenticateToken, requireRole } from '../middleware/auth.js'
 import { calculateScore } from '../services/scoring.js'
 import { syncAllTestFiles, downloadExerciseTests, normalizeToExercismSlug } from '../services/exercismTestSync.js'
 import Challenge from '../models/Challenge.js'
@@ -8,7 +8,10 @@ import Challenge from '../models/Challenge.js'
 // Route handlers for Scoring APIs.
 const router = express.Router()
 
-router.post('/', authenticateToken, async (req, res) => {
+router.use(authenticateToken)
+router.use(requireRole('student', 'faculty'))
+
+router.post('/', async (req, res) => {
   try {
     const { code, language, challengeId } = req.body
 
@@ -40,7 +43,7 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 })
 
-router.post('/sync-tests', authenticateToken, async (req, res) => {
+router.post('/sync-tests', async (req, res) => {
   try {
     if (req.user.role !== 'faculty') {
       return res.status(403).json({ message: 'Only faculty can sync test files' })
@@ -65,7 +68,7 @@ router.post('/sync-tests', authenticateToken, async (req, res) => {
   }
 })
 
-router.post('/sync-challenge-test', authenticateToken, async (req, res) => {
+router.post('/sync-challenge-test', async (req, res) => {
   try {
     const { challengeId } = req.body
 

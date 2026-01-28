@@ -1,6 +1,6 @@
 // Express routes for Progress endpoints.
 import express from 'express'
-import { authenticateToken } from '../middleware/auth.js'
+import { authenticateToken, requireRole } from '../middleware/auth.js'
 import Submission from '../models/Submission.js'
 import Challenge from '../models/Challenge.js'
 import ChallengeAnswer from '../models/ChallengeAnswer.js'
@@ -8,6 +8,9 @@ import LatestAnswer from '../models/LatestAnswer.js'
 
 // Route handlers for Progress APIs.
 const router = express.Router()
+
+router.use(authenticateToken)
+router.use(requireRole('student', 'faculty'))
 
 const COMPETENCY_NAMES = [
   'Variables & Data Types',
@@ -18,7 +21,7 @@ const COMPETENCY_NAMES = [
   'Error Handling'
 ]
 
-router.get('/my-progress', authenticateToken, async (req, res) => {
+router.get('/my-progress', async (req, res) => {
   try {
     const completedSubmissions = await Submission.find({
       userId: req.user._id,
@@ -118,7 +121,7 @@ router.get('/my-progress', authenticateToken, async (req, res) => {
   }
 })
 
-router.post('/save', authenticateToken, async (req, res) => {
+router.post('/save', async (req, res) => {
   try {
     const { challengeId, time, runCount, completed, code } = req.body
 
@@ -153,7 +156,7 @@ router.post('/save', authenticateToken, async (req, res) => {
   }
 })
 
-router.get('/challenge/:challengeId', authenticateToken, async (req, res) => {
+router.get('/challenge/:challengeId', async (req, res) => {
   try {
     const submission = await Submission.findOne({
       userId: req.user._id,
@@ -167,7 +170,7 @@ router.get('/challenge/:challengeId', authenticateToken, async (req, res) => {
   }
 })
 
-router.get('/challenge/:challengeId/latest', authenticateToken, async (req, res) => {
+router.get('/challenge/:challengeId/latest', async (req, res) => {
   try {
     const latest = await LatestAnswer.findOne({
       userId: req.user._id,
@@ -195,7 +198,7 @@ router.get('/challenge/:challengeId/latest', authenticateToken, async (req, res)
   }
 })
 
-router.get('/challenge/:challengeId/history', authenticateToken, async (req, res) => {
+router.get('/challenge/:challengeId/history', async (req, res) => {
   try {
     const { limit = 20, skip = 0 } = req.query
 
@@ -220,7 +223,7 @@ router.get('/challenge/:challengeId/history', authenticateToken, async (req, res
   }
 })
 
-router.post('/challenge/:challengeId/submit', authenticateToken, async (req, res) => {
+router.post('/challenge/:challengeId/submit', async (req, res) => {
   try {
     const { challengeId } = req.params
     const { answer, language, isCorrect, score, runs, startedAt } = req.body
@@ -272,7 +275,7 @@ router.post('/challenge/:challengeId/submit', authenticateToken, async (req, res
   }
 })
 
-router.get('/challenge/:challengeId/summary', authenticateToken, async (req, res) => {
+router.get('/challenge/:challengeId/summary', async (req, res) => {
   try {
     const latest = await LatestAnswer.findOne({
       userId: req.user._id,

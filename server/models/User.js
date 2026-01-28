@@ -3,9 +3,27 @@ import mongoose from 'mongoose'
 
 // Schema details and validation for User.
 const userSchema = new mongoose.Schema({
+  uid: {
+    type: String,
+    unique: true,
+    sparse: true,
+    index: true
+  },
   name: {
     type: String,
     required: true
+  },
+  lastName: {
+    type: String,
+    default: null
+  },
+  givenName: {
+    type: String,
+    default: null
+  },
+  middleName: {
+    type: String,
+    default: null
   },
   email: {
     type: String,
@@ -13,6 +31,10 @@ const userSchema = new mongoose.Schema({
     unique: true
   },
   student_id: {
+    type: String,
+    default: null
+  },
+  yearLevelAndSection: {
     type: String,
     default: null
   },
@@ -51,7 +73,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['student', 'faculty'],
+    enum: ['admin', 'student', 'faculty'],
     default: 'student'
   },
   phone: String,

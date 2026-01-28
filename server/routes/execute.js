@@ -1,6 +1,6 @@
 // Express routes for Execute endpoints.
 import express from 'express'
-import { authenticateToken } from '../middleware/auth.js'
+import { authenticateToken, requireRole } from '../middleware/auth.js'
 import { executeCode } from '../services/judge0.js'
 import { rephraseError } from '../services/gpt.js'
 import { runOfficialTests } from '../services/officialTestsRunner.js'
@@ -14,7 +14,10 @@ import Challenge from '../models/Challenge.js'
 // Route handlers for Execute APIs.
 const router = express.Router()
 
-router.post('/', authenticateToken, async (req, res) => {
+router.use(authenticateToken)
+router.use(requireRole('student', 'faculty'))
+
+router.post('/', async (req, res) => {
   try {
     const { code, language, challengeId } = req.body
 

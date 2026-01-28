@@ -14,8 +14,17 @@ import FacultyDashboard from './pages/faculty/Dashboard'
 import FacultyProfile from './pages/faculty/Profile'
 import StudentList from './pages/faculty/StudentList'
 import StudentProfileView from './pages/faculty/StudentProfileView'
+import AdminUserManagement from './pages/admin/UserManagement'
 
-function ProtectedRoute({ children, allowedRole }) {
+function getDefaultRoute(role) {
+  switch (role) {
+    case 'admin': return '/admin'
+    case 'faculty': return '/faculty'
+    default: return '/dashboard'
+  }
+}
+
+function ProtectedRoute({ children, allowedRoles }) {
   const { user, loading } = useAuth()
   
   if (loading) {
@@ -30,8 +39,9 @@ function ProtectedRoute({ children, allowedRole }) {
     return <Navigate to="/login" replace />
   }
   
-  if (allowedRole && user.role !== allowedRole) {
-    return <Navigate to={user.role === 'faculty' ? '/faculty' : '/dashboard'} replace />
+  const roles = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles]
+  if (allowedRoles && !roles.includes(user.role)) {
+    return <Navigate to={getDefaultRoute(user.role)} replace />
   }
   
   return children
@@ -42,62 +52,73 @@ function AppRoutes() {
   
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to={user.role === 'faculty' ? '/faculty' : '/dashboard'} /> : <Login />} />
+      <Route path="/login" element={user ? <Navigate to={getDefaultRoute(user.role)} /> : <Login />} />
       <Route path="/sso" element={<SsoCallback />} />
       
       <Route path="/dashboard" element={
-        <ProtectedRoute allowedRole="student">
+        <ProtectedRoute allowedRoles="student">
           <StudentDashboard />
         </ProtectedRoute>
       } />
       <Route path="/profile" element={
-        <ProtectedRoute allowedRole="student">
+        <ProtectedRoute allowedRoles="student">
           <StudentProfile />
         </ProtectedRoute>
       } />
       <Route path="/languages" element={
-        <ProtectedRoute allowedRole="student">
+        <ProtectedRoute allowedRoles="student">
           <LanguageSelection />
         </ProtectedRoute>
       } />
       <Route path="/challenges/:language/difficulty" element={
-        <ProtectedRoute allowedRole="student">
+        <ProtectedRoute allowedRoles="student">
           <DifficultySelection />
         </ProtectedRoute>
       } />
       <Route path="/challenges/:language/:difficulty" element={
-        <ProtectedRoute allowedRole="student">
+        <ProtectedRoute allowedRoles="student">
           <ChallengeList />
         </ProtectedRoute>
       } />
       <Route path="/challenge/:challengeId" element={
-        <ProtectedRoute allowedRole="student">
+        <ProtectedRoute allowedRoles="student">
           <ChallengeEditor />
         </ProtectedRoute>
       } />
       
       <Route path="/faculty" element={
-        <ProtectedRoute allowedRole="faculty">
+        <ProtectedRoute allowedRoles="faculty">
           <FacultyDashboard />
         </ProtectedRoute>
       } />
       <Route path="/faculty/profile" element={
-        <ProtectedRoute allowedRole="faculty">
+        <ProtectedRoute allowedRoles="faculty">
           <FacultyProfile />
         </ProtectedRoute>
       } />
       <Route path="/faculty/students" element={
-        <ProtectedRoute allowedRole="faculty">
+        <ProtectedRoute allowedRoles="faculty">
           <StudentList />
         </ProtectedRoute>
       } />
       <Route path="/faculty/student/:studentId" element={
-        <ProtectedRoute allowedRole="faculty">
+        <ProtectedRoute allowedRoles="faculty">
           <StudentProfileView />
         </ProtectedRoute>
       } />
       
-      <Route path="/" element={user ? <Navigate to={user.role === 'faculty' ? '/faculty' : '/dashboard'} /> : <Login />} />
+      <Route path="/admin" element={
+        <ProtectedRoute allowedRoles="admin">
+          <AdminUserManagement />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/users" element={
+        <ProtectedRoute allowedRoles="admin">
+          <AdminUserManagement />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/" element={user ? <Navigate to={getDefaultRoute(user.role)} /> : <Login />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

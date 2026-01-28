@@ -2,8 +2,24 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { User, LogOut, Code2, Home } from 'lucide-react'
+import { User, LogOut, Code2, Home, Users } from 'lucide-react'
 import ConfirmDialog from './ConfirmDialog'
+
+function getHomeRoute(role) {
+  switch (role) {
+    case 'admin': return '/admin'
+    case 'faculty': return '/faculty'
+    default: return '/dashboard'
+  }
+}
+
+function getProfileRoute(role) {
+  switch (role) {
+    case 'admin': return null
+    case 'faculty': return '/faculty/profile'
+    default: return '/profile'
+  }
+}
 
 // Component logic for Header.
 export default function Header() {
@@ -21,10 +37,13 @@ export default function Header() {
     navigate('/login')
   }
 
+  const homeRoute = getHomeRoute(user?.role)
+  const profileRoute = getProfileRoute(user?.role)
+
   return (
     <>
       <header className="bg-gray-900 border-b border-gray-800 text-white py-2 sm:py-4 px-3 sm:px-6 flex justify-between items-center">
-        <Link to={user?.role === 'faculty' ? '/faculty' : '/dashboard'} className="flex items-center gap-2 sm:gap-3">
+        <Link to={homeRoute} className="flex items-center gap-2 sm:gap-3">
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center overflow-hidden">
               <img
                 src="/images/akodemy-logo.png"
@@ -33,22 +52,41 @@ export default function Header() {
               />
           </div>
           <span className="text-lg sm:text-2xl font-bold tracking-wide">Akodemy</span>
+          {user?.role === 'admin' && (
+            <span className="text-xs bg-akodemy-purple/20 text-akodemy-purple px-2 py-0.5 rounded-full border border-akodemy-purple/30">
+              Admin
+            </span>
+          )}
         </Link>
         <div className="flex items-center gap-2 sm:gap-4">
-          <Link 
-            to={user?.role === 'faculty' ? '/faculty' : '/dashboard'} 
-            className="flex items-center gap-2 bg-gray-800 text-white px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-gray-700 transition border border-gray-700"
-          >
-            <Home className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="hidden sm:inline text-sm sm:text-base">Home</span>
-          </Link>
-          <Link 
-            to={user?.role === 'faculty' ? '/faculty/profile' : '/profile'} 
-            className="flex items-center gap-2 bg-gray-800 text-white px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-gray-700 transition border border-gray-700"
-          >
-            <User className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="hidden sm:inline text-sm sm:text-base">My Profile</span>
-          </Link>
+          {user?.role === 'admin' ? (
+            <Link 
+              to="/admin/users" 
+              className="flex items-center gap-2 bg-gray-800 text-white px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-gray-700 transition border border-gray-700"
+            >
+              <Users className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline text-sm sm:text-base">Users</span>
+            </Link>
+          ) : (
+            <>
+              <Link 
+                to={homeRoute} 
+                className="flex items-center gap-2 bg-gray-800 text-white px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-gray-700 transition border border-gray-700"
+              >
+                <Home className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="hidden sm:inline text-sm sm:text-base">Home</span>
+              </Link>
+              {profileRoute && (
+                <Link 
+                  to={profileRoute} 
+                  className="flex items-center gap-2 bg-gray-800 text-white px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-gray-700 transition border border-gray-700"
+                >
+                  <User className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="hidden sm:inline text-sm sm:text-base">My Profile</span>
+                </Link>
+              )}
+            </>
+          )}
           <button
             onClick={handleLogout}
             className="flex items-center gap-2 text-gray-400 hover:text-white transition p-1.5 sm:p-2 rounded-lg hover:bg-gray-800"

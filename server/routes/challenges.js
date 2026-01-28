@@ -2,15 +2,18 @@
 import express from 'express'
 import Challenge from '../models/Challenge.js'
 import Submission from '../models/Submission.js'
-import { authenticateToken } from '../middleware/auth.js'
+import { authenticateToken, requireRole } from '../middleware/auth.js'
 import { syncAllChallenges } from '../services/exercismSync.js'
 
 // Route handlers for Challenges APIs.
 const router = express.Router()
 
+router.use(authenticateToken)
+router.use(requireRole('student', 'faculty'))
+
 const DIFFICULTY_ORDER = { beginner: 1, intermediate: 2, advanced: 3 }
 
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { language, difficulty } = req.query
     const query = {}
@@ -53,7 +56,7 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 })
 
-router.get('/stats', authenticateToken, async (req, res) => {
+router.get('/stats', async (req, res) => {
   try {
     const stats = await Challenge.aggregate([
       {
@@ -73,7 +76,7 @@ router.get('/stats', authenticateToken, async (req, res) => {
   }
 })
 
-router.get('/:id', authenticateToken, async (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const challenge = await Challenge.findById(req.params.id)
     if (!challenge) {
@@ -86,7 +89,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
   }
 })
 
-router.post('/sync-exercism', authenticateToken, async (req, res) => {
+router.post('/sync-exercism', async (req, res) => {
   try {
     if (req.user.role !== 'faculty') {
       return res.status(403).json({ message: 'Only faculty can sync challenges' })
@@ -115,7 +118,7 @@ router.post('/sync-exercism', authenticateToken, async (req, res) => {
   }
 })
 
-router.delete('/clear-all', authenticateToken, async (req, res) => {
+router.delete('/clear-all', async (req, res) => {
   try {
     if (req.user.role !== 'faculty') {
       return res.status(403).json({ message: 'Only faculty can clear challenges' })
