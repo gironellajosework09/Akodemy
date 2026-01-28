@@ -10,45 +10,42 @@ import User from '../models/User.js'
 // Route handlers for Progress APIs.
 const router = express.Router()
 
-const INCREMENT = 1
-const DECREMENT = 1
-
 router.use(authenticateToken)
 router.use(requireRole('student', 'faculty'))
 
 router.get('/my-progress', async (req, res) => {
   try {
-    const user = await User.findById(req.user._id)
-    const userCompetencies = user?.competencies || { javascript: [0,0,0,0,0,0], python: [0,0,0,0,0,0], java: [0,0,0,0,0,0] }
+    const allChallenges = await Challenge.find({}).select('_id language competencyIndex')
+    
+    const latestAnswers = await LatestAnswer.find({ userId: req.user._id }).select('challengeId isCorrect')
+    const correctMap = {}
+    for (const la of latestAnswers) {
+      correctMap[la.challengeId.toString()] = la.isCorrect
+    }
 
     const progress = {}
+    const summary = {}
     
     for (const language of ['javascript', 'python', 'java']) {
-      const langScores = userCompetencies[language] || [0, 0, 0, 0, 0, 0]
       progress[language] = []
       
       for (let i = 0; i < 6; i++) {
-        const score = langScores[i] || 0
+        const challengesInComp = allChallenges.filter(c => c.language === language && c.competencyIndex === i)
+        const total = challengesInComp.length
+        const correct = challengesInComp.filter(c => correctMap[c._id.toString()] === true).length
         
         progress[language].push({
           index: i,
           name: COMPETENCY_NAMES[i],
-          score,
-          hasActivity: score > 0
+          correct,
+          total,
+          hasActivity: correct > 0
         })
       }
-    }
-
-    const summary = {
-      javascript: { score: 0 },
-      python: { score: 0 },
-      java: { score: 0 }
-    }
-
-    for (const language of ['javascript', 'python', 'java']) {
-      for (const comp of progress[language]) {
-        summary[language].score += comp.score
-      }
+      
+      const langTotal = progress[language].reduce((sum, c) => sum + c.total, 0)
+      const langCorrect = progress[language].reduce((sum, c) => sum + c.correct, 0)
+      summary[language] = { correct: langCorrect, total: langTotal }
     }
 
     res.json({ 
@@ -201,39 +198,6 @@ router.post('/challenge/:challengeId/submit', async (req, res) => {
       bestTime
     })
 
-    const challenge = await Challenge.findById(challengeId)
-    let competencyUpdated = null
-    
-    if (challenge && challenge.competencyIndex !== undefined && challenge.competencyIndex !== null) {
-      const lang = challenge.language
-      const idx = challenge.competencyIndex
-      
-      if (lang && ['javascript', 'python', 'java'].includes(lang) && idx >= 0 && idx < 6) {
-        const user = await User.findById(req.user._id)
-        if (user) {
-          if (!user.competencies) {
-            user.competencies = { javascript: [0,0,0,0,0,0], python: [0,0,0,0,0,0], java: [0,0,0,0,0,0] }
-          }
-          if (!user.competencies[lang]) {
-            user.competencies[lang] = [0, 0, 0, 0, 0, 0]
-          }
-          
-          const currentScore = user.competencies[lang][idx] || 0
-          
-          if (isCorrect) {
-            user.competencies[lang][idx] = currentScore + INCREMENT
-            competencyUpdated = { language: lang, index: idx, name: COMPETENCY_NAMES[idx], change: INCREMENT, newScore: currentScore + INCREMENT }
-          } else if (attemptNumber > 1) {
-            user.competencies[lang][idx] = Math.max(0, currentScore - DECREMENT)
-            competencyUpdated = { language: lang, index: idx, name: COMPETENCY_NAMES[idx], change: -DECREMENT, newScore: Math.max(0, currentScore - DECREMENT) }
-          }
-          
-          user.markModified('competencies')
-          await user.save()
-        }
-      }
-    }
-
     res.json({
       success: true,
       submission: {
@@ -241,8 +205,7 @@ router.post('/challenge/:challengeId/submit', async (req, res) => {
         score: submission.score,
         bestTime: submission.bestTime,
         isCorrect: submission.isCorrect
-      },
-      competencyUpdated
+      }
     })
   } catch (error) {
     console.error('Submit answer error:', error)

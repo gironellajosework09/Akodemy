@@ -324,8 +324,14 @@ router.get('/students/:studentId/profile', authenticateToken, requireRole('facul
 router.get('/student/:id/competencies', authenticateToken, requireRole('faculty'), async (req, res) => {
   try {
     const userId = req.params.id
-    const user = await User.findById(userId)
-    const userCompetencies = user?.competencies || { javascript: [0,0,0,0,0,0], python: [0,0,0,0,0,0], java: [0,0,0,0,0,0] }
+
+    const allChallenges = await Challenge.find({}).select('_id language competencyIndex')
+    
+    const latestAnswers = await LatestAnswer.find({ userId }).select('challengeId isCorrect')
+    const correctMap = {}
+    for (const la of latestAnswers) {
+      correctMap[la.challengeId.toString()] = la.isCorrect
+    }
 
     const competencyNames = [
       'Variables & Data Types',
@@ -341,18 +347,25 @@ router.get('/student/:id/competencies', authenticateToken, requireRole('faculty'
     const summary = {}
 
     for (const lang of languages) {
-      const langScores = userCompetencies[lang] || [0, 0, 0, 0, 0, 0]
-
-      result[lang] = langScores.map((score, idx) => ({
-        index: idx,
-        name: competencyNames[idx] || `Competency ${idx}`,
-        score: score || 0,
-        hasActivity: (score || 0) > 0
-      }))
-
-      summary[lang] = {
-        score: langScores.reduce((sum, s) => sum + (s || 0), 0)
+      result[lang] = []
+      
+      for (let i = 0; i < 6; i++) {
+        const challengesInComp = allChallenges.filter(c => c.language === lang && c.competencyIndex === i)
+        const total = challengesInComp.length
+        const correct = challengesInComp.filter(c => correctMap[c._id.toString()] === true).length
+        
+        result[lang].push({
+          index: i,
+          name: competencyNames[i] || `Competency ${i}`,
+          correct,
+          total,
+          hasActivity: correct > 0
+        })
       }
+      
+      const langTotal = result[lang].reduce((sum, c) => sum + c.total, 0)
+      const langCorrect = result[lang].reduce((sum, c) => sum + c.correct, 0)
+      summary[lang] = { correct: langCorrect, total: langTotal }
     }
 
     res.json({ ...result, summary })
