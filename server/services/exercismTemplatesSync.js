@@ -200,15 +200,17 @@ def ${snakeName}(${pyParams}):
       return `// ${title}
 // Write your solution here
 
-public class ${className} {
+class ${className} {
     public Object ${functionName}(${javaParams}) {
         // Implement your solution
         throw new UnsupportedOperationException(\"Not implemented\");
     }
-    
+}
+
+public class Main {
     public static void main(String[] args) {
         ${className} solution = new ${className}();
-        // Test your solution
+        // Add your own test calls here
     }
 }
 `

@@ -175,9 +175,18 @@ async function downloadExerciseTests(language, slug) {
 
 function normalizeToExercismSlug(slug) {
   // Strip language suffixes so slugs match Exercism's canonical naming.
-  return slug
+  const normalized = slug
     .replace(/-(?:javascript|python|java)$/i, '')
     .replace(/-(?:js|py)$/i, '')
+
+  const aliases = {
+    'difference-squares': 'difference-of-squares',
+    'rna': 'rna-transcription',
+    'rle': 'run-length-encoding',
+    'resistor': 'resistor-color'
+  }
+
+  return aliases[normalized] || normalized
 }
 
 async function syncTestFilesForChallenge(challenge) {

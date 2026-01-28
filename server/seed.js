@@ -594,17 +594,14 @@ print(to_roman(1990))`,
   {
     title: 'Hello World',
     slug: 'hello-world-java',
+    exerciseSlug: 'hello-world',
     description: 'Write a method that returns "Hello, World!"',
     language: 'java',
     difficulty: 'beginner',
-    starterCode: `public class Main {
-    public static String helloWorld() {
+    starterCode: `public class Greeter {
+    public String getGreeting() {
         // Return "Hello, World!"
         return "";
-    }
-    
-    public static void main(String[] args) {
-        System.out.println(helloWorld());
     }
 }`,
     solution: 'Hello, World!',
@@ -616,17 +613,14 @@ print(to_roman(1990))`,
   {
     title: 'Two Fer',
     slug: 'two-fer-java',
+    exerciseSlug: 'two-fer',
     description: 'Create a sentence "One for X, one for me." Use "you" if no name given.',
     language: 'java',
     difficulty: 'beginner',
-    starterCode: `public class Main {
-    public static String twoFer(String name) {
+    starterCode: `public class Twofer {
+    public String twofer(String name) {
         // Return "One for [name], one for me."
         return "";
-    }
-    
-    public static void main(String[] args) {
-        System.out.println(twoFer("Alice"));
     }
 }`,
     solution: 'One for Alice, one for me.',
@@ -638,17 +632,14 @@ print(to_roman(1990))`,
   {
     title: 'Leap Year',
     slug: 'leap-java',
+    exerciseSlug: 'leap',
     description: 'Determine whether a year is a leap year.',
     language: 'java',
     difficulty: 'beginner',
-    starterCode: `public class Main {
-    public static boolean isLeap(int year) {
+    starterCode: `public class Leap {
+    public boolean isLeapYear(int year) {
         // Return true if leap year
         return false;
-    }
-    
-    public static void main(String[] args) {
-        System.out.println(isLeap(2024));
     }
 }`,
     solution: 'true',
@@ -660,17 +651,14 @@ print(to_roman(1990))`,
   {
     title: 'Reverse String',
     slug: 'reverse-string-java',
+    exerciseSlug: 'reverse-string',
     description: 'Reverse a string.',
     language: 'java',
     difficulty: 'beginner',
-    starterCode: `public class Main {
-    public static String reverseString(String s) {
+    starterCode: `public class ReverseString {
+    public String reverse(String input) {
         // Return reversed string
         return "";
-    }
-    
-    public static void main(String[] args) {
-        System.out.println(reverseString("hello"));
     }
 }`,
     solution: 'olleh',
@@ -681,18 +669,20 @@ print(to_roman(1990))`,
   },
   {
     title: 'Resistor Color',
-    slug: 'resistor-java',
+    slug: 'resistor-color-java',
+    exerciseSlug: 'resistor-color',
     description: 'Return the numeric value of a resistor color band.',
     language: 'java',
     difficulty: 'beginner',
-    starterCode: `public class Main {
-    public static int colorCode(String color) {
+    starterCode: `public class ResistorColor {
+    public int colorCode(String color) {
         // Return numeric value for color
         return -1;
     }
-    
-    public static void main(String[] args) {
-        System.out.println(colorCode("brown"));
+
+    public String[] colors() {
+        // Return the color array
+        return new String[] {};
     }
 }`,
     solution: '1',
@@ -706,17 +696,22 @@ print(to_roman(1990))`,
   {
     title: 'Hamming Distance',
     slug: 'hamming-java',
+    exerciseSlug: 'hamming',
     description: 'Calculate the Hamming distance between two DNA strands.',
     language: 'java',
     difficulty: 'intermediate',
-    starterCode: `public class Main {
-    public static int hamming(String strand1, String strand2) {
+    starterCode: `public class Hamming {
+    private final String left;
+    private final String right;
+
+    public Hamming(String left, String right) {
+        this.left = left;
+        this.right = right;
+    }
+
+    public int getHammingDistance() {
         // Return count of differences
         return 0;
-    }
-    
-    public static void main(String[] args) {
-        System.out.println(hamming("GAGCCTACTAACGGGAT", "CATCGTAATGACGGCCT"));
     }
 }`,
     solution: '7',
@@ -728,17 +723,14 @@ print(to_roman(1990))`,
   {
     title: 'Isogram',
     slug: 'isogram-java',
+    exerciseSlug: 'isogram',
     description: 'Determine if a word is an isogram (no repeating letters).',
     language: 'java',
     difficulty: 'intermediate',
-    starterCode: `public class Main {
-    public static boolean isIsogram(String word) {
+    starterCode: `public class IsogramChecker {
+    public boolean isIsogram(String word) {
         // Return true if no repeating letters
         return false;
-    }
-    
-    public static void main(String[] args) {
-        System.out.println(isIsogram("lumberjacks"));
     }
 }`,
     solution: 'true',
@@ -750,17 +742,14 @@ print(to_roman(1990))`,
   {
     title: 'Pangram',
     slug: 'pangram-java',
+    exerciseSlug: 'pangram',
     description: 'Determine if a sentence is a pangram.',
     language: 'java',
     difficulty: 'intermediate',
-    starterCode: `public class Main {
-    public static boolean isPangram(String sentence) {
+    starterCode: `public class PangramChecker {
+    public boolean isPangram(String sentence) {
         // Return true if contains all letters
         return false;
-    }
-    
-    public static void main(String[] args) {
-        System.out.println(isPangram("The quick brown fox jumps over the lazy dog"));
     }
 }`,
     solution: 'true',
@@ -772,19 +761,25 @@ print(to_roman(1990))`,
   {
     title: 'RNA Transcription',
     slug: 'rna-java',
+    exerciseSlug: 'rna-transcription',
     description: 'Convert DNA to RNA. G→C, C→G, T→A, A→U',
     language: 'java',
     difficulty: 'intermediate',
-    starterCode: `public class Main {
-    public static String toRNA(String dna) {
+    starterCode: `public class RnaTranscription {
+    public String transcribe(String dna) {
         // Convert DNA to RNA
         return "";
     }
-    
+}
+
+class Main {
     public static void main(String[] args) {
-        System.out.println(toRNA("GCTA"));
+        RnaTranscription rna = new RnaTranscription();
+        // Example run
+        System.out.println(rna.transcribe("GCTA"));
     }
-}`,
+}
+`,
     solution: 'CGAU',
     competencyIndex: 2,
     testCases: [
@@ -794,17 +789,24 @@ print(to_roman(1990))`,
   {
     title: 'Difference of Squares',
     slug: 'difference-squares-java',
+    exerciseSlug: 'difference-of-squares',
     description: 'Find the difference between sum of squares and square of sum.\n\nFor 1-10: (1+2+...+10)² - (1²+2²+...+10²) = 2640',
     language: 'java',
     difficulty: 'intermediate',
-    starterCode: `public class Main {
-    public static int difference(int n) {
-        // Return squareOfSum - sumOfSquares
+    starterCode: `public class DifferenceOfSquaresCalculator {
+    public int computeSquareOfSumTo(int input) {
+        // Return square of sum to input
         return 0;
     }
-    
-    public static void main(String[] args) {
-        System.out.println(difference(10));
+
+    public int computeSumOfSquaresTo(int input) {
+        // Return sum of squares to input
+        return 0;
+    }
+
+    public int computeDifferenceOfSquares(int input) {
+        // Return square of sum minus sum of squares
+        return 0;
     }
 }`,
     solution: '2640',
@@ -818,20 +820,23 @@ print(to_roman(1990))`,
   {
     title: 'Anagram Detector',
     slug: 'anagram-java',
+    exerciseSlug: 'anagram',
     description: 'Find all anagrams of a word from a list of candidates.',
     language: 'java',
     difficulty: 'advanced',
-    starterCode: `import java.util.*;
+    starterCode: `import java.util.ArrayList;
+import java.util.List;
 
-public class Main {
-    public static List<String> findAnagrams(String word, List<String> candidates) {
+public class Anagram {
+    private final String source;
+
+    public Anagram(String source) {
+        this.source = source;
+    }
+
+    public List<String> match(List<String> candidates) {
         // Return list of anagrams
         return new ArrayList<>();
-    }
-    
-    public static void main(String[] args) {
-        List<String> candidates = Arrays.asList("enlist", "google", "silent");
-        System.out.println(findAnagrams("listen", candidates));
     }
 }`,
     solution: '[enlist, silent]',
@@ -843,17 +848,19 @@ public class Main {
   {
     title: 'Run Length Encoding',
     slug: 'rle-java',
+    exerciseSlug: 'run-length-encoding',
     description: 'Implement run-length encoding.',
     language: 'java',
     difficulty: 'advanced',
-    starterCode: `public class Main {
-    public static String encode(String s) {
+    starterCode: `public class RunLengthEncoding {
+    public String encode(String input) {
         // Return run-length encoded string
         return "";
     }
-    
-    public static void main(String[] args) {
-        System.out.println(encode("WWWWBWWWWBBB"));
+
+    public String decode(String input) {
+        // Return decoded string
+        return "";
     }
 }`,
     solution: '4WB4W3B',
@@ -865,20 +872,31 @@ public class Main {
   {
     title: 'Binary Search',
     slug: 'binary-search-java',
+    exerciseSlug: 'binary-search',
     description: 'Implement binary search.',
     language: 'java',
     difficulty: 'advanced',
-    starterCode: `public class Main {
-    public static int binarySearch(int[] arr, int target) {
-        // Return index or -1
+    starterCode: `import java.util.List;
+
+public class BinarySearch {
+    private final List<Integer> list;
+
+    public BinarySearch(List<Integer> list) {
+        this.list = list;
+    }
+
+    public int indexOf(int value) throws ValueNotFoundException {
+        // Return index of value or throw ValueNotFoundException
         return -1;
     }
-    
-    public static void main(String[] args) {
-        int[] arr = {1, 3, 5, 8, 13, 21};
-        System.out.println(binarySearch(arr, 8));
+}
+
+class ValueNotFoundException extends Exception {
+    public ValueNotFoundException(String message) {
+        super(message);
     }
-}`,
+}
+`,
     solution: '3',
     competencyIndex: 3,
     testCases: [
@@ -888,17 +906,20 @@ public class Main {
   {
     title: 'Roman Numerals',
     slug: 'roman-numerals-java',
+    exerciseSlug: 'roman-numerals',
     description: 'Convert a number to a Roman numeral.',
     language: 'java',
     difficulty: 'advanced',
-    starterCode: `public class Main {
-    public static String toRoman(int num) {
+    starterCode: `public class RomanNumerals {
+    private final int number;
+
+    public RomanNumerals(int number) {
+        this.number = number;
+    }
+
+    public String getRomanNumeral() {
         // Convert to Roman numeral
         return "";
-    }
-    
-    public static void main(String[] args) {
-        System.out.println(toRoman(1990));
     }
 }`,
     solution: 'MCMXC',
@@ -910,19 +931,17 @@ public class Main {
   {
     title: 'Prime Factors',
     slug: 'prime-factors-java',
+    exerciseSlug: 'prime-factors',
     description: 'Compute the prime factors of a given number.',
     language: 'java',
     difficulty: 'advanced',
-    starterCode: `import java.util.*;
+    starterCode: `import java.util.ArrayList;
+import java.util.List;
 
-public class Main {
-    public static List<Integer> primeFactors(int n) {
+public class PrimeFactorsCalculator {
+    public List<Long> calculatePrimeFactorsOf(long number) {
         // Return list of prime factors
         return new ArrayList<>();
-    }
-    
-    public static void main(String[] args) {
-        System.out.println(primeFactors(60));
     }
 }`,
     solution: '[2, 2, 3, 5]',

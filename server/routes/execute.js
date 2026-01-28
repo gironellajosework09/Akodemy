@@ -4,15 +4,30 @@ import { authenticateToken, requireRole } from '../middleware/auth.js'
 import { executeCode } from '../services/judge0.js'
 import { rephraseError } from '../services/gpt.js'
 import { runOfficialTests } from '../services/officialTestsRunner.js'
-import { normalizeToExercismSlug } from '../services/exercismTestSync.js'
+import { normalizeToExercismSlug, readTestFile } from '../services/exercismTestSync.js'
 import { getTestCases } from '../services/canonical/testFetcher.js'
 import { runTests } from '../services/testRunner.js'
+import { extractJavaTestCases } from '../services/javaTestParser.js'
 import { checkAndUnlockBadge } from '../services/badgeService.js'
 import Submission from '../models/Submission.js'
 import Challenge from '../models/Challenge.js'
 
 // Route handlers for Execute APIs.
 const router = express.Router()
+
+function wrapJavaForRun(code) {
+  const hasMain = /\bclass\s+Main\b/.test(code)
+  if (hasMain) return code
+  const stripped = code.replace(/\bpublic\s+(class|interface|enum|record)\b/g, '$1')
+  return `${stripped}
+
+public class Main {
+    public static void main(String[] args) {
+        // No-op runner to avoid missing Main errors.
+    }
+}
+`
+}
 
 router.use(authenticateToken)
 router.use(requireRole('student', 'faculty'))
@@ -25,7 +40,12 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'Code and language are required' })
     }
 
-    const result = await executeCode(code, language)
+    let runCode = code
+    if (language === 'java' && challengeId) {
+      runCode = wrapJavaForRun(code)
+    }
+
+    const result = await executeCode(runCode, language)
 
     let output = result.stdout || ''
     let error = result.stderr || result.compileOutput || ''
@@ -102,6 +122,20 @@ router.post('/', async (req, res) => {
               const canonical = await getTestCases(baseSlug)
               tests = (canonical.cases || []).map(mapToTest)
             } catch {}
+          }
+
+          if (language === 'java') {
+            try {
+              const javaTestFile = await readTestFile('java', baseSlug)
+              if (javaTestFile?.content) {
+                const parsed = extractJavaTestCases(javaTestFile.content)
+                if (parsed.length > 0) {
+                  tests = parsed
+                }
+              }
+            } catch (err) {
+              console.error('Failed to parse Java test file:', err.message)
+            }
           }
 
           if (tests.length > 0) {
