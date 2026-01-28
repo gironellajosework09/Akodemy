@@ -155,7 +155,9 @@ export default function ChallengeList() {
                       {challenge.title}
                     </h3>
                     <p className="text-xs text-gray-500 mb-2">
-                      Competency: {challenge.competencyTarget || <span className="text-yellow-500">(Missing - admin must set)</span>}
+                      Competency: {challenge.competencyIndex !== undefined && challenge.competencyIndex !== null 
+                        ? ['Variables & Data Types', 'Control Structures', 'Functions', 'Arrays & Collections', 'Object-Oriented Programming', 'Error Handling'][challenge.competencyIndex] || <span className="text-yellow-500">(Missing - admin must set)</span>
+                        : <span className="text-yellow-500">(Missing - admin must set)</span>}
                     </p>
                     <div className="flex items-center justify-between text-xs sm:text-sm text-gray-400">
                       <div className="flex items-center gap-2 sm:gap-4">

@@ -23,7 +23,7 @@ const officialTestSchema = new mongoose.Schema({
   expected: mongoose.Schema.Types.Mixed
 })
 
-const COMPETENCY_TARGETS = [
+const COMPETENCY_NAMES = [
   'Variables & Data Types',
   'Control Structures',
   'Functions',
@@ -55,11 +55,6 @@ const challengeSchema = new mongoose.Schema({
     type: String,
     enum: ['beginner', 'intermediate', 'advanced'],
     required: true
-  },
-  competencyTarget: {
-    type: String,
-    enum: COMPETENCY_TARGETS,
-    default: null
   },
   starterCode: {
     type: String,
@@ -124,7 +119,7 @@ const challengeSchema = new mongoose.Schema({
 }, { timestamps: true })
 
 const Challenge = mongoose.model('Challenge', challengeSchema)
-export { COMPETENCY_TARGETS }
+export { COMPETENCY_NAMES }
 export default Challenge
 
 

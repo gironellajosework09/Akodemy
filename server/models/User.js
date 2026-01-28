@@ -100,11 +100,6 @@ const userSchema = new mongoose.Schema({
       default: [0, 0, 0, 0, 0, 0]
     }
   },
-  competencyScores: {
-    type: Map,
-    of: Number,
-    default: {}
-  },
   progress: {
     javascript: { type: Number, default: 0 },
     python: { type: Number, default: 0 },

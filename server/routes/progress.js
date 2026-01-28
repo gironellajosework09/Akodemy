@@ -2,7 +2,7 @@
 import express from 'express'
 import { authenticateToken, requireRole } from '../middleware/auth.js'
 import Submission from '../models/Submission.js'
-import Challenge, { COMPETENCY_TARGETS } from '../models/Challenge.js'
+import Challenge, { COMPETENCY_NAMES } from '../models/Challenge.js'
 import ChallengeAnswer from '../models/ChallengeAnswer.js'
 import LatestAnswer from '../models/LatestAnswer.js'
 import User from '../models/User.js'
@@ -15,15 +15,6 @@ const DECREMENT = 1
 
 router.use(authenticateToken)
 router.use(requireRole('student', 'faculty'))
-
-const COMPETENCY_NAMES = [
-  'Variables & Data Types',
-  'Control Structures',
-  'Functions',
-  'Arrays & Collections',
-  'Object-Oriented Programming',
-  'Error Handling'
-]
 
 router.get('/my-progress', async (req, res) => {
   try {
@@ -267,25 +258,33 @@ router.post('/challenge/:challengeId/submit', async (req, res) => {
     const challenge = await Challenge.findById(challengeId)
     let competencyUpdated = null
     
-    if (challenge?.competencyTarget && COMPETENCY_TARGETS.includes(challenge.competencyTarget)) {
-      const user = await User.findById(req.user._id)
-      if (user) {
-        if (!user.competencyScores) {
-          user.competencyScores = new Map()
+    if (challenge && challenge.competencyIndex !== undefined && challenge.competencyIndex !== null) {
+      const lang = challenge.language
+      const idx = challenge.competencyIndex
+      
+      if (lang && ['javascript', 'python', 'java'].includes(lang) && idx >= 0 && idx < 6) {
+        const user = await User.findById(req.user._id)
+        if (user) {
+          if (!user.competencies) {
+            user.competencies = { javascript: [0,0,0,0,0,0], python: [0,0,0,0,0,0], java: [0,0,0,0,0,0] }
+          }
+          if (!user.competencies[lang]) {
+            user.competencies[lang] = [0, 0, 0, 0, 0, 0]
+          }
+          
+          const currentScore = user.competencies[lang][idx] || 0
+          
+          if (isCorrect) {
+            user.competencies[lang][idx] = currentScore + INCREMENT
+            competencyUpdated = { language: lang, index: idx, name: COMPETENCY_NAMES[idx], change: INCREMENT, newScore: currentScore + INCREMENT }
+          } else if (attemptNumber > 1) {
+            user.competencies[lang][idx] = Math.max(0, currentScore - DECREMENT)
+            competencyUpdated = { language: lang, index: idx, name: COMPETENCY_NAMES[idx], change: -DECREMENT, newScore: Math.max(0, currentScore - DECREMENT) }
+          }
+          
+          user.markModified('competencies')
+          await user.save()
         }
-        
-        const currentScore = user.competencyScores.get(challenge.competencyTarget) || 0
-        
-        if (isCorrect) {
-          user.competencyScores.set(challenge.competencyTarget, currentScore + INCREMENT)
-          competencyUpdated = { target: challenge.competencyTarget, change: INCREMENT, newScore: currentScore + INCREMENT }
-        } else if (attemptNumber > 1) {
-          user.competencyScores.set(challenge.competencyTarget, Math.max(0, currentScore - DECREMENT))
-          competencyUpdated = { target: challenge.competencyTarget, change: -DECREMENT, newScore: Math.max(0, currentScore - DECREMENT) }
-        }
-        
-        user.markModified('competencyScores')
-        await user.save()
       }
     }
 
