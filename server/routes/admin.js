@@ -96,46 +96,59 @@ router.get('/users', async (req, res) => {
 router.post('/users', async (req, res) => {
   try {
     const { uid, lastName, givenName, middleName, email, role, yearLevelAndSection } = req.body
+    const normalizedUid = String(uid || '').trim()
+    const normalizedEmail = String(email || '').trim().toLowerCase()
+    const normalizedLastName = String(lastName || '').trim()
+    const normalizedGivenName = String(givenName || '').trim()
+    const normalizedMiddleName = String(middleName || '').trim()
+    const normalizedRole = String(role || '').trim().toLowerCase()
+    const normalizedYearLevelAndSection = String(yearLevelAndSection || '').trim()
 
-    if (!uid || !lastName || !givenName || !email || !role) {
+    if (!normalizedUid || !normalizedLastName || !normalizedGivenName || !normalizedEmail || !normalizedRole) {
       return res.status(400).json({ message: 'Required fields: uid, lastName, givenName, email, role' })
     }
 
-    if (!['student', 'faculty'].includes(role)) {
+    if (!['student', 'faculty'].includes(normalizedRole)) {
       return res.status(400).json({ message: 'Role must be student or faculty' })
     }
 
-    if (role === 'student' && !yearLevelAndSection) {
+    if (normalizedRole === 'student' && !normalizedYearLevelAndSection) {
       return res.status(400).json({ message: 'Year Level & Section is required for students' })
     }
 
-    const existingEmail = await User.findOne({ email: email.toLowerCase() })
+    const existingEmail = await User.findOne({ email: normalizedEmail })
     if (existingEmail) {
-      return res.status(400).json({ message: 'Email already exists' })
+      return res.status(409).json({
+        message: 'Email already exists',
+        conflict: { type: 'email', value: normalizedEmail, id: existingEmail._id, role: existingEmail.role }
+      })
     }
 
-    const existingUid = await User.findOne({ uid })
+    const existingUid = await User.findOne({ uid: normalizedUid })
     if (existingUid) {
-      return res.status(400).json({ message: 'UID already exists' })
+      return res.status(409).json({
+        message: 'UID already exists',
+        conflict: { type: 'uid', value: normalizedUid, id: existingUid._id, role: existingUid.role }
+      })
     }
 
-    const name = middleName 
-      ? `${lastName}, ${givenName} ${middleName}`
-      : `${lastName}, ${givenName}`
+    const name = normalizedMiddleName 
+      ? `${normalizedLastName}, ${normalizedGivenName} ${normalizedMiddleName}`
+      : `${normalizedLastName}, ${normalizedGivenName}`
 
-    const defaultPassword = uid
+    const defaultPassword = normalizedUid
     const hashedPassword = await bcrypt.hash(defaultPassword, 10)
 
     const newUser = new User({
-      uid,
-      lastName,
-      givenName,
-      middleName: middleName || null,
-      email: email.toLowerCase(),
+      uid: normalizedUid,
+      lastName: normalizedLastName,
+      givenName: normalizedGivenName,
+      middleName: normalizedMiddleName || null,
+      email: normalizedEmail,
       name,
-      role,
-      yearLevelAndSection: role === 'student' ? yearLevelAndSection : null,
-      student_id: role === 'student' ? uid : null,
+      role: normalizedRole,
+      yearLevelAndSection: normalizedRole === 'student' ? normalizedYearLevelAndSection : null,
+      student_id: normalizedRole === 'student' ? normalizedUid : null,
       password: hashedPassword
     })
 
@@ -153,6 +166,14 @@ router.post('/users', async (req, res) => {
       }
     })
   } catch (error) {
+    if (error?.code === 11000) {
+      const key = error?.keyValue ? Object.keys(error.keyValue)[0] : undefined
+      const value = error?.keyValue?.[key]
+      return res.status(409).json({
+        message: `${key === 'email' ? 'Email' : 'UID'} already exists`,
+        conflict: { type: key || 'unknown', value }
+      })
+    }
     console.error('Error creating user:', error)
     res.status(500).json({ message: 'Failed to create user' })
   }
@@ -221,8 +242,32 @@ router.post('/users/bulk', async (req, res) => {
       return res.status(400).json({ message: 'No file data provided' })
     }
 
-    const buffer = Buffer.from(req.body.fileData, 'base64')
-    const wb = XLSX.read(buffer, { type: 'buffer' })
+    if (typeof req.body.fileData !== 'string' || !req.body.fileData.trim()) {
+      return res.status(400).json({ message: 'Invalid file data provided' })
+    }
+
+    const base64Data = req.body.fileData.includes(',')
+      ? req.body.fileData.split(',')[1]
+      : req.body.fileData
+
+    let buffer
+    try {
+      buffer = Buffer.from(base64Data, 'base64')
+    } catch (error) {
+      return res.status(400).json({ message: 'Invalid base64 file data' })
+    }
+
+    let wb
+    try {
+      wb = XLSX.read(buffer, { type: 'buffer' })
+    } catch (error) {
+      return res.status(400).json({ message: 'Invalid or unsupported Excel file' })
+    }
+
+    if (!wb.SheetNames || wb.SheetNames.length === 0) {
+      return res.status(400).json({ message: 'Excel file contains no sheets' })
+    }
+
     const ws = wb.Sheets[wb.SheetNames[0]]
     
     const REQUIRED_HEADERS = ['UID', 'LastName', 'GivenName', 'MiddleName', 'Email', 'YearLevelAndSection', 'Role']
@@ -347,6 +392,9 @@ router.post('/users/bulk', async (req, res) => {
       errors: errors
     })
   } catch (error) {
+    if (error?.code === 11000) {
+      return res.status(400).json({ message: 'Duplicate UID or email detected during insert' })
+    }
     console.error('Error bulk uploading users:', error)
     res.status(500).json({ message: 'Failed to process bulk upload' })
   }

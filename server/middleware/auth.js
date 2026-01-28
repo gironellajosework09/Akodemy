@@ -6,7 +6,13 @@ const JWT_SECRET = process.env.JWT_SECRET || 'akodemy-secret-key-2025'
 
 export const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization']
-  const token = authHeader && authHeader.split(' ')[1]
+  const headerToken = authHeader && authHeader.split(' ')[1]
+  const fallbackToken =
+    req.headers['x-access-token'] ||
+    req.headers['x-authorization'] ||
+    req.query?.token ||
+    req.body?.token
+  const token = headerToken || fallbackToken
 
   if (!token) {
     return res.status(401).json({ message: 'Access token required' })

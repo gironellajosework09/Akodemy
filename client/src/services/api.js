@@ -8,6 +8,23 @@ const api = axios.create({
   }
 })
 
+if (typeof window !== 'undefined') {
+  const token = localStorage.getItem('token')
+  if (token) {
+    api.defaults.headers.common.Authorization = `Bearer ${token}`
+    api.defaults.headers.common['X-Access-Token'] = token
+  }
+}
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token')
+  if (token && !config.headers?.Authorization) {
+    config.headers.Authorization = `Bearer ${token}`
+    config.headers['X-Access-Token'] = token
+  }
+  return config
+})
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
