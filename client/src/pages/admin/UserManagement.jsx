@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Search, Plus, Download, Upload, ChevronLeft, ChevronRight, Users, User, GraduationCap, X, AlertCircle, CheckCircle } from 'lucide-react'
+import { Search, Plus, Download, Upload, ChevronLeft, ChevronRight, Users, User, GraduationCap, X, AlertCircle, CheckCircle, UserX, UserCheck, MoreVertical } from 'lucide-react'
 import Layout from '../../components/Layout'
 import { InlineSpinner } from '../../components/LoadingSpinner'
 import api from '../../services/api'
@@ -15,6 +15,8 @@ export default function UserManagement() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [showBulkModal, setShowBulkModal] = useState(false)
   const [bulkResult, setBulkResult] = useState(null)
+  const [statusModal, setStatusModal] = useState(null)
+  const [statusLoading, setStatusLoading] = useState(false)
 
   const fetchUsers = useCallback(async () => {
     setLoading(true)
@@ -75,6 +77,22 @@ export default function UserManagement() {
     setBulkResult(result)
     setShowBulkModal(false)
     fetchUsers()
+  }
+
+  const handleStatusChange = async () => {
+    if (!statusModal) return
+    setStatusLoading(true)
+    try {
+      await api.patch(`/api/admin/users/${statusModal._id}/status`, {
+        isActive: !statusModal.isActive
+      })
+      fetchUsers()
+      setStatusModal(null)
+    } catch (error) {
+      console.error('Failed to update user status:', error)
+    } finally {
+      setStatusLoading(false)
+    }
   }
 
   return (
@@ -185,25 +203,26 @@ export default function UserManagement() {
                     <th className="px-4 py-3 text-sm font-semibold text-gray-300">Email</th>
                     <th className="px-4 py-3 text-sm font-semibold text-gray-300">Role</th>
                     <th className="px-4 py-3 text-sm font-semibold text-gray-300">Year & Section</th>
-                    <th className="px-4 py-3 text-sm font-semibold text-gray-300">Created</th>
+                    <th className="px-4 py-3 text-sm font-semibold text-gray-300">Status</th>
+                    <th className="px-4 py-3 text-sm font-semibold text-gray-300">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700">
                   {loading ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center">
+                      <td colSpan={7} className="px-4 py-8 text-center">
                         <InlineSpinner />
                       </td>
                     </tr>
                   ) : users.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
+                      <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
                         No users found
                       </td>
                     </tr>
                   ) : (
                     users.map(user => (
-                      <tr key={user._id} className="hover:bg-gray-700/30 transition">
+                      <tr key={user._id} className={`hover:bg-gray-700/30 transition ${!user.isActive ? 'opacity-60' : ''}`}>
                         <td className="px-4 py-3 text-sm text-white font-mono">{user.uid}</td>
                         <td className="px-4 py-3 text-sm text-white">{user.fullName}</td>
                         <td className="px-4 py-3 text-sm text-gray-300">{user.email}</td>
@@ -218,8 +237,46 @@ export default function UserManagement() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-300">{user.yearLevelAndSection}</td>
-                        <td className="px-4 py-3 text-sm text-gray-400">
-                          {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '—'}
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                            user.isActive
+                              ? 'bg-green-500/20 text-green-400'
+                              : 'bg-red-500/20 text-red-400'
+                          }`}>
+                            {user.isActive ? (
+                              <>
+                                <UserCheck className="w-3 h-3" />
+                                Active
+                              </>
+                            ) : (
+                              <>
+                                <UserX className="w-3 h-3" />
+                                Inactive
+                              </>
+                            )}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => setStatusModal(user)}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                              user.isActive
+                                ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                                : 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                            }`}
+                          >
+                            {user.isActive ? (
+                              <>
+                                <UserX className="w-3 h-3" />
+                                Deactivate
+                              </>
+                            ) : (
+                              <>
+                                <UserCheck className="w-3 h-3" />
+                                Activate
+                              </>
+                            )}
+                          </button>
                         </td>
                       </tr>
                     ))
@@ -262,6 +319,66 @@ export default function UserManagement() {
 
       {showBulkModal && (
         <BulkUploadModal onClose={() => setShowBulkModal(false)} onSuccess={handleBulkUpload} />
+      )}
+
+      {statusModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 border border-gray-700 rounded-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-4 border-b border-gray-700">
+              <h2 className="text-xl font-bold text-white">
+                {statusModal.isActive ? 'Deactivate User' : 'Activate User'}
+              </h2>
+              <button onClick={() => setStatusModal(null)} className="text-gray-400 hover:text-white">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-6">
+                <div className={`p-3 rounded-full ${statusModal.isActive ? 'bg-red-500/20' : 'bg-green-500/20'}`}>
+                  {statusModal.isActive ? (
+                    <UserX className="w-8 h-8 text-red-400" />
+                  ) : (
+                    <UserCheck className="w-8 h-8 text-green-400" />
+                  )}
+                </div>
+                <div>
+                  <p className="text-white font-medium">{statusModal.fullName}</p>
+                  <p className="text-sm text-gray-400">{statusModal.uid}</p>
+                </div>
+              </div>
+              <p className="text-gray-300 mb-6">
+                {statusModal.isActive
+                  ? 'Are you sure you want to deactivate this user? They will no longer be able to log in until reactivated.'
+                  : 'Are you sure you want to activate this user? They will be able to log in again.'}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setStatusModal(null)}
+                  className="flex-1 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleStatusChange}
+                  disabled={statusLoading}
+                  className={`flex-1 py-2.5 rounded-lg transition disabled:opacity-50 ${
+                    statusModal.isActive
+                      ? 'bg-red-600 hover:bg-red-700 text-white'
+                      : 'bg-green-600 hover:bg-green-700 text-white'
+                  }`}
+                >
+                  {statusLoading ? (
+                    <InlineSpinner />
+                  ) : statusModal.isActive ? (
+                    'Deactivate'
+                  ) : (
+                    'Activate'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </Layout>
   )

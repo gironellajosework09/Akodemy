@@ -74,7 +74,8 @@ router.get('/users', async (req, res) => {
         email: user.email,
         role: user.role,
         yearLevelAndSection: user.role === 'student' ? (user.yearLevelAndSection || user.yearSection || '—') : '—',
-        createdAt: user.createdAt
+        createdAt: user.createdAt,
+        isActive: user.isActive !== false
       }
     })
 
@@ -176,6 +177,49 @@ router.post('/users', async (req, res) => {
     }
     console.error('Error creating user:', error)
     res.status(500).json({ message: 'Failed to create user' })
+  }
+})
+
+router.patch('/users/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { isActive } = req.body
+
+    if (typeof isActive !== 'boolean') {
+      return res.status(400).json({ message: 'isActive must be a boolean' })
+    }
+
+    const user = await User.findById(id)
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' })
+    }
+
+    if (user.role === 'admin') {
+      return res.status(403).json({ message: 'Cannot modify admin account status' })
+    }
+
+    user.isActive = isActive
+    if (!isActive) {
+      user.deactivatedAt = new Date()
+      user.deactivatedBy = req.user.id
+    } else {
+      user.deactivatedAt = null
+      user.deactivatedBy = null
+    }
+
+    await user.save()
+
+    res.json({
+      message: isActive ? 'User activated successfully' : 'User deactivated successfully',
+      user: {
+        _id: user._id,
+        uid: user.uid,
+        isActive: user.isActive
+      }
+    })
+  } catch (error) {
+    console.error('Error updating user status:', error)
+    res.status(500).json({ message: 'Failed to update user status' })
   }
 })
 

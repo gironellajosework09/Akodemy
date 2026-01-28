@@ -122,6 +122,12 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' })
     }
 
+    if (user.isActive === false) {
+      return res.status(403).json({ 
+        message: 'Your account has been deactivated. Please contact an administrator for assistance.' 
+      })
+    }
+
     const now = new Date()
     if (user.lockoutUntil && new Date(user.lockoutUntil) > now) {
       return res.status(423).json({

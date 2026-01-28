@@ -108,6 +108,19 @@ const userSchema = new mongoose.Schema({
   lastSyncedAt: {
     type: Date,
     default: null
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  deactivatedAt: {
+    type: Date,
+    default: null
+  },
+  deactivatedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
   }
 }, { timestamps: true })
 
