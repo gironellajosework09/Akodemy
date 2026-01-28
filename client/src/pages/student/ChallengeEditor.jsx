@@ -387,6 +387,9 @@ export default function ChallengeEditor() {
             }`}>
               {challenge?.difficulty}
             </span>
+            <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-purple-500/20 text-purple-400">
+              {challenge?.competencyTarget || <span className="text-yellow-500">(Missing)</span>}
+            </span>
             <span className="text-white font-medium text-sm">
               {showInstructions ? 'Hide Instructions' : 'View Instructions'}
             </span>

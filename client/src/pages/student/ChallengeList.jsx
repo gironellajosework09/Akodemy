@@ -154,6 +154,9 @@ export default function ChallengeList() {
                     <h3 className={`text-base sm:text-lg font-bold text-white mb-2 sm:mb-3 transition-colors duration-200 line-clamp-2 ${getTitleHoverColor(challenge?.difficulty)}`}>
                       {challenge.title}
                     </h3>
+                    <p className="text-xs text-gray-500 mb-2">
+                      Competency: {challenge.competencyTarget || <span className="text-yellow-500">(Missing - admin must set)</span>}
+                    </p>
                     <div className="flex items-center justify-between text-xs sm:text-sm text-gray-400">
                       <div className="flex items-center gap-2 sm:gap-4">
                         {challenge.userProgress?.bestTime && (

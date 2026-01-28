@@ -1,0 +1,124 @@
+Act as a careful senior developer. Implement ONLY the features below with minimal code changes. We cannot rollback changes, so do not refactor or redesign anything.
+
+NON-NEGOTIABLE
+
+Do NOT add a new competency system/service.
+
+Do NOT add migrations/startup scripts.
+
+Do NOT change badges logic.
+
+Do NOT redesign profile pages or add new endpoints unless strictly required.
+
+Only update:
+
+challenge competency target field + display
+
+competency score update on submit: correct = increase, wrong on retake = decrease
+
+A) Challenges must have a SPECIFIC competency target (no default)
+Competency Matrix (ENUM — use exactly these)
+
+Variables & Data Types
+
+Control Structures
+
+Functions
+
+Arrays & Collections
+
+Object-Oriented Programming
+
+Error Handling
+
+Backend
+
+Update Challenge schema/model:
+
+Add required field: competencyTarget: string
+
+Enforce enum = the 6 values above
+
+Do not set default “General”.
+
+Ensure challenge list + challenge detail API responses include competencyTarget.
+
+Frontend
+
+Challenge List + Challenge Detail UI must display:
+
+Competency Target: <competencyTarget>
+
+If any existing challenge in DB is missing this field:
+
+Show Competency Target: (Missing - admin must set) (temporary warning)
+
+Do NOT show “General” or “N/A”.
+
+Admin create/edit challenge (only if it already exists)
+
+Add a required dropdown/select for competencyTarget using the enum above.
+
+Prevent saving if not selected.
+
+B) Competency updates based on attempts (simple +/-)
+Rule
+
+On correct submission → increase competency for the challenge’s competencyTarget
+
+On a later attempt of the same challenge that is incorrect → decrease competency for that same target
+(even if it was correct in the past)
+
+Minimal Implementation Constraints
+
+Reuse existing attempt/submission/progress storage if already present.
+
+Only add a tiny field if needed (e.g., store attempts[] per challenge or a record that attempts exist).
+
+Store user competency scores in the existing User document with minimal impact:
+
+competencies: { "<competencyName>": number }
+
+Initialize missing competency values to 0 on update (do not run migrations).
+
+Constants
+
+INCREMENT = 1
+
+DECREMENT = 1
+
+Clamp floor: competency cannot go below 0
+
+Do NOT add multipliers, partial credit, diminishing returns, or difficulty scaling.
+
+“Second attempt” definition
+
+Before applying a wrong penalty, check if the user has any previous attempt for (userId, challengeId).
+
+If no previous attempt exists (first ever attempt) and it’s wrong:
+
+either apply no change OR apply decrease (choose no change to keep it simple and fair).
+
+If previous attempt exists and current is wrong:
+
+apply -DECREMENT.
+
+ACCEPTANCE TESTS (must work)
+
+Challenge list + details show competency target.
+
+Correct submit on a challenge increases the correct competency bucket by +1.
+
+Submit same challenge again, wrong result → competency decreases by -1.
+
+No badges changes. No profile redesign. No migrations.
+
+OUTPUT REQUIRED
+
+List exact files changed.
+
+Show where you added competencyTarget enum and where you display it.
+
+Show where the +/- update happens in the submit route/controller.
+
+Provide manual test steps.

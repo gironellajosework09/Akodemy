@@ -23,6 +23,15 @@ const officialTestSchema = new mongoose.Schema({
   expected: mongoose.Schema.Types.Mixed
 })
 
+const COMPETENCY_TARGETS = [
+  'Variables & Data Types',
+  'Control Structures',
+  'Functions',
+  'Arrays & Collections',
+  'Object-Oriented Programming',
+  'Error Handling'
+]
+
 const challengeSchema = new mongoose.Schema({
   title: {
     type: String,
@@ -46,6 +55,11 @@ const challengeSchema = new mongoose.Schema({
     type: String,
     enum: ['beginner', 'intermediate', 'advanced'],
     required: true
+  },
+  competencyTarget: {
+    type: String,
+    enum: COMPETENCY_TARGETS,
+    default: null
   },
   starterCode: {
     type: String,
@@ -109,7 +123,9 @@ const challengeSchema = new mongoose.Schema({
   }
 }, { timestamps: true })
 
-export default mongoose.model('Challenge', challengeSchema)
+const Challenge = mongoose.model('Challenge', challengeSchema)
+export { COMPETENCY_TARGETS }
+export default Challenge
 
 
 
