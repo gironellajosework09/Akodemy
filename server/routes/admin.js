@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs'
 import * as XLSX from 'xlsx'
 import User from '../models/User.js'
 import { authenticateToken, requireAdmin } from '../middleware/auth.js'
-import { sendAccountDeactivatedEmail } from '../services/emailService.js'
+import { sendAccountDeactivatedEmail, sendAccountReactivatedEmail } from '../services/emailService.js'
 
 const router = express.Router()
 
@@ -210,11 +210,17 @@ router.patch('/users/:id/status', async (req, res) => {
 
     await user.save()
 
-    if (!isActive && user.email) {
+    if (user.email) {
       const userName = user.givenName || user.name || 'User'
-      sendAccountDeactivatedEmail(user.email, userName).catch(err => {
-        console.error('Failed to send deactivation email:', err)
-      })
+      if (!isActive) {
+        sendAccountDeactivatedEmail(user.email, userName).catch(err => {
+          console.error('Failed to send deactivation email:', err)
+        })
+      } else {
+        sendAccountReactivatedEmail(user.email, userName).catch(err => {
+          console.error('Failed to send reactivation email:', err)
+        })
+      }
     }
 
     res.json({

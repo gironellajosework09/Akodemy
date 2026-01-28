@@ -82,6 +82,66 @@ export function generateOtp() {
   return otp;
 }
 
+export async function sendAccountReactivatedEmail(toEmail, userName) {
+  const gmailUser = process.env.GMAIL_USER || DEFAULT_GMAIL_USER;
+  let transporter;
+  try {
+    transporter = createTransporter(gmailUser);
+  } catch (error) {
+    console.error("Email configuration error:", error);
+    return { success: false, error: "Email service not configured" };
+  }
+
+  const mailOptions = {
+    from: `"Akodemy" <${gmailUser}>`,
+    to: toEmail,
+    subject: "Akodemy - Account Reactivated",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #8B5CF6; margin: 0;">Akodemy</h1>
+          <p style="color: #666; margin-top: 5px;">Coding Challenge Platform</p>
+        </div>
+        
+        <div style="background: #f5f5f5; border-radius: 10px; padding: 30px;">
+          <h2 style="color: #333; margin-top: 0;">Account Reactivated</h2>
+          <p style="color: #666;">Hello ${userName},</p>
+          <p style="color: #666;">
+            Great news! Your Akodemy account has been reactivated by an administrator.
+          </p>
+          
+          <div style="background: #D1FAE5; border-left: 4px solid #10B981; padding: 15px; margin: 20px 0; border-radius: 4px;">
+            <p style="color: #065F46; margin: 0; font-weight: 500;">
+              You can now log in and access all platform features again.
+            </p>
+          </div>
+          
+          <p style="color: #666;">
+            Welcome back! We're excited to have you continue your coding journey with Akodemy.
+          </p>
+          
+          <p style="color: #999; font-size: 14px; margin-top: 30px;">
+            If you have any questions, please reach out to your institution's administrator.
+          </p>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px; color: #999; font-size: 12px;">
+          <p>&copy; ${new Date().getFullYear()} Akodemy. All rights reserved.</p>
+        </div>
+      </div>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`Account reactivation email sent to ${toEmail}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to send reactivation email:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function sendAccountDeactivatedEmail(toEmail, userName) {
   const gmailUser = process.env.GMAIL_USER || DEFAULT_GMAIL_USER;
   let transporter;
