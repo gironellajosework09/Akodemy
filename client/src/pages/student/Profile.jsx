@@ -15,7 +15,6 @@ export default function Profile() {
   const userId = user?._id
   const [activeTab, setActiveTab] = useState('info')
   const [progress, setProgress] = useState(null)
-  const [competencyScores, setCompetencyScores] = useState(null)
   const [badges, setBadges] = useState([])
   const [badgeProgress, setBadgeProgress] = useState({})
   const [equippedBadge, setEquippedBadge] = useState(null)
@@ -56,7 +55,6 @@ export default function Profile() {
 
   useEffect(() => {
     fetchProgress()
-    fetchCompetencyScores()
     fetchBadges()
   }, [])
 
@@ -121,15 +119,6 @@ export default function Profile() {
       console.error('Failed to fetch progress:', error)
     } finally {
       setLoading(false)
-    }
-  }
-
-  const fetchCompetencyScores = async () => {
-    try {
-      const response = await api.get('/api/progress/competency-scores')
-      setCompetencyScores(response.data)
-    } catch (error) {
-      console.error('Failed to fetch competency scores:', error)
     }
   }
 
@@ -373,31 +362,6 @@ export default function Profile() {
       return { label: 'Developing', color: 'bg-yellow-500', textColor: 'text-yellow-400' }
     }
     return { label: 'Needs Practice', color: 'bg-red-500', textColor: 'text-red-400' }
-  }
-
-  const getCompetencyScoreMastery = (score) => {
-    if (score === 0) {
-      return { label: 'Not Started', color: 'bg-gray-600', textColor: 'text-gray-500' }
-    }
-    if (score >= 80) {
-      return { label: 'Mastered', color: 'bg-green-500', textColor: 'text-green-400' }
-    }
-    if (score >= 50) {
-      return { label: 'Developing', color: 'bg-yellow-500', textColor: 'text-yellow-400' }
-    }
-    if (score >= 20) {
-      return { label: 'Needs Practice', color: 'bg-orange-500', textColor: 'text-orange-400' }
-    }
-    return { label: 'Beginning', color: 'bg-red-500', textColor: 'text-red-400' }
-  }
-
-  const COMPETENCY_INDEX_TO_KEY = {
-    0: 'variables',
-    1: 'controlStructures',
-    2: 'functions',
-    3: 'arrays',
-    4: 'oop',
-    5: 'errorHandling'
   }
 
   const getLanguageIcon = (lang) => {
@@ -655,35 +619,27 @@ export default function Profile() {
                             </div>
                           </div>
                           
-                          <h4 className="font-semibold mb-4 text-gray-300 text-sm sm:text-base">Competency Scores</h4>
+                          <h4 className="font-semibold mb-4 text-gray-300 text-sm sm:text-base">Competencies</h4>
                           
                           <div className="space-y-3">
                             {langProgress.map((comp) => {
-                              const competencyKey = COMPETENCY_INDEX_TO_KEY[comp.index]
-                              const scoreData = competencyScores?.scores?.[lang]?.[competencyKey]
-                              const score = scoreData?.score || 0
-                              const mastery = getCompetencyScoreMastery(score)
+                              const mastery = getMasteryInfo(comp.percentage, comp.hasActivity)
                               
                               return (
                                 <div key={comp.index} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
                                   <span className="text-xs sm:text-sm text-gray-300 sm:w-48 sm:flex-shrink-0">{comp.name}</span>
                                   <div className="flex items-center gap-2 flex-1">
                                     <div className="flex-1 bg-gray-700 rounded-full h-3 sm:h-4 relative overflow-hidden">
-                                      {score > 0 && (
+                                      {comp.percentage > 0 && (
                                         <div
                                           className={`h-full rounded-full ${mastery.color} transition-all duration-500`}
-                                          style={{ width: `${Math.min(score, 100)}%` }}
+                                          style={{ width: `${comp.percentage}%` }}
                                         ></div>
                                       )}
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                      <span className={`text-xs font-medium ${mastery.textColor} w-10 text-right`}>
-                                        {Math.round(score)}%
-                                      </span>
-                                      <span className="text-xs text-gray-500 w-12 text-right" title="Challenges completed">
-                                        ({comp.completed}/{comp.total})
-                                      </span>
-                                    </div>
+                                    <span className="text-xs text-gray-400 w-12 text-right">
+                                      {comp.completed}/{comp.total}
+                                    </span>
                                   </div>
                                 </div>
                               )
@@ -693,29 +649,21 @@ export default function Profile() {
                           <div className="flex flex-wrap items-center gap-3 sm:gap-6 mt-4 pt-4 border-t border-gray-700 justify-center">
                             <div className="flex items-center gap-2">
                               <div className="w-3 h-3 rounded-full bg-gray-600"></div>
-                              <span className="text-xs text-gray-500">0%</span>
+                              <span className="text-xs text-gray-500">Not Started</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                              <span className="text-xs text-gray-400">1-19%</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 rounded-full bg-orange-500"></div>
-                              <span className="text-xs text-gray-400">20-49%</span>
+                              <span className="text-xs text-gray-400">Needs Practice</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                              <span className="text-xs text-gray-400">50-79%</span>
+                              <span className="text-xs text-gray-400">Developing</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                              <span className="text-xs text-gray-400">80-100%</span>
+                              <span className="text-xs text-gray-400">Mastered</span>
                             </div>
                           </div>
-                          
-                          <p className="text-xs text-gray-500 mt-4 text-center">
-                            Competency scores update based on your performance. Correct submissions increase your score, while incorrect attempts decrease it.
-                          </p>
                         </div>
                       )
                     })

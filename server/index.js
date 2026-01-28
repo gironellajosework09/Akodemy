@@ -16,7 +16,6 @@ import badgeRoutes from "./routes/badges.js";
 import userRoutes from "./routes/users.js";
 import adminRoutes from "./routes/admin.js";
 import { seedDefaultAdmin } from "./services/adminSeed.js";
-import { migrateCompetencyIndexToTargetCompetencies } from "./services/competencyService.js";
 
 dotenv.config();
 
@@ -37,11 +36,6 @@ mongoose
     const dbHost = mongoose.connection?.host || 'unknown'
     console.log(`Connected to MongoDB (db: ${dbName}, host: ${dbHost})`)
     await seedDefaultAdmin();
-    
-    const migrationResult = await migrateCompetencyIndexToTargetCompetencies();
-    if (migrationResult.migrated > 0) {
-      console.log(`Migrated ${migrationResult.migrated} challenges to targetCompetencies`);
-    }
   })
   .catch((err) => console.error("MongoDB connection error:", err));
 

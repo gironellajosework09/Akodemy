@@ -5,13 +5,6 @@ import Submission from '../models/Submission.js'
 import Challenge from '../models/Challenge.js'
 import ChallengeAnswer from '../models/ChallengeAnswer.js'
 import LatestAnswer from '../models/LatestAnswer.js'
-import CompetencyScore from '../models/CompetencyScore.js'
-import { 
-  processSubmissionCompetency, 
-  formatCompetencyFeedback,
-  getUserCompetencyScores,
-  getUserCompetencyHistory
-} from '../services/competencyService.js'
 
 // Route handlers for Progress APIs.
 const router = express.Router()
@@ -233,7 +226,7 @@ router.get('/challenge/:challengeId/history', async (req, res) => {
 router.post('/challenge/:challengeId/submit', async (req, res) => {
   try {
     const { challengeId } = req.params
-    const { answer, language, isCorrect, score, runs, startedAt, passedTests, totalTests } = req.body
+    const { answer, language, isCorrect, score, runs, startedAt } = req.body
 
     const attemptNumber = await ChallengeAnswer.getNextAttemptNumber(req.user._id, challengeId)
     const submittedAt = new Date()
@@ -267,25 +260,6 @@ router.post('/challenge/:challengeId/submit', async (req, res) => {
       bestTime
     })
 
-    let competencyFeedback = null
-    try {
-      const competencyResult = await processSubmissionCompetency(
-        req.user._id,
-        challengeId,
-        submission._id,
-        {
-          isCorrect,
-          score,
-          passedTests: passedTests || 0,
-          totalTests: totalTests || 1,
-          attemptNumber
-        }
-      )
-      competencyFeedback = formatCompetencyFeedback(competencyResult)
-    } catch (compError) {
-      console.error('Competency processing error:', compError)
-    }
-
     res.json({
       success: true,
       submission: {
@@ -293,8 +267,7 @@ router.post('/challenge/:challengeId/submit', async (req, res) => {
         score: submission.score,
         bestTime: submission.bestTime,
         isCorrect: submission.isCorrect
-      },
-      competencyFeedback
+      }
     })
   } catch (error) {
     console.error('Submit answer error:', error)
@@ -342,39 +315,6 @@ router.get('/challenge/:challengeId/summary', async (req, res) => {
   } catch (error) {
     console.error('Fetch summary error:', error)
     res.status(500).json({ message: 'Failed to fetch summary' })
-  }
-})
-
-router.get('/competency-scores', async (req, res) => {
-  try {
-    const { language } = req.query
-    const scores = await getUserCompetencyScores(req.user._id, language || null)
-    
-    res.json({
-      scores,
-      competencyNames: CompetencyScore.COMPETENCY_NAMES
-    })
-  } catch (error) {
-    console.error('Fetch competency scores error:', error)
-    res.status(500).json({ message: 'Failed to fetch competency scores' })
-  }
-})
-
-router.get('/competency-history', async (req, res) => {
-  try {
-    const { language, competencyArea, limit = 50, skip = 0 } = req.query
-    
-    const history = await getUserCompetencyHistory(req.user._id, {
-      language,
-      competencyArea,
-      limit: parseInt(limit),
-      skip: parseInt(skip)
-    })
-    
-    res.json({ history })
-  } catch (error) {
-    console.error('Fetch competency history error:', error)
-    res.status(500).json({ message: 'Failed to fetch competency history' })
   }
 })
 
