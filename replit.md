@@ -37,11 +37,29 @@ Preferred communication style: Simple, everyday language.
 
 ### Data Models
 - **User**: Students, faculty, and admins with SSO support (CCIS portal integration)
+  - Fields: uid (unique), lastName, givenName, middleName, email, password, role, yearLevelAndSection
+  - Role enum: `admin`, `student`, `faculty`
 - **Challenge**: Programming exercises with starter code, test cases, and difficulty ratings
 - **Submission**: Code submissions with execution status and scoring
 - **ChallengeAnswer/LatestAnswer**: Detailed answer tracking with attempt history
 - **Badge**: Achievement badges by language and difficulty level
 - **OTP**: Time-limited one-time passwords for password reset
+
+### Admin System
+- **Default Admin Account**: Created on server startup if no admin exists
+  - Username: `Admin`
+  - Password: Hashed with bcrypt (never exposed)
+  - Auto-seeded via `server/services/adminSeed.js`
+- **Admin Routes** (`/api/admin/*`): Protected with `requireAdmin` middleware
+  - User listing with pagination and search
+  - Single user creation
+  - Bulk Excel upload with strict column order validation
+  - Template download
+- **Login UI**: No public registration - only "Are you an admin? Login as admin" option
+- **Role-Based Redirects**:
+  - admin → `/admin`
+  - faculty → `/faculty`
+  - student → `/dashboard`
 
 ### Code Execution
 - **External Service**: Judge0 API for sandboxed code execution

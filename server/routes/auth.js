@@ -96,46 +96,9 @@ function verifySyncSecret(req) {
 }
 
 router.post('/register', async (req, res) => {
-  try {
-    const { name, email, password, role } = req.body
-
-    const passwordErrors = validatePassword(password)
-    if (passwordErrors.length > 0) {
-      return res.status(400).json({ 
-        message: 'Password does not meet requirements',
-        errors: passwordErrors
-      })
-    }
-
-    const strength = getPasswordStrength(password)
-    if (strength === 'weak') {
-      return res.status(400).json({ message: 'Password is too weak. Please use a stronger password.' })
-    }
-
-    const existingUser = await User.findOne({ email })
-    if (existingUser) {
-      return res.status(400).json({ message: 'Email already registered' })
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10)
-    const user = new User({
-      name,
-      email,
-      password: hashedPassword,
-      role: role || 'student'
-    })
-
-    await user.save()
-
-    const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '7d' })
-    const userData = user.toObject()
-    delete userData.password
-
-    res.status(201).json({ token, user: userData })
-  } catch (error) {
-    console.error('Registration error:', error)
-    res.status(500).json({ message: 'Registration failed' })
-  }
+  return res.status(403).json({ 
+    message: 'Public registration is disabled. Please contact your administrator to create an account.' 
+  })
 })
 
 router.post('/login', async (req, res) => {
@@ -150,6 +113,9 @@ router.post('/login', async (req, res) => {
     let user = await User.findOne({ email: identifier })
     if (!user) {
       user = await User.findOne({ portalUsername: identifier })
+    }
+    if (!user) {
+      user = await User.findOne({ uid: identifier })
     }
 
     if (!user) {

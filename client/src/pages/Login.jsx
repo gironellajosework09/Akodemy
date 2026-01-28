@@ -107,12 +107,11 @@ function ConfirmDialog({ isOpen, title, message, onConfirm, onCancel }) {
 
 export default function Login() {
   const [mode, setMode] = useState('login')
+  const [isAdminMode, setIsAdminMode] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [name, setName] = useState('')
-  const [role, setRole] = useState('student')
   const [showPassword, setShowPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -134,7 +133,7 @@ export default function Login() {
   const otpRefs = useRef([])
   const emailRef = useRef(null)
   const passwordRef = useRef(null)
-  const { login, register } = useAuth()
+  const { login } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -184,7 +183,13 @@ export default function Login() {
       setPassword('')
       setLockoutUntil(null)
       setLockoutEmail('')
-      navigate(user.role === 'faculty' ? '/faculty' : '/dashboard')
+      if (user.role === 'admin') {
+        navigate('/admin')
+      } else if (user.role === 'faculty') {
+        navigate('/faculty')
+      } else {
+        navigate('/dashboard')
+      }
     } catch (err) {
       const lockoutUntilValue = err.response?.data?.lockoutUntil
       if (lockoutUntilValue) {
@@ -206,20 +211,6 @@ export default function Login() {
     }
   }
 
-  const handleRegisterSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-    
-    try {
-      const user = await register({ name, email, password, role })
-      navigate(user.role === 'faculty' ? '/faculty' : '/dashboard')
-    } catch (err) {
-      setError(err.response?.data?.message || 'An error occurred')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleForgotPassword = async (e) => {
     e.preventDefault()
@@ -372,15 +363,13 @@ export default function Login() {
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-white mb-2">
-              {mode === 'login' && 'Welcome Back'}
-              {mode === 'register' && 'Create Account'}
+              {mode === 'login' && (isAdminMode ? 'Admin Login' : 'Welcome Back')}
               {mode === 'forgot' && 'Forgot Password'}
               {mode === 'otp' && 'Verify OTP'}
               {mode === 'reset' && 'Reset Password'}
             </h1>
             <p className="text-gray-400">
-              {mode === 'login' && 'Sign in to continue your coding journey'}
-              {mode === 'register' && 'Start your coding journey with Akodemy'}
+              {mode === 'login' && (isAdminMode ? 'Sign in with your admin credentials' : 'Sign in to continue your coding journey')}
               {mode === 'forgot' && 'Enter your email to receive a reset code'}
               {mode === 'otp' && 'Enter the 6-character code sent to your email'}
               {mode === 'reset' && 'Create your new password'}
@@ -388,30 +377,6 @@ export default function Login() {
           </div>
 
           <div className="bg-gray-800 rounded-2xl border border-gray-700 p-8">
-            {(mode === 'login' || mode === 'register') && (
-              <div className="flex mb-6 bg-gray-900 rounded-lg p-1">
-                <button
-                  onClick={() => { setMode('login'); setError(''); }}
-                  className={`flex-1 py-2.5 rounded-lg transition font-medium text-sm ${
-                    mode === 'login' 
-                      ? 'bg-akodemy-purple text-white' 
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  Sign In
-                </button>
-                <button
-                  onClick={() => { setMode('register'); setError(''); }}
-                  className={`flex-1 py-2.5 rounded-lg transition font-medium text-sm ${
-                    mode === 'register' 
-                      ? 'bg-akodemy-purple text-white' 
-                      : 'text-gray-400 hover:text-white'
-                  }`}
-                >
-                  Register
-                </button>
-              </div>
-            )}
 
             {error && mode !== 'login' && (
               <div className="bg-red-500/10 border border-red-500/50 text-red-400 p-3 rounded-lg mb-4 text-sm flex items-start gap-2">
@@ -510,82 +475,22 @@ export default function Login() {
                     </>
                   ) : 'Sign In'}
                 </button>
-              </form>
-            )}
 
-            {mode === 'register' && (
-              <form onSubmit={handleRegisterSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-gray-300 mb-2 text-sm font-medium">Full Name</label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-akodemy-purple focus:border-transparent transition"
-                    placeholder="Enter your full name"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-gray-300 mb-2 text-sm font-medium">Email</label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-akodemy-purple focus:border-transparent transition"
-                    placeholder="Enter your email"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-gray-300 mb-2 text-sm font-medium">Password</label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-akodemy-purple focus:border-transparent pr-12 transition"
-                      placeholder="Create a strong password"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-300 transition"
-                    >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
-                  <PasswordStrengthIndicator password={password} />
-                  <PasswordRequirements password={password} />
-                </div>
-
-                <div>
-                  <label className="block text-gray-300 mb-2 text-sm font-medium">Role</label>
-                  <select
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-akodemy-purple focus:border-transparent transition"
+                <div className="mt-4 text-center">
+                  <button
+                    type="button"
+                    onClick={() => { 
+                      setIsAdminMode(!isAdminMode)
+                      setEmail('')
+                      setPassword('')
+                      setError('')
+                      setLoginError(false)
+                    }}
+                    className="text-akodemy-purple hover:text-purple-400 text-sm transition"
                   >
-                    <option value="student">Student</option>
-                    <option value="faculty">Faculty</option>
-                  </select>
+                    {isAdminMode ? 'Back to regular login' : 'Are you an admin? Login as admin'}
+                  </button>
                 </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-akodemy-purple text-white py-3 rounded-lg font-semibold hover:bg-purple-700 transition disabled:opacity-50 flex items-center justify-center gap-2 mt-6"
-                >
-                  {loading ? (
-                    <>
-                      <LoadingSpinner />
-                      <span>Creating account...</span>
-                    </>
-                  ) : 'Create Account'}
-                </button>
               </form>
             )}
 
@@ -762,17 +667,6 @@ export default function Login() {
               </form>
             )}
 
-            {(mode === 'login' || mode === 'register') && (
-              <p className="text-center text-gray-500 text-sm mt-6">
-                {mode === 'login' ? "Don't have an account? " : "Already have an account? "}
-                <button
-                  onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }}
-                  className="text-akodemy-purple hover:text-purple-400 transition font-medium"
-                >
-                  {mode === 'login' ? 'Register' : 'Sign In'}
-                </button>
-              </p>
-            )}
           </div>
 
           <p className="text-center text-gray-600 text-xs mt-6">

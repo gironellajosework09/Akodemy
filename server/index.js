@@ -15,6 +15,7 @@ import gradingRoutes from "./routes/grading.js";
 import badgeRoutes from "./routes/badges.js";
 import userRoutes from "./routes/users.js";
 import adminRoutes from "./routes/admin.js";
+import { seedDefaultAdmin } from "./services/adminSeed.js";
 
 dotenv.config();
 
@@ -29,7 +30,10 @@ const MONGODB_URI =
 
 mongoose
   .connect(MONGODB_URI)
-  .then(() => console.log("Connected to MongoDB"))
+  .then(async () => {
+    console.log("Connected to MongoDB");
+    await seedDefaultAdmin();
+  })
   .catch((err) => console.error("MongoDB connection error:", err));
 
 app.use("/api/auth", authRoutes);
