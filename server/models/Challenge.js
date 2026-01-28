@@ -60,6 +60,16 @@ const challengeSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  targetCompetencies: [{
+    type: String,
+    enum: ['variables', 'controlStructures', 'functions', 'arrays', 'oop', 'errorHandling']
+  }],
+  impactWeight: {
+    type: Number,
+    default: 10,
+    min: 1,
+    max: 25
+  },
   testFilePath: {
     type: String,
     default: null
