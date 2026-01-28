@@ -351,14 +351,14 @@ export default function Profile() {
     day: '2-digit'
   })
 
-  const getMasteryInfo = (percentage, hasActivity) => {
-    if (!hasActivity || percentage === 0) {
+  const getMasteryInfo = (score, hasActivity) => {
+    if (!hasActivity || score === 0) {
       return { label: '', color: 'bg-gray-600', textColor: 'text-gray-500' }
     }
-    if (percentage >= 80) {
+    if (score >= 8) {
       return { label: 'Mastered', color: 'bg-green-500', textColor: 'text-green-400' }
     }
-    if (percentage >= 40) {
+    if (score >= 4) {
       return { label: 'Developing', color: 'bg-yellow-500', textColor: 'text-yellow-400' }
     }
     return { label: 'Needs Practice', color: 'bg-red-500', textColor: 'text-red-400' }
@@ -615,7 +615,7 @@ export default function Profile() {
                             </div>
 
                             <div className="text-xs sm:text-sm text-gray-400">
-                              {summary.completed} / {summary.total} challenges completed
+                              Total Score: {summary.score || 0} pts
                             </div>
                           </div>
                           
@@ -623,22 +623,23 @@ export default function Profile() {
                           
                           <div className="space-y-3">
                             {langProgress.map((comp) => {
-                              const mastery = getMasteryInfo(comp.percentage, comp.hasActivity)
+                              const mastery = getMasteryInfo(comp.score, comp.hasActivity)
+                              const barWidth = Math.min(100, (comp.score / 10) * 100)
                               
                               return (
                                 <div key={comp.index} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
                                   <span className="text-xs sm:text-sm text-gray-300 sm:w-48 sm:flex-shrink-0">{comp.name}</span>
                                   <div className="flex items-center gap-2 flex-1">
                                     <div className="flex-1 bg-gray-700 rounded-full h-3 sm:h-4 relative overflow-hidden">
-                                      {comp.percentage > 0 && (
+                                      {comp.score > 0 && (
                                         <div
                                           className={`h-full rounded-full ${mastery.color} transition-all duration-500`}
-                                          style={{ width: `${comp.percentage}%` }}
+                                          style={{ width: `${barWidth}%` }}
                                         ></div>
                                       )}
                                     </div>
                                     <span className="text-xs text-gray-400 w-12 text-right">
-                                      {comp.completed}/{comp.total}
+                                      {comp.score} pts
                                     </span>
                                   </div>
                                 </div>
@@ -690,20 +691,20 @@ export default function Profile() {
 
                   <div className="grid grid-cols-3 gap-3 mt-5">
                     {languages.map((lang) => {
-                      const summary = progress?.summary?.[lang] || { completed: 0, total: 0 }
+                      const summary = progress?.summary?.[lang] || { score: 0 }
                       return (
                         <div key={`${lang}-summary`} className="border border-gray-200 rounded-lg p-3">
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-xs font-semibold uppercase text-gray-700">{lang}</span>
-                            <span className="text-xs text-gray-500">{summary.completed}/{summary.total}</span>
+                            <span className="text-xs text-gray-500">{summary.score || 0} pts</span>
                           </div>
                           <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
                             <div
                               className="h-full bg-akodemy-purple"
-                              style={{ width: summary.total > 0 ? `${Math.round((summary.completed / summary.total) * 100)}%` : '0%' }}
+                              style={{ width: `${Math.min(100, ((summary.score || 0) / 60) * 100)}%` }}
                             ></div>
                           </div>
-                          <p className="text-[11px] text-gray-500 mt-2">Completed challenges</p>
+                          <p className="text-[11px] text-gray-500 mt-2">Total Competency Score</p>
                         </div>
                       )
                     })}
@@ -715,7 +716,7 @@ export default function Profile() {
                     ) : (
                       languages.map((lang) => {
                         const langProgress = progress?.competencies?.[lang] || []
-                        const summary = progress?.summary?.[lang] || { completed: 0, total: 0 }
+                        const summary = progress?.summary?.[lang] || { score: 0 }
 
                         return (
                           <div key={`${lang}-details`} className="border border-gray-200 rounded-xl p-4">
@@ -730,7 +731,7 @@ export default function Profile() {
                                 </div>
                                 <h2 className="text-sm font-semibold uppercase text-gray-800">{lang}</h2>
                               </div>
-                              <span className="text-xs text-gray-500">{summary.completed} / {summary.total} completed</span>
+                              <span className="text-xs text-gray-500">{summary.score || 0} pts total</span>
                             </div>
 
                             {langProgress.length === 0 ? (
@@ -738,23 +739,24 @@ export default function Profile() {
                             ) : (
                               <div className="space-y-2">
                                 {langProgress.map((comp) => {
-                                  const mastery = getMasteryInfo(comp.percentage, comp.hasActivity)
+                                  const mastery = getMasteryInfo(comp.score, comp.hasActivity)
+                                  const barWidth = Math.min(100, (comp.score / 10) * 100)
 
                                   return (
                                     <div key={`${lang}-${comp.index}`} className="flex items-center gap-3">
                                       <span className="text-xs text-gray-700 w-44">{comp.name}</span>
                                       <div className="flex-1">
                                         <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
-                                          {comp.percentage > 0 && (
+                                          {comp.score > 0 && (
                                             <div
                                               className={`h-full ${mastery.color}`}
-                                              style={{ width: `${comp.percentage}%` }}
+                                              style={{ width: `${barWidth}%` }}
                                             ></div>
                                           )}
                                         </div>
                                       </div>
                                       <span className="text-xs text-gray-500 w-14 text-right">
-                                        {comp.completed}/{comp.total}
+                                        {comp.score} pts
                                       </span>
                                     </div>
                                   )

@@ -324,16 +324,8 @@ router.get('/students/:studentId/profile', authenticateToken, requireRole('facul
 router.get('/student/:id/competencies', authenticateToken, requireRole('faculty'), async (req, res) => {
   try {
     const userId = req.params.id
-
-    const completedSubmissions = await Submission.find({ 
-      userId, 
-      completed: true 
-    }).select('challengeId')
-
-    const completedChallengeIds = completedSubmissions.map(s => s.challengeId)
-
-    const allChallenges = await Challenge.find({})
-      .select('language competencyIndex competencyName')
+    const user = await User.findById(userId)
+    const userCompetencies = user?.competencies || { javascript: [0,0,0,0,0,0], python: [0,0,0,0,0,0], java: [0,0,0,0,0,0] }
 
     const competencyNames = [
       'Variables & Data Types',
@@ -349,42 +341,17 @@ router.get('/student/:id/competencies', authenticateToken, requireRole('faculty'
     const summary = {}
 
     for (const lang of languages) {
-      const langChallenges = allChallenges.filter(c => c.language === lang)
-      const competencyStats = {}
+      const langScores = userCompetencies[lang] || [0, 0, 0, 0, 0, 0]
 
-      for (let i = 0; i < 6; i++) {
-        competencyStats[i] = { total: 0, completed: 0 }
-      }
+      result[lang] = langScores.map((score, idx) => ({
+        index: idx,
+        name: competencyNames[idx] || `Competency ${idx}`,
+        score: score || 0,
+        hasActivity: (score || 0) > 0
+      }))
 
-      langChallenges.forEach(challenge => {
-        const idx = challenge.competencyIndex ?? 0
-        competencyStats[idx].total++
-        if (completedChallengeIds.some(id => id.toString() === challenge._id.toString())) {
-          competencyStats[idx].completed++
-        }
-      })
-
-      result[lang] = Object.keys(competencyStats).map(idx => {
-        const stat = competencyStats[idx]
-        const percentage = stat.total > 0 ? Math.round((stat.completed / stat.total) * 100) : 0
-        return {
-          index: parseInt(idx),
-          name: competencyNames[idx] || `Competency ${idx}`,
-          total: stat.total,
-          completed: stat.completed,
-          percentage,
-          hasActivity: stat.completed > 0
-        }
-      })
-
-      const langTotal = langChallenges.length
-      const langCompleted = langChallenges.filter(c => 
-        completedChallengeIds.some(id => id.toString() === c._id.toString())
-      ).length
-      
       summary[lang] = {
-        total: langTotal,
-        completed: langCompleted
+        score: langScores.reduce((sum, s) => sum + (s || 0), 0)
       }
     }
 

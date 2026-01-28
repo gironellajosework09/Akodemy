@@ -18,90 +18,36 @@ router.use(requireRole('student', 'faculty'))
 
 router.get('/my-progress', async (req, res) => {
   try {
-    const completedSubmissions = await Submission.find({
-      userId: req.user._id,
-      completed: true
-    }).populate('challengeId')
-
-    const totalChallenges = await Challenge.aggregate([
-      {
-        $group: {
-          _id: { language: '$language', competencyIndex: '$competencyIndex' },
-          count: { $sum: 1 }
-        }
-      }
-    ])
-
-    const challengeCounts = {}
-    for (const item of totalChallenges) {
-      const { language, competencyIndex } = item._id
-      if (!challengeCounts[language]) {
-        challengeCounts[language] = {}
-      }
-      challengeCounts[language][competencyIndex] = item.count
-    }
-
-    const completedByCompetency = {
-      javascript: {},
-      python: {},
-      java: {}
-    }
-
-    const completedChallengeIds = new Set()
-
-    for (const submission of completedSubmissions) {
-      if (submission.challengeId) {
-        const challenge = submission.challengeId
-        const key = `${challenge._id}`
-        
-        if (completedChallengeIds.has(key)) continue
-        completedChallengeIds.add(key)
-
-        const { language, competencyIndex } = challenge
-        if (language && competencyIndex !== undefined) {
-          if (!completedByCompetency[language][competencyIndex]) {
-            completedByCompetency[language][competencyIndex] = 0
-          }
-          completedByCompetency[language][competencyIndex]++
-        }
-      }
-    }
+    const user = await User.findById(req.user._id)
+    const userCompetencies = user?.competencies || { javascript: [0,0,0,0,0,0], python: [0,0,0,0,0,0], java: [0,0,0,0,0,0] }
 
     const progress = {}
     
     for (const language of ['javascript', 'python', 'java']) {
+      const langScores = userCompetencies[language] || [0, 0, 0, 0, 0, 0]
       progress[language] = []
       
       for (let i = 0; i < 6; i++) {
-        const completed = completedByCompetency[language][i] || 0
-        const total = challengeCounts[language]?.[i] || 0
-        
-        let percentage = 0
-        if (total > 0) {
-          percentage = Math.round((completed / total) * 100)
-        }
+        const score = langScores[i] || 0
         
         progress[language].push({
           index: i,
           name: COMPETENCY_NAMES[i],
-          completed,
-          total,
-          percentage,
-          hasActivity: completed > 0
+          score,
+          hasActivity: score > 0
         })
       }
     }
 
     const summary = {
-      javascript: { completed: 0, total: 0 },
-      python: { completed: 0, total: 0 },
-      java: { completed: 0, total: 0 }
+      javascript: { score: 0 },
+      python: { score: 0 },
+      java: { score: 0 }
     }
 
     for (const language of ['javascript', 'python', 'java']) {
       for (const comp of progress[language]) {
-        summary[language].completed += comp.completed
-        summary[language].total += comp.total
+        summary[language].score += comp.score
       }
     }
 
