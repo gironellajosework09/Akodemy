@@ -82,5 +82,66 @@ export function generateOtp() {
   return otp;
 }
 
+export async function sendAccountDeactivatedEmail(toEmail, userName) {
+  const gmailUser = process.env.GMAIL_USER || DEFAULT_GMAIL_USER;
+  let transporter;
+  try {
+    transporter = createTransporter(gmailUser);
+  } catch (error) {
+    console.error("Email configuration error:", error);
+    return { success: false, error: "Email service not configured" };
+  }
+
+  const mailOptions = {
+    from: `"Akodemy" <${gmailUser}>`,
+    to: toEmail,
+    subject: "Akodemy - Account Deactivated",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h1 style="color: #8B5CF6; margin: 0;">Akodemy</h1>
+          <p style="color: #666; margin-top: 5px;">Coding Challenge Platform</p>
+        </div>
+        
+        <div style="background: #f5f5f5; border-radius: 10px; padding: 30px;">
+          <h2 style="color: #333; margin-top: 0;">Account Deactivated</h2>
+          <p style="color: #666;">Hello ${userName},</p>
+          <p style="color: #666;">
+            We're writing to inform you that your Akodemy account has been deactivated by an administrator.
+          </p>
+          
+          <div style="background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 15px; margin: 20px 0; border-radius: 4px;">
+            <p style="color: #92400E; margin: 0; font-weight: 500;">
+              While your account is deactivated, you will not be able to log in or access the platform.
+            </p>
+          </div>
+          
+          <p style="color: #666;">
+            If you believe this was done in error or if you would like to request reactivation of your account, 
+            please contact an administrator for assistance.
+          </p>
+          
+          <p style="color: #999; font-size: 14px; margin-top: 30px;">
+            If you have any questions, please reach out to your institution's administrator.
+          </p>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px; color: #999; font-size: 12px;">
+          <p>&copy; ${new Date().getFullYear()} Akodemy. All rights reserved.</p>
+        </div>
+      </div>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log(`Account deactivation email sent to ${toEmail}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to send deactivation email:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 
 
