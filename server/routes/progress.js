@@ -2,12 +2,16 @@
 import express from 'express'
 import { authenticateToken, requireRole } from '../middleware/auth.js'
 import Submission from '../models/Submission.js'
-import Challenge from '../models/Challenge.js'
+import Challenge, { COMPETENCY_TARGETS } from '../models/Challenge.js'
 import ChallengeAnswer from '../models/ChallengeAnswer.js'
 import LatestAnswer from '../models/LatestAnswer.js'
+import User from '../models/User.js'
 
 // Route handlers for Progress APIs.
 const router = express.Router()
+
+const INCREMENT = 1
+const DECREMENT = 1
 
 router.use(authenticateToken)
 router.use(requireRole('student', 'faculty'))
@@ -260,6 +264,31 @@ router.post('/challenge/:challengeId/submit', async (req, res) => {
       bestTime
     })
 
+    const challenge = await Challenge.findById(challengeId)
+    let competencyUpdated = null
+    
+    if (challenge?.competencyTarget && COMPETENCY_TARGETS.includes(challenge.competencyTarget)) {
+      const user = await User.findById(req.user._id)
+      if (user) {
+        if (!user.competencyScores) {
+          user.competencyScores = new Map()
+        }
+        
+        const currentScore = user.competencyScores.get(challenge.competencyTarget) || 0
+        
+        if (isCorrect) {
+          user.competencyScores.set(challenge.competencyTarget, currentScore + INCREMENT)
+          competencyUpdated = { target: challenge.competencyTarget, change: INCREMENT, newScore: currentScore + INCREMENT }
+        } else if (attemptNumber > 1) {
+          user.competencyScores.set(challenge.competencyTarget, Math.max(0, currentScore - DECREMENT))
+          competencyUpdated = { target: challenge.competencyTarget, change: -DECREMENT, newScore: Math.max(0, currentScore - DECREMENT) }
+        }
+        
+        user.markModified('competencyScores')
+        await user.save()
+      }
+    }
+
     res.json({
       success: true,
       submission: {
@@ -267,7 +296,8 @@ router.post('/challenge/:challengeId/submit', async (req, res) => {
         score: submission.score,
         bestTime: submission.bestTime,
         isCorrect: submission.isCorrect
-      }
+      },
+      competencyUpdated
     })
   } catch (error) {
     console.error('Submit answer error:', error)
