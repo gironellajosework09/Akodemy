@@ -190,7 +190,8 @@ function normalizeToExercismSlug(slug) {
     'rna': 'rna-transcription',
     'rle': 'run-length-encoding',
     'resistor': 'resistor-color',
-    'flatten': 'flatten-array'
+    'flatten': 'flatten-array',
+    'sum-multiples': 'sum-of-multiples'
   }
 
   return aliases[normalized] || normalized

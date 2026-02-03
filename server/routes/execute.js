@@ -103,7 +103,7 @@ router.post('/', async (req, res) => {
         }
 
         if (challenge && !error) {
-          const baseSlug = challenge.exerciseSlug || normalizeToExercismSlug(challenge.slug)
+          const baseSlug = normalizeToExercismSlug(challenge.exerciseSlug || challenge.slug)
           const toName = (value) => value === undefined ? undefined : (typeof value === 'string' ? value : JSON.stringify(value))
           const pickFirstFailure = (details = [], errors = [], fallbackError = null) => {
             const firstDetail = details.find(detail => detail && (detail.passed === false || detail.error))
@@ -164,7 +164,7 @@ router.post('/', async (req, res) => {
             } catch {}
           }
 
-          if (normalizedLanguage === 'python' && (baseSlug === 'run-length-encoding' || baseSlug === 'binary-search' || baseSlug === 'flatten-array')) {
+          if (normalizedLanguage === 'python' && (baseSlug === 'run-length-encoding' || baseSlug === 'binary-search' || baseSlug === 'flatten-array' || baseSlug === 'roman-numerals' || baseSlug === 'reverse-string' || baseSlug === 'sum-of-multiples' || baseSlug === 'sum-multiples' || baseSlug === 'two-fer')) {
             const hasInputs = tests.some(hasMeaningfulInput)
             if (!hasInputs) {
               try {
@@ -172,6 +172,37 @@ router.post('/', async (req, res) => {
                 tests = (canonical.cases || []).map(mapToTest)
               } catch {}
             }
+          }
+
+          if (normalizedLanguage === 'python' && baseSlug === 'reverse-string') {
+            const getInputString = (input) => {
+              if (typeof input === 'string') return input
+              if (input && typeof input === 'object') {
+                if (typeof input.value === 'string') return input.value
+                if (typeof input.string === 'string') return input.string
+              }
+              return null
+            }
+            const isNonAscii = (value) => /[^\x00-\x7F]/.test(value)
+            const filterNonAscii = (list) => list.filter(test => {
+              const str = getInputString(test.input)
+              return !str || !isNonAscii(str)
+            })
+
+            if (tests.length > 0) {
+              tests = filterNonAscii(tests)
+            }
+
+            try {
+              const canonical = await getTestCases(baseSlug)
+              const filtered = (canonical.cases || []).filter(test => {
+                const str = getInputString(test.input)
+                return !str || !isNonAscii(str)
+              })
+              if (filtered.length > 0) {
+                tests = filtered.map(mapToTest)
+              }
+            } catch {}
           }
 
           if (normalizedLanguage === 'java') {
@@ -312,6 +343,8 @@ router.post('/', async (req, res) => {
                   triangle: ['triangle_type'],
                   'binary-search': ['binary_search'],
                   'roman-numerals': ['to_roman'],
+                  'sum-of-multiples': ['sum_of_multiples'],
+                  'sum-multiples': ['sum_of_multiples'],
                   'run-length-encoding': ['encode', 'decode']
                 }
                 const requiredList = enforcedBySlug[baseSlug] || Array.from(requiredNames)

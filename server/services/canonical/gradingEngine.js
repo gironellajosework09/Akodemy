@@ -8,6 +8,7 @@ import {
 } from './runnerGenerators.js'
 import { executeCode } from '../judge0.js'
 import Challenge from '../../models/Challenge.js'
+import { normalizeToExercismSlug } from '../exercismTestSync.js'
 
 const LANGUAGE_IDS = {
   javascript: 63,
@@ -59,9 +60,7 @@ export async function gradeSubmission(code, language, exerciseSlug) {
     throw new Error(`Unsupported language: ${language}. Supported: javascript, python, java`)
   }
   
-  const normalizedSlug = exerciseSlug
-    .replace(/-(?:javascript|python|java)$/i, '')
-    .replace(/-(?:js|py)$/i, '')
+  const normalizedSlug = normalizeToExercismSlug(exerciseSlug)
   
   console.log(`Grading ${normalizedSlug} (${language})...`)
   

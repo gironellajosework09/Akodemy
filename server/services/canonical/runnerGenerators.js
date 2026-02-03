@@ -210,6 +210,18 @@ import json
 test_cases = json.loads('${casesJson}')
 exercise_slug = '${exerciseSlug}'
 
+def _normalize_slug(value):
+    if value is None:
+        return value
+    slug = str(value).strip().lower().replace('_', '-')
+    if slug.endswith('-python'):
+        slug = slug[:-7]
+    if slug.endswith('-py'):
+        slug = slug[:-3]
+    return slug
+
+exercise_slug = _normalize_slug(exercise_slug)
+
 def deep_equal(a, b):
     if type(a) != type(b):
         if a is None and b is None:
@@ -236,8 +248,10 @@ alias_map = {
     "reverse-string": {"reverse": "reverse_string"},
     "hamming": {"distance": "hamming"},
     "binary-search": {"find": "binary_search"},
-    "roman-numerals": {"roman": "to_roman"},
+    "roman-numerals": {"roman": "to_roman", "roman_numerals": "to_roman"},
     "run-length-encoding": {"run_length_encoding": "encode"},
+    "sum-of-multiples": {"sum_multiples": "sum_of_multiples", "sum": "sum_of_multiples"},
+    "sum-multiples": {"sum_multiples": "sum_of_multiples", "sum": "sum_of_multiples"},
     "triangle": {"equilateral": "triangle_type", "isosceles": "triangle_type", "scalene": "triangle_type"},
 }
 
@@ -270,6 +284,15 @@ def get_input_args(input_obj):
     if exercise_slug == "flatten-array" and isinstance(input_obj, dict):
         if "array" in input_obj and len(input_obj) == 1:
             return [input_obj["array"]], {}
+    if exercise_slug == "roman-numerals" and isinstance(input_obj, dict):
+        if "number" in input_obj and len(input_obj) == 1:
+            return [input_obj["number"]], {}
+    if exercise_slug == "reverse-string" and isinstance(input_obj, dict):
+        if "value" in input_obj and len(input_obj) == 1:
+            return [input_obj["value"]], {}
+    if exercise_slug in ("sum-of-multiples", "sum-multiples") and isinstance(input_obj, dict):
+        if "limit" in input_obj and "factors" in input_obj:
+            return [input_obj["limit"], input_obj["factors"]], {}
     # Allow positional args for non-dict inputs (strings, numbers, booleans).
     if isinstance(input_obj, list):
         return input_obj, {}

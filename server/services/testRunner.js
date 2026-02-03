@@ -233,10 +233,12 @@ function wrapPythonCode(userCode, testContent, slug) {
   
   const targetModuleImportRegex = new RegExp(`from\\s+${moduleName}\\s+import\\s+[^\\n]+`, 'g')
   const targetModuleImportRegex2 = new RegExp(`import\\s+${moduleName}\\b`, 'g')
+  const targetModuleImportRegexMultiline = new RegExp(`from\\s+${moduleName}\\s+import\\s*\\([^)]+\\)`, 'gs')
   const needsFileLike = /from\s+test_utils\s+import\s+FileLike/.test(testContent)
   
   // Strip imports/decorators and run a lightweight unittest-style runner inline.
   const cleanedTest = testContent
+    .replace(targetModuleImportRegexMultiline, '')
     .replace(targetModuleImportRegex, '')
     .replace(targetModuleImportRegex2, '')
     .replace(/from\s+test_utils\s+import\s+FileLike/g, '')
@@ -504,7 +506,16 @@ input_val = ${inputStr}
 if funcs:
     # Handle different input formats
     if isinstance(input_val, dict):
-        result = funcs[0](*input_val.values())
+        def _camel_to_snake(name):
+            import re
+            s1 = re.sub('(.)([A-Z][a-z]+)', r'\\1_\\2', name)
+            return re.sub('([a-z0-9])([A-Z])', r'\\1_\\2', s1).lower().replace('-', '_')
+
+        snake_input = { _camel_to_snake(k): v for k, v in input_val.items() }
+        try:
+            result = funcs[0](**snake_input)
+        except TypeError:
+            result = funcs[0](*snake_input.values())
     elif isinstance(input_val, list):
         result = funcs[0](*input_val)
     else:
