@@ -19,6 +19,13 @@ export default function ResultsOverlay({
   const totalTests = testResults?.length || 0
   const scorePercent = totalTests > 0 ? Math.round((passedTests / totalTests) * 100) : 0
   const allPassed = passedTests === totalTests && totalTests > 0
+  const primaryResult = testResults?.[0]
+  const missingFunctions = primaryResult?.missingFunctions || []
+  const failureMessage = !allPassed
+    ? (missingFunctions.length > 0
+        ? `Missing required function${missingFunctions.length > 1 ? 's' : ''}: ${missingFunctions.join(', ')}`
+        : primaryResult?.message)
+    : null
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60)
@@ -121,6 +128,9 @@ export default function ResultsOverlay({
 
         <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 mb-4">
           <h3 className="text-white font-semibold mb-3">Test Results</h3>
+          {!allPassed && failureMessage && (
+            <p className="text-sm text-red-300 mb-3">{failureMessage}</p>
+          )}
           <div className="space-y-2">
             {testResults && testResults.length > 0 ? (
               testResults.map((test, index) => (

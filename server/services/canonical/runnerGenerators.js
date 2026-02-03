@@ -42,7 +42,10 @@ function serializeJavaValue(value) {
   if (value === null) return 'null'
   if (typeof value === 'string') return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`
   if (typeof value === 'number') {
-    if (Number.isInteger(value)) return String(value)
+    if (Number.isInteger(value)) {
+      if (Math.abs(value) > 2147483647) return `${value}L`
+      return String(value)
+    }
     return String(value) + (String(value).includes('.') ? '' : '.0')
   }
   if (typeof value === 'boolean') return `Boolean.valueOf(${value})`
@@ -205,6 +208,7 @@ ${studentCode}
 import json
 
 test_cases = json.loads('${casesJson}')
+exercise_slug = '${exerciseSlug}'
 
 def deep_equal(a, b):
     if type(a) != type(b):
@@ -226,9 +230,51 @@ def camel_to_snake(name):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\\1_\\2', name)
     return re.sub('([a-z0-9])([A-Z])', r'\\1_\\2', s1).lower().replace('-', '_')
 
+alias_map = {
+    "hello-world": {"hello": "hello_world"},
+    "leap": {"leap_year": "is_leap"},
+    "reverse-string": {"reverse": "reverse_string"},
+    "hamming": {"distance": "hamming"},
+    "binary-search": {"find": "binary_search"},
+    "roman-numerals": {"roman": "to_roman"},
+    "run-length-encoding": {"run_length_encoding": "encode"},
+    "triangle": {"equilateral": "triangle_type", "isosceles": "triangle_type", "scalene": "triangle_type"},
+}
+
+if exercise_slug == "triangle" and "triangle_type" in globals():
+    def _triangle_equilateral(sides):
+        return triangle_type(*sides) == "equilateral"
+
+    def _triangle_isosceles(sides):
+        return triangle_type(*sides) in ("isosceles", "equilateral")
+
+    def _triangle_scalene(sides):
+        return triangle_type(*sides) == "scalene"
+
+    if "equilateral" not in globals():
+        equilateral = _triangle_equilateral
+    if "isosceles" not in globals():
+        isosceles = _triangle_isosceles
+    if "scalene" not in globals():
+        scalene = _triangle_scalene
+
 def get_input_args(input_obj):
-    if not input_obj:
+    if input_obj is None:
         return [], {}
+    if exercise_slug == "run-length-encoding" and isinstance(input_obj, dict):
+        if "string" in input_obj and len(input_obj) == 1:
+            return [input_obj["string"]], {}
+    if exercise_slug == "binary-search" and isinstance(input_obj, dict):
+        if "array" in input_obj and "value" in input_obj:
+            return [input_obj["array"], input_obj["value"]], {}
+    if exercise_slug == "flatten-array" and isinstance(input_obj, dict):
+        if "array" in input_obj and len(input_obj) == 1:
+            return [input_obj["array"]], {}
+    # Allow positional args for non-dict inputs (strings, numbers, booleans).
+    if isinstance(input_obj, list):
+        return input_obj, {}
+    if not isinstance(input_obj, dict):
+        return [input_obj], {}
     # Convert camelCase keys to snake_case for Python functions
     snake_input = {}
     for k, v in input_obj.items():
@@ -245,21 +291,42 @@ for tc in test_cases:
     try:
         args, kwargs = get_input_args(tc['input'])
         fn_name = camel_to_snake(tc.get('property', '${functionName}'))
-        fn = globals().get(fn_name) or locals().get(fn_name)
-        if not fn:
-            raise Exception(f"Function {fn_name} not found")
-        actual = fn(*args, **kwargs)
+        if exercise_slug == "run-length-encoding" and fn_name == "consistency":
+            if "encode" not in globals() or "decode" not in globals():
+                missing = "encode" if "encode" not in globals() else "decode"
+                raise Exception(f"Function {missing} not found")
+            # Expect decode(encode(s)) == s
+            s = kwargs.get('string') if kwargs else (args[0] if args else '')
+            actual = decode(encode(s))
+        else:
+            fn = globals().get(fn_name) or locals().get(fn_name)
+            if not fn:
+                alt = alias_map.get(exercise_slug, {}).get(fn_name)
+                if alt:
+                    fn = globals().get(alt) or locals().get(alt)
+            if not fn:
+                raise Exception(f"Function {fn_name} not found")
+            actual = fn(*args, **kwargs)
         expected = tc['expected']
         
         # Check if expected is an error object
         if isinstance(expected, dict) and 'error' in expected:
-            # Expected an error but didn't get one
-            details.append({
-                'description': tc['description'],
-                'passed': False,
-                'expected': 'error: ' + expected['error'],
-                'actual': actual
-            })
+            # Accept -1 as a sentinel for "not found" in legacy platform tasks.
+            if exercise_slug == "binary-search" and actual == -1:
+                passed += 1
+                details.append({
+                    'description': tc['description'],
+                    'passed': True,
+                    'expected': 'error: ' + expected['error']
+                })
+            else:
+                # Expected an error but didn't get one
+                details.append({
+                    'description': tc['description'],
+                    'passed': False,
+                    'expected': 'error: ' + expected['error'],
+                    'actual': actual
+                })
         else:
             success = deep_equal(actual, expected)
             if success:
@@ -297,6 +364,7 @@ print(json.dumps({'total': total, 'passed': passed, 'score': score, 'details': d
 export function generateJavaRunner(studentCode, testCases, exerciseSlug) {
   const className = toPascalCase(exerciseSlug)
   const defaultMethodName = toCamelCase(testCases.property || exerciseSlug)
+  const isBankAccount = exerciseSlug === 'bank-account'
   
   // Avoid duplicate Main class when we wrap with Main for execution.
   const renamedStudentCode = studentCode.replace(/\bclass\s+Main\b/g, 'class StudentMain')
@@ -309,9 +377,141 @@ export function generateJavaRunner(studentCode, testCases, exerciseSlug) {
     'Main'
   ].filter(Boolean)))
   
+  const renderBankAccountOp = (op, indent, caseIndex, counters) => {
+    const pad = ' '.repeat(indent)
+    if (!op || !op.operation) return ''
+    const opName = op.operation
+    if (opName === 'open') return `${pad}account.open();`
+    if (opName === 'close') return `${pad}account.close();`
+    if (opName === 'deposit') return `${pad}account.deposit(${op.amount});`
+    if (opName === 'withdraw') return `${pad}account.withdraw(${op.amount});`
+    if (opName === 'balance') return `${pad}lastBalance = account.getBalance(); hasBalance = true;`
+    if (opName === 'concurrent') {
+      const loopId = counters.next++
+      const varName = `j${caseIndex}_${loopId}`
+      const iterations = Number.isFinite(op.number) ? op.number : 0
+      const innerOps = (op.operations || []).map(inner => renderBankAccountOp(inner, indent + 4, caseIndex, counters)).filter(Boolean).join('\n')
+      return `${pad}for (int ${varName} = 0; ${varName} < ${iterations}; ${varName}++) {\n${innerOps}\n${pad}}`
+    }
+    return ''
+  }
+
+  const buildArgExpression = (value, prefix, idx) => {
+    if (value && typeof value === 'object' && value.__invoke) {
+      const inv = value.__invoke
+      const ctorArgs = Array.isArray(inv.constructorArgs) ? inv.constructorArgs : []
+      const methodArgs = Array.isArray(inv.methodArgs) ? inv.methodArgs : []
+      let pre = ''
+      const ctorExprs = ctorArgs.map((arg, cIdx) => {
+        const built = buildArgExpression(arg, `${prefix}_c${cIdx}`, cIdx)
+        pre += built.pre
+        return built.expr
+      })
+      const argExprs = methodArgs.map((arg, aIdx) => {
+        const built = buildArgExpression(arg, `${prefix}_a${aIdx}`, aIdx)
+        pre += built.pre
+        return built.expr
+      })
+      const varName = `${prefix}_v${idx}`
+      const ctorArray = ctorExprs.length > 0 ? `new Object[]{${ctorExprs.join(', ')}}` : 'new Object[]{}'
+      const argsArray = argExprs.length > 0 ? `new Object[]{${argExprs.join(', ')}}` : 'new Object[]{}'
+      pre += `Object ${varName} = invoke("${inv.methodName}", ${ctorArray}, ${argsArray});\n`
+      return { pre, expr: varName }
+    }
+    return { pre: '', expr: serializeJavaValue(value) }
+  }
+
+  const indentLines = (text, indent) => {
+    if (!text) return ''
+    return text
+      .split('\n')
+      .filter(line => line.length > 0)
+      .map(line => indent + line)
+      .join('\n') + '\n'
+  }
+
   const testCode = testCases.cases.map((tc, i) => {
+    if (isBankAccount && tc.input && typeof tc.input === 'object' && tc.input.operations) {
+      const counters = { next: 0 }
+      const opsCode = tc.input.operations
+        .map(op => renderBankAccountOp(op, 16, i, counters))
+        .filter(Boolean)
+        .join('\n')
+      const desc = tc.description.replace(/"/g, "'").replace(/\\/g, "\\\\")
+      const expectsError = tc.expected && typeof tc.expected === 'object' && tc.expected.error
+      const expected = serializeJavaValue(tc.expected)
+
+      if (expectsError) {
+        return `
+            try {
+                BankAccount account = new BankAccount();
+                int lastBalance = 0;
+                boolean hasBalance = false;
+                boolean threw = false;
+                String errorMessage = null;
+                try {
+${opsCode}
+                } catch (Exception e) {
+                    threw = true;
+                    errorMessage = e.getMessage();
+                }
+                total++;
+                if (threw) {
+                    passed++;
+                    details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":true,\\"expected\\":\\"error\\"},");
+                } else {
+                    details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":false,\\"expected\\":\\"error\\"},");
+                }
+            } catch (Exception e) {
+                total++;
+                details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":false,\\"error\\":\\"").append(e.getMessage() != null ? e.getMessage().replace("\\"", "'") : "error").append("\\"},");
+            }`
+      }
+
+      return `
+            try {
+                BankAccount account = new BankAccount();
+                int lastBalance = 0;
+                boolean hasBalance = false;
+                boolean threw = false;
+                String errorMessage = null;
+                try {
+${opsCode}
+                } catch (Exception e) {
+                    threw = true;
+                    errorMessage = e.getMessage();
+                }
+                total++;
+                if (threw) {
+                    details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":false,\\"error\\":\\"")
+                        .append(errorMessage != null ? errorMessage.replace("\\"", "'") : "error").append("\\"},");
+                } else if (!hasBalance) {
+                    details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":false,\\"error\\":\\"No balance operation\\"},");
+                } else {
+                    Object expected${i} = ${expected};
+                    Object actual${i} = lastBalance;
+                    boolean success${i} = deepEquals(expected${i}, actual${i});
+                    if (success${i}) {
+                        passed++;
+                        details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":true},");
+                    } else {
+                        String expectedStr${i} = escapeJson(expected${i});
+                        String actualStr${i} = escapeJson(actual${i});
+                        details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":false,\\"expected\\":\\"")
+                            .append(expectedStr${i})
+                            .append("\\",\\"actual\\":\\"")
+                            .append(actualStr${i})
+                            .append("\\"},");
+                    }
+                }
+            } catch (Exception e) {
+                total++;
+                details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":false,\\"error\\":\\"").append(e.getMessage() != null ? e.getMessage().replace("\\"", "'") : "error").append("\\"},");
+            }`
+    }
     let methodArgs = ''
     let constructorArgs = ''
+    let argsPreamble = ''
     if (tc.input && typeof tc.input === 'object' && !Array.isArray(tc.input)) {
       const ctor = tc.input.__constructorArgs || tc.input.constructorArgs
       const args = tc.input.__args || tc.input.args
@@ -319,14 +519,39 @@ export function generateJavaRunner(studentCode, testCases, exerciseSlug) {
         constructorArgs = ctor.map(value => serializeJavaValue(value)).join(', ')
       }
       if (Array.isArray(args)) {
-        methodArgs = args.map(value => serializeJavaValue(value)).join(', ')
+        const builtArgs = args.map((value, idx) => buildArgExpression(value, `arg${i}_${idx}`, idx))
+        const preamble = builtArgs.map(b => b.pre).join('')
+        const exprs = builtArgs.map(b => b.expr)
+        methodArgs = exprs.join(', ')
+        argsPreamble = preamble
       } else if (!ctor) {
         methodArgs = generateInputArgs(tc.input, 'java')
       }
     } else if (Array.isArray(tc.input)) {
-      methodArgs = tc.input.map(value => serializeJavaValue(value)).join(', ')
+      const builtArgs = tc.input.map((value, idx) => buildArgExpression(value, `arg${i}_${idx}`, idx))
+      const preamble = builtArgs.map(b => b.pre).join('')
+      const exprs = builtArgs.map(b => b.expr)
+      methodArgs = exprs.join(', ')
+      argsPreamble = preamble
     } else if (tc.input !== undefined && tc.input !== null) {
       methodArgs = serializeJavaValue(tc.input)
+    }
+
+    if (exerciseSlug === 'anagram' && tc.input && typeof tc.input === 'object' && !Array.isArray(tc.input)) {
+      if (Object.prototype.hasOwnProperty.call(tc.input, 'subject')) {
+        constructorArgs = serializeJavaValue(tc.input.subject)
+      }
+      if (Object.prototype.hasOwnProperty.call(tc.input, 'candidates')) {
+        methodArgs = serializeJavaValue(tc.input.candidates)
+      }
+    }
+    if (exerciseSlug === 'anagram' && Array.isArray(tc.input)) {
+      if (tc.input.length > 0) {
+        constructorArgs = serializeJavaValue(tc.input[0])
+      }
+      if (tc.input.length > 1) {
+        methodArgs = serializeJavaValue(tc.input[1])
+      }
     }
 
     const ctorArray = constructorArgs && constructorArgs.trim().length > 0
@@ -337,17 +562,27 @@ export function generateJavaRunner(studentCode, testCases, exerciseSlug) {
       : 'new Object[]{}'
     const desc = tc.description.replace(/"/g, "'").replace(/\\/g, "\\\\")
     // Use per-test property if available, otherwise use default
-    const methodName = toCamelCase(tc.property || testCases.property || exerciseSlug)
+    const methodName = exerciseSlug === 'anagram'
+      ? 'match'
+      : toCamelCase(tc.property || testCases.property || exerciseSlug)
     const unordered = tc.unordered ? 'true' : 'false'
     
+    const argsPreambleIndented = indentLines(argsPreamble, '                ')
+
     // Check if this test expects an error
     const expectsError = tc.expected && typeof tc.expected === 'object' && tc.expected.error
+    const expectedInvocation = tc.expected && typeof tc.expected === 'object' && tc.expected.__invoke
+    const expectedRegex = tc.expected && typeof tc.expected === 'object' && tc.expected.__regex
+    const expectedEmpty = tc.expected && typeof tc.expected === 'object' && tc.expected.__empty
+    const expectedNotEqual = tc.expected && typeof tc.expected === 'object' && tc.expected.__notEqual !== undefined
+    const expectedNotEqualInvoke = tc.expected && typeof tc.expected === 'object' && tc.expected.__notEqualInvoke
+    const expectedSize = tc.expected && typeof tc.expected === 'object' && tc.expected.__size !== undefined
     
     if (expectsError) {
       // Test expects an exception to be thrown
       return `
             try {
-                Object actual${i} = invoke("${methodName}", ${ctorArray}, ${argsArray});
+${argsPreambleIndented}                Object actual${i} = invoke("${methodName}", ${ctorArray}, ${argsArray});
                 total++;
                 // Expected error but got result
                 details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":false,\\"expected\\":\\"error expected\\"},");
@@ -357,12 +592,225 @@ export function generateJavaRunner(studentCode, testCases, exerciseSlug) {
                 details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":true,\\"expected\\":\\"error\\"},");
             }`
     } else {
-      const expected = serializeJavaValue(tc.expected)
       const comparison = `deepEquals(expected${i}, actual${i})`
+
+      if (expectedInvocation) {
+        const expCtorArgs = Array.isArray(expectedInvocation.constructorArgs)
+          ? expectedInvocation.constructorArgs.map(value => serializeJavaValue(value)).join(', ')
+          : ''
+        const expMethodArgs = Array.isArray(expectedInvocation.methodArgs)
+          ? expectedInvocation.methodArgs.map(value => serializeJavaValue(value)).join(', ')
+          : ''
+        const expCtorArray = expCtorArgs && expCtorArgs.trim().length > 0
+          ? `new Object[]{${expCtorArgs}}`
+          : 'new Object[]{}'
+        const expArgsArray = expMethodArgs && expMethodArgs.trim().length > 0
+          ? `new Object[]{${expMethodArgs}}`
+          : 'new Object[]{}'
+        const expMethodName = expectedInvocation.methodName
+        const sameInstance = Boolean(expectedInvocation.sameInstance)
+
+        if (sameInstance) {
+          return `
+            try {
+${argsPreambleIndented}                Object[] args${i} = ${argsArray};
+                Object[] expectedArgs${i} = ${expArgsArray};
+                Object instance${i} = createInstanceForMethod("${methodName}", ${ctorArray}, args${i}.length);
+                Object actual${i} = invokeOnInstance(instance${i}, "${methodName}", args${i});
+                Object expected${i} = invokeOnInstance(instance${i}, "${expMethodName}", expectedArgs${i});
+                boolean success${i} = ${unordered} ? compareUnordered(expected${i}, actual${i}) : ${comparison};
+                total++;
+                if (success${i}) {
+                    passed++;
+                    details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":true},");
+                } else {
+                    String expectedStr${i} = escapeJson(expected${i});
+                    String actualStr${i} = escapeJson(actual${i});
+                    details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":false,\\"expected\\":\\"")
+                        .append(expectedStr${i})
+                        .append("\\",\\"actual\\":\\"")
+                        .append(actualStr${i})
+                        .append("\\"},");
+                }
+            } catch (Exception e) {
+                total++;
+                details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":false,\\"error\\":\\"").append(e.getMessage() != null ? e.getMessage().replace("\\"", "'") : "error").append("\\"},");
+            }`
+        }
+
+        return `
+            try {
+${argsPreambleIndented}                Object expected${i} = invoke("${expMethodName}", ${expCtorArray}, ${expArgsArray});
+                Object actual${i} = invoke("${methodName}", ${ctorArray}, ${argsArray});
+                boolean success${i} = ${unordered} ? compareUnordered(expected${i}, actual${i}) : ${comparison};
+                total++;
+                if (success${i}) {
+                    passed++;
+                    details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":true},");
+                } else {
+                    String expectedStr${i} = escapeJson(expected${i});
+                    String actualStr${i} = escapeJson(actual${i});
+                    details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":false,\\"expected\\":\\"")
+                        .append(expectedStr${i})
+                        .append("\\",\\"actual\\":\\"")
+                        .append(actualStr${i})
+                        .append("\\"},");
+                }
+            } catch (Exception e) {
+                total++;
+                details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":false,\\"error\\":\\"").append(e.getMessage() != null ? e.getMessage().replace("\\"", "'") : "error").append("\\"},");
+            }`
+      }
+
+      if (expectedRegex) {
+        const pattern = serializeJavaValue(tc.expected.__regex)
+        return `
+            try {
+${argsPreambleIndented}                Object actual${i} = invoke("${methodName}", ${ctorArray}, ${argsArray});
+                boolean success${i} = matchesRegex(actual${i}, ${pattern});
+                total++;
+                if (success${i}) {
+                    passed++;
+                    details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":true},");
+                } else {
+                    details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":false,\\"expected\\":\\"")
+                        .append(${pattern})
+                        .append("\\",\\"actual\\":\\"")
+                        .append(escapeJson(actual${i}))
+                        .append("\\"},");
+                }
+            } catch (Exception e) {
+                total++;
+                details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":false,\\"error\\":\\"").append(e.getMessage() != null ? e.getMessage().replace("\\"", "'") : "error").append("\\"},");
+            }`
+      }
+
+      if (expectedEmpty) {
+        return `
+            try {
+${argsPreambleIndented}                Object actual${i} = invoke("${methodName}", ${ctorArray}, ${argsArray});
+                boolean success${i} = isEmptyObject(actual${i});
+                total++;
+                if (success${i}) {
+                    passed++;
+                    details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":true},");
+                } else {
+                    details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":false,\\"expected\\":\\"empty\\"},");
+                }
+            } catch (Exception e) {
+                total++;
+                details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":false,\\"error\\":\\"").append(e.getMessage() != null ? e.getMessage().replace("\\"", "'") : "error").append("\\"},");
+            }`
+      }
+
+      if (expectedSize) {
+        const sizeVal = serializeJavaValue(tc.expected.__size)
+        return `
+            try {
+${argsPreambleIndented}                Object actual${i} = invoke("${methodName}", ${ctorArray}, ${argsArray});
+                Integer size${i} = sizeOfObject(actual${i});
+                boolean success${i} = size${i} != null && size${i} == ${sizeVal};
+                total++;
+                if (success${i}) {
+                    passed++;
+                    details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":true},");
+                } else {
+                    details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":false,\\"expected\\":\\"")
+                        .append(${sizeVal})
+                        .append("\\",\\"actual\\":\\"")
+                        .append(size${i} == null ? "null" : size${i})
+                        .append("\\"},");
+                }
+            } catch (Exception e) {
+                total++;
+                details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":false,\\"error\\":\\"").append(e.getMessage() != null ? e.getMessage().replace("\\"", "'") : "error").append("\\"},");
+            }`
+      }
+
+      if (expectedNotEqual) {
+        const notExpected = serializeJavaValue(tc.expected.__notEqual)
+        return `
+            try {
+                Object actual${i} = invoke("${methodName}", ${ctorArray}, ${argsArray});
+                Object expected${i} = ${notExpected};
+                boolean success${i} = !deepEquals(expected${i}, actual${i});
+                total++;
+                if (success${i}) {
+                    passed++;
+                    details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":true},");
+                } else {
+                    details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":false,\\"expected\\":\\"not equal\\"},");
+                }
+            } catch (Exception e) {
+                total++;
+                details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":false,\\"error\\":\\"").append(e.getMessage() != null ? e.getMessage().replace("\\"", "'") : "error").append("\\"},");
+            }`
+      }
+
+      if (expectedNotEqualInvoke) {
+        const expCtorArgs = Array.isArray(expectedNotEqualInvoke.constructorArgs)
+          ? expectedNotEqualInvoke.constructorArgs.map(value => serializeJavaValue(value)).join(', ')
+          : ''
+        const expMethodArgs = Array.isArray(expectedNotEqualInvoke.methodArgs)
+          ? expectedNotEqualInvoke.methodArgs.map(value => serializeJavaValue(value)).join(', ')
+          : ''
+        const expCtorArray = expCtorArgs && expCtorArgs.trim().length > 0
+          ? `new Object[]{${expCtorArgs}}`
+          : 'new Object[]{}'
+        const expArgsArray = expMethodArgs && expMethodArgs.trim().length > 0
+          ? `new Object[]{${expMethodArgs}}`
+          : 'new Object[]{}'
+        const expMethodName = expectedNotEqualInvoke.methodName
+        const sameInstance = Boolean(expectedNotEqualInvoke.sameInstance)
+
+        if (sameInstance) {
+          return `
+            try {
+${argsPreambleIndented}                Object[] args${i} = ${argsArray};
+                Object[] expectedArgs${i} = ${expArgsArray};
+                Object instance${i} = createInstanceForMethod("${methodName}", ${ctorArray}, args${i}.length);
+                Object actual${i} = invokeOnInstance(instance${i}, "${methodName}", args${i});
+                if ("robot-name".equals("${exerciseSlug}") && "getName".equals("${methodName}") && "getName".equals("${expMethodName}")) {
+                    invokeOnInstance(instance${i}, "reset", new Object[]{});
+                }
+                Object expected${i} = invokeOnInstance(instance${i}, "${expMethodName}", expectedArgs${i});
+                boolean success${i} = !deepEquals(expected${i}, actual${i});
+                total++;
+                if (success${i}) {
+                    passed++;
+                    details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":true},");
+                } else {
+                    details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":false,\\"expected\\":\\"not equal\\"},");
+                }
+            } catch (Exception e) {
+                total++;
+                details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":false,\\"error\\":\\"").append(e.getMessage() != null ? e.getMessage().replace("\\"", "'") : "error").append("\\"},");
+            }`
+        }
+
+        return `
+            try {
+${argsPreambleIndented}                Object expected${i} = invoke("${expMethodName}", ${expCtorArray}, ${expArgsArray});
+                Object actual${i} = invoke("${methodName}", ${ctorArray}, ${argsArray});
+                boolean success${i} = !deepEquals(expected${i}, actual${i});
+                total++;
+                if (success${i}) {
+                    passed++;
+                    details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":true},");
+                } else {
+                    details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":false,\\"expected\\":\\"not equal\\"},");
+                }
+            } catch (Exception e) {
+                total++;
+                details.append("{\\"description\\":\\"${desc}\\",\\"passed\\":false,\\"error\\":\\"").append(e.getMessage() != null ? e.getMessage().replace("\\"", "'") : "error").append("\\"},");
+            }`
+      }
+
+      const expected = serializeJavaValue(tc.expected)
       
       return `
             try {
-                Object expected${i} = ${expected};
+${argsPreambleIndented}                Object expected${i} = ${expected};
                 Object actual${i} = invoke("${methodName}", ${ctorArray}, ${argsArray});
                 boolean success${i} = ${unordered} ? compareUnordered(expected${i}, actual${i}) : ${comparison};
                 total++;
@@ -499,6 +947,63 @@ public class Main {
         throw new NoSuchMethodException("Constructor not found for " + cls.getName());
     }
 
+    private static Object createInstanceForMethod(String methodName, Object[] constructorArgs, int argCount) throws Exception {
+        for (String candidate : CLASS_CANDIDATES) {
+            try {
+                Class<?> cls = Class.forName(candidate);
+                java.lang.reflect.Method method = findMethod(cls, methodName, argCount);
+                if (method == null) {
+                    method = findFallbackMethod(cls, argCount);
+                }
+                if (method != null) {
+                    return createInstance(cls, constructorArgs);
+                }
+            } catch (ClassNotFoundException e) {
+                // Continue searching other candidates.
+            }
+        }
+        throw new NoSuchMethodException("Method not found: " + methodName);
+    }
+
+    private static Object invokeOnInstance(Object instance, String methodName, Object[] args) throws Exception {
+        if (instance == null) {
+            throw new IllegalArgumentException("Instance is null");
+        }
+        Class<?> cls = instance.getClass();
+        java.lang.reflect.Method method = findMethod(cls, methodName, args.length);
+        if (method == null) {
+            method = findFallbackMethod(cls, args.length);
+        }
+        if (method == null) {
+            throw new NoSuchMethodException("Method not found: " + methodName);
+        }
+        Object[] converted = convertArgs(method.getParameterTypes(), args);
+        return method.invoke(instance, converted);
+    }
+
+    private static boolean matchesRegex(Object actual, String pattern) {
+        if (actual == null) return false;
+        return String.valueOf(actual).matches(pattern);
+    }
+
+    private static boolean isEmptyObject(Object actual) {
+        if (actual == null) return true;
+        if (actual instanceof java.util.Collection) return ((java.util.Collection<?>) actual).isEmpty();
+        if (actual instanceof java.util.Map) return ((java.util.Map<?, ?>) actual).isEmpty();
+        if (actual instanceof String) return ((String) actual).isEmpty();
+        if (actual.getClass().isArray()) return java.lang.reflect.Array.getLength(actual) == 0;
+        return false;
+    }
+
+    private static Integer sizeOfObject(Object actual) {
+        if (actual == null) return null;
+        if (actual instanceof java.util.Collection) return ((java.util.Collection<?>) actual).size();
+        if (actual instanceof java.util.Map) return ((java.util.Map<?, ?>) actual).size();
+        if (actual instanceof String) return ((String) actual).length();
+        if (actual.getClass().isArray()) return java.lang.reflect.Array.getLength(actual);
+        return null;
+    }
+
     private static Object invoke(String methodName, Object[] constructorArgs, Object[] args) throws Exception {
         java.lang.reflect.Method fallback = null;
         Object fallbackInstance = null;
@@ -552,6 +1057,12 @@ public class Main {
         if (expected == actual) return true;
         if (expected == null || actual == null) return false;
 
+        if (expected instanceof Number && actual instanceof Number) {
+            double e = ((Number) expected).doubleValue();
+            double a = ((Number) actual).doubleValue();
+            return Double.compare(e, a) == 0;
+        }
+
         if (expected.getClass().isArray() || actual.getClass().isArray()) {
             if (expected.getClass().isArray() && actual.getClass().isArray()) {
                 if (expected instanceof Object[] && actual instanceof Object[]) {
@@ -575,7 +1086,13 @@ public class Main {
         if (expected instanceof java.util.List || actual instanceof java.util.List) {
             java.util.List<?> expectedList = expected instanceof java.util.List ? (java.util.List<?>) expected : arrayToList(expected);
             java.util.List<?> actualList = actual instanceof java.util.List ? (java.util.List<?>) actual : arrayToList(actual);
-            if (expectedList != null && actualList != null) return expectedList.equals(actualList);
+            if (expectedList != null && actualList != null) {
+                if (expectedList.size() != actualList.size()) return false;
+                for (int i = 0; i < expectedList.size(); i++) {
+                    if (!deepEquals(expectedList.get(i), actualList.get(i))) return false;
+                }
+                return true;
+            }
         }
 
         return expected.equals(actual);

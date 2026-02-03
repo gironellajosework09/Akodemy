@@ -177,7 +177,7 @@ function generateStarterCode(language, slug, property, inputKeys) {
       return `// ${title}
 // Write your solution here
 
-export function ${functionName}(${jsParams}) {
+function ${functionName}(${jsParams}) {
   // Implement your solution
   throw new Error('Not implemented')
 }

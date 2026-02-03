@@ -7,6 +7,14 @@ import api from '../services/api'
 export default function ChallengeEntryModal({ isOpen, challenge, onClose, onStartAttempt }) {
   const [loading, setLoading] = useState(true)
   const [summary, setSummary] = useState(null)
+  const COMPETENCY_LABELS = [
+    'Variables & Data Types',
+    'Control Structures',
+    'Functions',
+    'Arrays & Collections',
+    'Object-Oriented Programming',
+    'Error Handling'
+  ]
 
   useEffect(() => {
     if (isOpen && challenge?._id) {
@@ -32,6 +40,16 @@ export default function ChallengeEntryModal({ isOpen, challenge, onClose, onStar
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
     return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
+  const resolveCompetencies = (challengeData) => {
+    if (Array.isArray(challengeData?.competencies) && challengeData.competencies.length > 0) {
+      return challengeData.competencies
+    }
+    if (challengeData?.competencyIndex !== undefined && challengeData?.competencyIndex !== null) {
+      return [COMPETENCY_LABELS[challengeData.competencyIndex] || '(Missing)']
+    }
+    return []
   }
 
   if (!isOpen) return null
@@ -66,6 +84,20 @@ export default function ChallengeEntryModal({ isOpen, challenge, onClose, onStar
                 </span>
                 <span className="text-gray-400 text-sm capitalize">{challenge?.language}</span>
               </div>
+              {resolveCompetencies(challenge).length > 0 ? (
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {resolveCompetencies(challenge).map((competency) => (
+                    <span
+                      key={`${challenge?._id}-${competency}`}
+                      className="px-2.5 py-1 rounded-full text-xs font-medium bg-purple-500/20 text-purple-300"
+                    >
+                      {competency}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-yellow-500 mb-6">(Missing - admin must set)</p>
+              )}
 
               {summary?.hasAttempted ? (
                 <>

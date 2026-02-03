@@ -52,13 +52,11 @@ export default function InstructionsModal({ isOpen, challenge, onClose, onStartC
           </h3>
           
           {instructions.length > 0 ? (
-            <div className="space-y-4">
-              {instructions.map((instruction, index) => (
-                <div key={instruction.id} className="flex gap-4">
-                  <div className="flex-shrink-0 w-8 h-8 bg-akodemy-purple/20 rounded-lg flex items-center justify-center">
-                    <span className="text-sm font-bold text-akodemy-purple">{index + 1}</span>
-                  </div>
-                  <p className="text-gray-300 leading-relaxed pt-1">{instruction.text}</p>
+            <div className="space-y-3">
+              {instructions.map((instruction) => (
+                <div key={instruction.id} className="flex gap-3">
+                  <span className="mt-2 h-2 w-2 rounded-full bg-akodemy-purple flex-shrink-0" />
+                  <p className="text-gray-300 leading-relaxed">{instruction.text}</p>
                 </div>
               ))}
             </div>

@@ -6,6 +6,7 @@ function splitArgs(argStr) {
   let current = ''
   let inString = false
   let escape = false
+  let parenDepth = 0
 
   for (let i = 0; i < argStr.length; i++) {
     const ch = argStr[i]
@@ -24,7 +25,17 @@ function splitArgs(argStr) {
       current += ch
       continue
     }
-    if (ch === ',' && !inString) {
+    if (!inString && ch === '(') {
+      parenDepth++
+      current += ch
+      continue
+    }
+    if (!inString && ch === ')' && parenDepth > 0) {
+      parenDepth--
+      current += ch
+      continue
+    }
+    if (ch === ',' && !inString && parenDepth === 0) {
       args.push(current.trim())
       current = ''
       continue
@@ -113,10 +124,51 @@ export function extractJavaTestCases(testContent) {
   let localCalls = new Map()
   let currentMode = 'global'
 
+  const normalizeWhitespace = (value) => {
+    let out = ''
+    let inString = false
+    let escape = false
+    let prevSpace = false
+    for (let i = 0; i < value.length; i++) {
+      const ch = value[i]
+      if (escape) {
+        out += ch
+        escape = false
+        prevSpace = false
+        continue
+      }
+      if (ch === '\\') {
+        out += ch
+        escape = true
+        prevSpace = false
+        continue
+      }
+      if (ch === '"') {
+        inString = !inString
+        out += ch
+        prevSpace = false
+        continue
+      }
+      if (!inString && /\s/.test(ch)) {
+        if (!prevSpace) {
+          out += ' '
+          prevSpace = true
+        }
+        continue
+      }
+      out += ch
+      prevSpace = false
+    }
+    return out.trim()
+  }
+
   const resolveValue = (token) => {
     const trimmed = token.trim()
     if (localValues.has(trimmed)) return localValues.get(trimmed)
     if (globalValues.has(trimmed)) return globalValues.get(trimmed)
+    if (localCalls.has(trimmed)) {
+      return { __invoke: localCalls.get(trimmed) }
+    }
     const listValue = parseListExpression(trimmed, resolveValue)
     if (listValue !== null) return listValue
     return parseJavaLiteral(trimmed)
@@ -162,6 +214,7 @@ export function extractJavaTestCases(testContent) {
       const instanceInfo = localInstances.get(instanceName) || globalInstances.get(instanceName)
       return {
         methodName,
+        instanceName,
         constructorArgs: instanceInfo?.constructorArgs || [],
         methodArgs: rawArgs ? splitArgs(rawArgs).map(arg => resolveValue(arg)) : []
       }
@@ -171,6 +224,7 @@ export function extractJavaTestCases(testContent) {
     if (directCall) {
       return {
         methodName: directCall.methodName,
+        instanceName: null,
         constructorArgs: [],
         methodArgs: directCall.args
       }
@@ -181,11 +235,11 @@ export function extractJavaTestCases(testContent) {
 
   const flushCapture = () => {
     if (!capture) return
-    const normalized = capture.replace(/\s+/g, ' ').trim()
+    const normalized = normalizeWhitespace(capture)
     capture = null
 
     const assertMatch = normalized.match(
-      /assertThat\s*\((.*?)\)\s*\.\s*(isEqualTo|isTrue|isFalse|containsExactly|containsExactlyInAnyOrder)\s*\((.*?)\)\s*;/
+      /assertThat\s*\((.*?)\)\s*\.\s*(isEqualTo|isTrue|isFalse|containsExactly|containsExactlyInAnyOrder|matches|isEmpty|isNotEqualTo|hasSize)\s*(?:\((.*?)\))?\s*;/
     )
     if (!assertMatch) return
 
@@ -199,14 +253,63 @@ export function extractJavaTestCases(testContent) {
     if (!invocation) return
 
     let expected
+    let expectedInvocation = null
     if (assertion === 'isTrue') expected = true
     else if (assertion === 'isFalse') expected = false
+    else if (assertion === 'isEmpty') expected = { __empty: true }
+    else if (assertion === 'hasSize') {
+      const trimmedExpected = (expectedRaw ?? '').trim()
+      expected = { __size: resolveValue(trimmedExpected) }
+    }
+    else if (assertion === 'matches') {
+      const trimmedExpected = (expectedRaw ?? '').trim()
+      const resolved = resolveValue(trimmedExpected)
+      const normalized = typeof resolved === 'string' ? resolved.replace(/\\\\/g, '\\') : resolved
+      expected = { __regex: normalized }
+    }
+    else if (assertion === 'isNotEqualTo') {
+      const trimmedExpected = (expectedRaw ?? '').trim()
+      let expectedInv = parseInvocation(trimmedExpected)
+      if (!expectedInv && localCalls.has(trimmedExpected)) expectedInv = localCalls.get(trimmedExpected)
+      if (expectedInv) {
+        expected = {
+          __notEqualInvoke: {
+            methodName: expectedInv.methodName,
+            constructorArgs: expectedInv.constructorArgs || [],
+            methodArgs: expectedInv.methodArgs || [],
+            sameInstance: Boolean(
+              expectedInv.instanceName &&
+              invocation.instanceName &&
+              expectedInv.instanceName === invocation.instanceName
+            )
+          }
+        }
+      } else {
+        expected = { __notEqual: resolveValue(trimmedExpected) }
+      }
+    }
     else if (assertion === 'containsExactly' || assertion === 'containsExactlyInAnyOrder') {
       const values = splitArgs(expectedRaw).map(arg => resolveValue(arg))
       expected = values
     } else {
       const trimmedExpected = expectedRaw.trim()
-      expected = resolveValue(trimmedExpected)
+      expectedInvocation = parseInvocation(trimmedExpected)
+      if (expectedInvocation) {
+        expected = {
+          __invoke: {
+            methodName: expectedInvocation.methodName,
+            constructorArgs: expectedInvocation.constructorArgs || [],
+            methodArgs: expectedInvocation.methodArgs || [],
+            sameInstance: Boolean(
+              expectedInvocation.instanceName &&
+              invocation.instanceName &&
+              expectedInvocation.instanceName === invocation.instanceName
+            )
+          }
+        }
+      } else {
+        expected = resolveValue(trimmedExpected)
+      }
     }
 
     cases.push({
@@ -223,7 +326,7 @@ export function extractJavaTestCases(testContent) {
 
   const flushExceptionCapture = () => {
     if (!captureException) return
-    const normalized = captureException.replace(/\s+/g, ' ').trim()
+    const normalized = normalizeWhitespace(captureException)
     captureException = null
 
     const match = normalized.match(/assertThatExceptionOfType\s*\(\s*([A-Za-z0-9_.]+)\.class\s*\)\s*\.isThrownBy\(\s*\(\s*\)\s*->\s*(.*?)\)\s*(?:\.withMessage\("([^"]+)"\))?\s*;/)
@@ -245,7 +348,7 @@ export function extractJavaTestCases(testContent) {
   }
 
   const storeAssignment = (line) => {
-    const assignmentMatch = line.match(/(?:^|\s)(?:[A-Za-z0-9_<>\\[\\]]+\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+);/)
+    const assignmentMatch = line.match(/(?:^|\s)(?:[A-Za-z0-9_<>\\[\\]]+\s+)*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+);/)
     if (!assignmentMatch) return
     const varName = assignmentMatch[1]
     const expr = assignmentMatch[2].trim()
@@ -315,6 +418,30 @@ export function extractJavaTestCases(testContent) {
       captureException = line.trim()
       if (line.includes(';')) {
         flushExceptionCapture()
+      }
+      continue
+    }
+
+    if (line.includes('assertIsValidName(')) {
+      const match = line.match(/assertIsValidName\s*\((.*)\)\s*;/)
+      if (match) {
+        const expr = match[1].trim()
+        let invocation = parseInvocation(expr)
+        if (!invocation && localCalls.has(expr)) invocation = localCalls.get(expr)
+        if (!invocation && globalValues.has(expr)) invocation = null
+        if (invocation) {
+          const rawPattern = globalValues.get('EXPECTED_ROBOT_NAME_PATTERN') || "[A-Z]{2}\\\\d{3}"
+          const pattern = typeof rawPattern === 'string' ? rawPattern.replace(/\\\\/g, '\\') : rawPattern
+          cases.push({
+            name: currentName || invocation.methodName,
+            property: invocation.methodName,
+            input: {
+              __constructorArgs: invocation.constructorArgs || [],
+              __args: invocation.methodArgs || []
+            },
+            expected: { __regex: pattern }
+          })
+        }
       }
       continue
     }

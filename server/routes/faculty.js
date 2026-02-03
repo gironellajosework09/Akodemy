@@ -3,12 +3,24 @@ import express from 'express'
 import { authenticateToken, requireRole } from '../middleware/auth.js'
 import User from '../models/User.js'
 import Submission from '../models/Submission.js'
-import Challenge from '../models/Challenge.js'
+import Challenge, { COMPETENCY_NAMES } from '../models/Challenge.js'
+import LatestAnswer from '../models/LatestAnswer.js'
 import Badge from '../models/Badge.js'
 import { BADGE_MAPPING } from '../services/badgeService.js'
 
 // Route handlers for Faculty APIs.
 const router = express.Router()
+
+const resolveCompetencies = (challenge) => {
+  if (Array.isArray(challenge?.competencies) && challenge.competencies.length > 0) {
+    return [...new Set(challenge.competencies)].filter(name => COMPETENCY_NAMES.includes(name))
+  }
+  const idx = typeof challenge?.competencyIndex === 'number' ? challenge.competencyIndex : null
+  if (idx !== null && COMPETENCY_NAMES[idx]) {
+    return [COMPETENCY_NAMES[idx]]
+  }
+  return []
+}
 
 router.get('/analytics', authenticateToken, requireRole('faculty'), async (req, res) => {
   try {
@@ -325,7 +337,7 @@ router.get('/student/:id/competencies', authenticateToken, requireRole('faculty'
   try {
     const userId = req.params.id
 
-    const allChallenges = await Challenge.find({}).select('_id language competencyIndex')
+    const allChallenges = await Challenge.find({}).select('_id language competencyIndex competencies')
     
     const latestAnswers = await LatestAnswer.find({ userId }).select('challengeId isCorrect')
     const correctMap = {}
@@ -333,38 +345,48 @@ router.get('/student/:id/competencies', authenticateToken, requireRole('faculty'
       correctMap[la.challengeId.toString()] = la.isCorrect
     }
 
-    const competencyNames = [
-      'Variables & Data Types',
-      'Control Structures', 
-      'Functions',
-      'Arrays & Collections',
-      'Object-Oriented Programming',
-      'Error Handling'
-    ]
-
     const languages = ['javascript', 'python', 'java']
     const result = {}
     const summary = {}
+    const competencyStats = {}
 
     for (const lang of languages) {
-      result[lang] = []
-      
-      for (let i = 0; i < 6; i++) {
-        const challengesInComp = allChallenges.filter(c => c.language === lang && c.competencyIndex === i)
-        const total = challengesInComp.length
-        const correct = challengesInComp.filter(c => correctMap[c._id.toString()] === true).length
-        
-        result[lang].push({
-          index: i,
-          name: competencyNames[i] || `Competency ${i}`,
-          correct,
-          total,
-          hasActivity: correct > 0
-        })
-      }
-      
-      const langTotal = result[lang].reduce((sum, c) => sum + c.total, 0)
-      const langCorrect = result[lang].reduce((sum, c) => sum + c.correct, 0)
+      competencyStats[lang] = {}
+      COMPETENCY_NAMES.forEach(name => {
+        competencyStats[lang][name] = { total: 0, correct: 0 }
+      })
+    }
+
+    for (const challenge of allChallenges) {
+      const lang = challenge.language
+      if (!competencyStats[lang]) continue
+      const compNames = resolveCompetencies(challenge)
+      if (compNames.length === 0) continue
+      const isCorrect = correctMap[challenge._id.toString()] === true
+
+      compNames.forEach(name => {
+        const stat = competencyStats[lang][name]
+        if (!stat) return
+        stat.total += 1
+        if (isCorrect) stat.correct += 1
+      })
+    }
+
+    for (const lang of languages) {
+      result[lang] = COMPETENCY_NAMES.map((name, index) => {
+        const stat = competencyStats[lang][name] || { total: 0, correct: 0 }
+        return {
+          index,
+          name,
+          correct: stat.correct,
+          total: stat.total,
+          hasActivity: stat.correct > 0
+        }
+      })
+
+      const challengesInLang = allChallenges.filter(c => c.language === lang)
+      const langTotal = challengesInLang.length
+      const langCorrect = challengesInLang.filter(c => correctMap[c._id.toString()] === true).length
       summary[lang] = { correct: langCorrect, total: langTotal }
     }
 
@@ -381,17 +403,8 @@ router.get('/competency-student-distribution', authenticateToken, requireRole('f
     const studentIds = students.map(s => s._id)
     const totalStudents = students.length
 
-    const competencyNames = [
-      'Variables & Data Types',
-      'Control Structures', 
-      'Functions',
-      'Arrays & Collections',
-      'Object-Oriented Programming',
-      'Error Handling'
-    ]
-
     if (totalStudents === 0) {
-      const emptyResult = competencyNames.map(name => ({
+      const emptyResult = COMPETENCY_NAMES.map(name => ({
         name,
         notStarted: 100,
         needsPractice: 0,
@@ -414,36 +427,37 @@ router.get('/competency-student-distribution', authenticateToken, requireRole('f
     })
 
     const competencyStats = {}
-    for (let i = 0; i < 6; i++) {
-      competencyStats[i] = { 
-        name: competencyNames[i],
-        challengesByStudent: {} 
-      }
+    COMPETENCY_NAMES.forEach(name => {
+      competencyStats[name] = { name, challengesByStudent: {} }
       studentIds.forEach(id => {
-        competencyStats[i].challengesByStudent[id.toString()] = { total: 0, completed: 0 }
+        competencyStats[name].challengesByStudent[id.toString()] = { total: 0, completed: 0 }
       })
-    }
+    })
 
     allChallenges.forEach(challenge => {
-      const idx = challenge.competencyIndex ?? 0
-      studentIds.forEach(studentId => {
-        const key = studentId.toString()
-        if (competencyStats[idx].challengesByStudent[key]) {
-          competencyStats[idx].challengesByStudent[key].total++
-          const compKey = `${studentId}-${challenge._id}`
-          if (completedMap[compKey]) {
-            competencyStats[idx].challengesByStudent[key].completed++
+      const compNames = resolveCompetencies(challenge)
+      compNames.forEach(name => {
+        const bucket = competencyStats[name]
+        if (!bucket) return
+        studentIds.forEach(studentId => {
+          const key = studentId.toString()
+          if (bucket.challengesByStudent[key]) {
+            bucket.challengesByStudent[key].total++
+            const compKey = `${studentId}-${challenge._id}`
+            if (completedMap[compKey]) {
+              bucket.challengesByStudent[key].completed++
+            }
           }
-        }
+        })
       })
     })
 
     const result = []
-    for (let i = 0; i < 6; i++) {
+    for (const name of COMPETENCY_NAMES) {
       let notStarted = 0, needsPractice = 0, developing = 0, mastered = 0
 
       for (const studentId of studentIds) {
-        const stats = competencyStats[i].challengesByStudent[studentId.toString()]
+        const stats = competencyStats[name].challengesByStudent[studentId.toString()]
         const percentage = stats.total > 0 ? (stats.completed / stats.total) * 100 : 0
 
         if (percentage === 0) notStarted++
@@ -453,7 +467,7 @@ router.get('/competency-student-distribution', authenticateToken, requireRole('f
       }
 
       result.push({
-        name: competencyNames[i],
+        name,
         notStarted: Math.round((notStarted / totalStudents) * 100),
         needsPractice: Math.round((needsPractice / totalStudents) * 100),
         developing: Math.round((developing / totalStudents) * 100),

@@ -1,22 +1,5 @@
 import { X, Award, Sparkles } from 'lucide-react'
-
-const BADGE_INFO = {
-  java: {
-    beginner: { name: 'Java Barista', icon: '☕', color: 'from-orange-500 to-red-600' },
-    intermediate: { name: 'Java Brewer', icon: '🫖', color: 'from-red-500 to-orange-600' },
-    advanced: { name: 'Java Roast Master', icon: '🔥', color: 'from-amber-500 to-red-700' }
-  },
-  python: {
-    beginner: { name: 'Python Catcher', icon: '🐍', color: 'from-green-500 to-emerald-600' },
-    intermediate: { name: 'Python Handler', icon: '🎯', color: 'from-emerald-500 to-green-600' },
-    advanced: { name: 'Python Expert', icon: '🏆', color: 'from-teal-500 to-green-700' }
-  },
-  javascript: {
-    beginner: { name: 'Script Starter', icon: '⚡', color: 'from-yellow-500 to-amber-600' },
-    intermediate: { name: 'Script Engineer', icon: '🛠️', color: 'from-amber-500 to-yellow-600' },
-    advanced: { name: 'Script Architect', icon: '🏗️', color: 'from-orange-500 to-yellow-700' }
-  }
-}
+import { BADGE_INFO } from './BadgeDisplay'
 
 const DIFFICULTY_LABELS = {
   beginner: 'Beginner',
@@ -35,6 +18,7 @@ export default function BadgeUnlockedModal({ badge, onClose, onClaim }) {
   
   const info = BADGE_INFO[badge.language]?.[badge.difficulty]
   if (!info) return null
+  const badgeImage = info.image || '/images/akodemy-logo.png'
   
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-page-in">
@@ -59,7 +43,11 @@ export default function BadgeUnlockedModal({ badge, onClose, onClaim }) {
           <div 
             className={`w-24 h-24 mx-auto rounded-full flex items-center justify-center text-5xl mb-4 bg-gradient-to-br ${info.color} shadow-lg shadow-akodemy-purple/30`}
           >
-            {info.icon}
+            <img
+              src={badgeImage}
+              alt={info.name}
+              className="w-14 h-14 object-cover"
+            />
           </div>
           <h3 className="text-xl font-bold text-white mb-1">{info.name}</h3>
           <p className="text-sm text-gray-400">

@@ -4,9 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import LoadingSpinner from '../../components/LoadingSpinner'
 import { 
-  Users, Trophy, Code, ArrowRight, TrendingUp, Award, 
-  Activity, AlertTriangle, CheckCircle, XCircle, Clock,
-  BarChart3, Target, Calendar
+  Users, Trophy, TrendingUp, Award, BarChart3, Target
 } from 'lucide-react'
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
@@ -25,7 +23,6 @@ export default function FacultyDashboard() {
   
   const [overview, setOverview] = useState({})
   const [trends, setTrends] = useState({ dailySubmissions: [], badgesClaimed: [] })
-  const [challenges, setChallenges] = useState({ mostAttempted: [], hardestChallenges: [] })
   const [students, setStudents] = useState({ topPerformers: [], needsAttention: [], recentActivity: [], recentBadges: [] })
   const [badges, setBadges] = useState({ distribution: {} })
   const [competencyDistribution, setCompetencyDistribution] = useState(null)
@@ -39,10 +36,9 @@ export default function FacultyDashboard() {
     try {
       const params = `?days=${dateRange}${languageFilter ? `&language=${languageFilter}` : ''}`
       
-      const [overviewRes, trendsRes, challengesRes, studentsRes, badgesRes, competencyRes] = await Promise.all([
+      const [overviewRes, trendsRes, studentsRes, badgesRes, competencyRes] = await Promise.all([
         api.get(`/api/faculty/analytics/overview${params}`),
         api.get(`/api/faculty/analytics/trends${params}`),
-        api.get(`/api/faculty/analytics/challenges${params}`),
         api.get(`/api/faculty/analytics/students${params}`),
         api.get('/api/faculty/analytics/badges'),
         api.get('/api/faculty/competency-distribution')
@@ -50,7 +46,6 @@ export default function FacultyDashboard() {
 
       setOverview(overviewRes.data)
       setTrends(trendsRes.data)
-      setChallenges(challengesRes.data)
       setStudents(studentsRes.data)
       setBadges(badgesRes.data)
       setCompetencyDistribution(competencyRes.data)
@@ -269,118 +264,40 @@ export default function FacultyDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6">
           <div className="bg-gray-800 border border-gray-700 p-4 sm:p-6 rounded-xl">
-            <h3 className="text-sm sm:text-base font-bold text-white mb-4 flex items-center gap-2">
-              <Target className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
-              Most Attempted Challenges
-            </h3>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {challenges.mostAttempted.length > 0 ? (
-                challenges.mostAttempted.slice(0, 5).map((challenge, idx) => (
-                  <div key={challenge._id} className="flex items-center justify-between p-3 bg-gray-900 rounded-lg">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="text-gray-500 font-mono text-sm w-6">{idx + 1}.</span>
-                      <div className="min-w-0">
-                        <p className="text-white text-sm truncate">{challenge.title}</p>
-                        <p className="text-gray-500 text-xs capitalize">{challenge.language} - {challenge.difficulty}</p>
-                      </div>
-                    </div>
-                    <span className="text-akodemy-purple font-semibold text-sm">{challenge.attempts}</span>
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-500 text-sm text-center py-4">No data available</p>
-              )}
+            <h3 className="text-sm sm:text-base font-bold text-white mb-4">Student Competency Distribution</h3>
+            <div className="h-48 sm:h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={getCompetencyChartData()} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis type="number" stroke="#9ca3af" tick={{ fontSize: 10 }} domain={[0, 100]} unit="%" />
+                  <YAxis type="category" dataKey="name" stroke="#9ca3af" tick={{ fontSize: 10 }} width={80} />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#1f2937', 
+                      border: '1px solid #374151',
+                      borderRadius: '8px',
+                      color: '#fff'
+                    }}
+                    formatter={(value) => `${value}%`}
+                  />
+                  <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
+                  <Bar dataKey="Not Started" stackId="a" fill="#4b5563" />
+                  <Bar dataKey="Needs Practice" stackId="a" fill="#ef4444" />
+                  <Bar dataKey="Developing" stackId="a" fill="#eab308" />
+                  <Bar dataKey="Mastered" stackId="a" fill="#22c55e" />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
 
           <div className="bg-gray-800 border border-gray-700 p-4 sm:p-6 rounded-xl">
             <h3 className="text-sm sm:text-base font-bold text-white mb-4 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-red-400" />
-              Hardest Challenges (Low Pass Rate)
-            </h3>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {challenges.hardestChallenges.length > 0 ? (
-                challenges.hardestChallenges.slice(0, 5).map((challenge, idx) => (
-                  <div key={challenge._id} className="flex items-center justify-between p-3 bg-gray-900 rounded-lg">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="text-gray-500 font-mono text-sm w-6">{idx + 1}.</span>
-                      <div className="min-w-0">
-                        <p className="text-white text-sm truncate">{challenge.title}</p>
-                        <p className="text-gray-500 text-xs capitalize">{challenge.language} - {challenge.difficulty}</p>
-                      </div>
-                    </div>
-                    <span className="text-red-400 font-semibold text-sm">{challenge.passRate}%</span>
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-500 text-sm text-center py-4">No data available</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gray-800 border border-gray-700 p-4 sm:p-6 rounded-xl mb-6">
-          <h3 className="text-sm sm:text-base font-bold text-white mb-4">Student Competency Distribution</h3>
-          <div className="h-48 sm:h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={getCompetencyChartData()} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis type="number" stroke="#9ca3af" tick={{ fontSize: 10 }} domain={[0, 100]} unit="%" />
-                <YAxis type="category" dataKey="name" stroke="#9ca3af" tick={{ fontSize: 10 }} width={80} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#1f2937', 
-                    border: '1px solid #374151',
-                    borderRadius: '8px',
-                    color: '#fff'
-                  }}
-                  formatter={(value) => `${value}%`}
-                />
-                <Legend wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
-                <Bar dataKey="Not Started" stackId="a" fill="#4b5563" />
-                <Bar dataKey="Needs Practice" stackId="a" fill="#ef4444" />
-                <Bar dataKey="Developing" stackId="a" fill="#eab308" />
-                <Bar dataKey="Mastered" stackId="a" fill="#22c55e" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
-          <div className="bg-gray-800 border border-gray-700 p-4 sm:p-6 rounded-xl">
-            <h3 className="text-sm sm:text-base font-bold text-white mb-4 flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
-              Top Performers
-            </h3>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {students.topPerformers.length > 0 ? (
-                students.topPerformers.slice(0, 5).map((student, idx) => (
-                  <div 
-                    key={student._id} 
-                    className="flex items-center justify-between p-3 bg-gray-900 rounded-lg cursor-pointer hover:bg-gray-700/50 transition"
-                    onClick={() => navigate(`/faculty/student/${student._id}`)}
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-akodemy-gold font-mono text-sm w-5">{idx + 1}</span>
-                      <span className="text-white text-sm truncate">{student.name}</span>
-                    </div>
-                    <span className="text-green-400 font-semibold text-sm">{student.passRate}%</span>
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-500 text-sm text-center py-4">No data available</p>
-              )}
-            </div>
-          </div>
-
-          <div className="bg-gray-800 border border-gray-700 p-4 sm:p-6 rounded-xl">
-            <h3 className="text-sm sm:text-base font-bold text-white mb-4 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
+              <Target className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
               Needs Attention
             </h3>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {students.needsAttention.length > 0 ? (
-                students.needsAttention.slice(0, 5).map((student) => (
+                students.needsAttention.slice(0, 6).map((student) => (
                   <div 
                     key={student._id} 
                     className="flex items-center justify-between p-3 bg-gray-900 rounded-lg cursor-pointer hover:bg-gray-700/50 transition"
@@ -392,32 +309,6 @@ export default function FacultyDashboard() {
                 ))
               ) : (
                 <p className="text-gray-500 text-sm text-center py-4">All students on track!</p>
-              )}
-            </div>
-          </div>
-
-          <div className="bg-gray-800 border border-gray-700 p-4 sm:p-6 rounded-xl">
-            <h3 className="text-sm sm:text-base font-bold text-white mb-4 flex items-center gap-2">
-              <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
-              Recent Activity
-            </h3>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {students.recentActivity.length > 0 ? (
-                students.recentActivity.slice(0, 5).map((activity, idx) => (
-                  <div key={idx} className="flex items-center gap-2 p-2 bg-gray-900 rounded-lg">
-                    {activity.status === 'accepted' ? (
-                      <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
-                    ) : (
-                      <XCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="text-white text-xs truncate">{activity.studentName}</p>
-                      <p className="text-gray-500 text-xs truncate">{activity.challengeTitle}</p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-500 text-sm text-center py-4">No recent activity</p>
               )}
             </div>
           </div>

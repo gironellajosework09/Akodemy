@@ -3,6 +3,13 @@ import axios from 'axios'
 
 // Service logic for Judge0.
 const JUDGE0_API_URL = process.env.JUDGE0_API_URL || 'https://ce.judge0.com'
+const DEFAULT_CPU_TIME_LIMIT = parseFloat(process.env.JUDGE0_CPU_TIME_LIMIT || '2')
+const DEFAULT_WALL_TIME_LIMIT = parseFloat(process.env.JUDGE0_WALL_TIME_LIMIT || '4')
+
+function normalizeLimit(value, fallback) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
+}
 
 const LANGUAGE_IDS = {
   javascript: 63,
@@ -23,7 +30,7 @@ function fromBase64(str) {
   }
 }
 
-export async function executeCode(code, languageOrId, stdin = '') {
+export async function executeCode(code, languageOrId, stdin = '', options = {}) {
   let languageId
   
   if (typeof languageOrId === 'number') {
@@ -35,13 +42,18 @@ export async function executeCode(code, languageOrId, stdin = '') {
     }
   }
 
+  const cpuTimeLimit = normalizeLimit(options.cpuTimeLimit, DEFAULT_CPU_TIME_LIMIT)
+  const wallTimeLimit = normalizeLimit(options.wallTimeLimit, DEFAULT_WALL_TIME_LIMIT)
+
   try {
     const submitResponse = await axios.post(
       `${JUDGE0_API_URL}/submissions?base64_encoded=true&wait=true`,
       {
         source_code: toBase64(code),
         language_id: languageId,
-        stdin: stdin ? toBase64(stdin) : ''
+        stdin: stdin ? toBase64(stdin) : '',
+        cpu_time_limit: cpuTimeLimit,
+        wall_time_limit: wallTimeLimit
       },
       {
         headers: {
@@ -52,16 +64,29 @@ export async function executeCode(code, languageOrId, stdin = '') {
     )
 
     const result = submitResponse.data
-    
+    const statusDescription = result.status?.description || 'Unknown'
+    const statusId = result.status?.id
+    const stdout = fromBase64(result.stdout) || ''
+    const stderr = fromBase64(result.stderr) || ''
+    const compileOutput = fromBase64(result.compile_output) || ''
+    const message = fromBase64(result.message) || ''
+    const exitCode = result.exit_code
+    const effectiveStderr = (statusId && statusId !== 3 && !stderr && !compileOutput)
+      ? statusDescription
+      : stderr
+    const error = effectiveStderr || compileOutput || null
+
     return {
-      status: result.status?.description || 'Unknown',
-      statusId: result.status?.id,
-      stdout: fromBase64(result.stdout) || '',
-      stderr: fromBase64(result.stderr) || '',
-      compileOutput: fromBase64(result.compile_output) || '',
+      status: statusDescription,
+      statusId,
+      stdout,
+      stderr: effectiveStderr,
+      compileOutput,
+      message,
+      exitCode,
       time: result.time,
       memory: result.memory,
-      error: fromBase64(result.stderr) || fromBase64(result.compile_output) || null
+      error
     }
   } catch (error) {
     console.error('Judge0 execution error:', error.response?.data || error.message)

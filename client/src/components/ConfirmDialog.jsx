@@ -9,9 +9,34 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
   confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel'
+  cancelLabel = 'Cancel',
+  confirmClassName,
+  cancelClassName,
+  reverseButtons = false
 }) {
   if (!isOpen) return null
+  const defaultCancelClass =
+    'px-4 py-2 rounded-lg bg-gray-700 text-white hover:bg-gray-600 transition'
+  const defaultConfirmClass =
+    'px-4 py-2 rounded-lg bg-akodemy-purple text-white hover:bg-purple-700 transition'
+
+  const cancelButton = (
+    <button
+      onClick={onCancel}
+      className={cancelClassName || defaultCancelClass}
+    >
+      {cancelLabel}
+    </button>
+  )
+
+  const confirmButton = (
+    <button
+      onClick={onConfirm}
+      className={confirmClassName || defaultConfirmClass}
+    >
+      {confirmLabel}
+    </button>
+  )
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center animate-page-in">
@@ -26,18 +51,8 @@ export default function ConfirmDialog({
         <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
         <p className="text-gray-400 mb-6">{message}</p>
         <div className="flex gap-3 justify-end">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 rounded-lg bg-gray-700 text-white hover:bg-gray-600 transition"
-          >
-            {cancelLabel}
-          </button>
-          <button
-            onClick={onConfirm}
-            className="px-4 py-2 rounded-lg bg-akodemy-purple text-white hover:bg-purple-700 transition"
-          >
-            {confirmLabel}
-          </button>
+          {reverseButtons ? confirmButton : cancelButton}
+          {reverseButtons ? cancelButton : confirmButton}
         </div>
       </div>
     </div>

@@ -69,6 +69,10 @@ const challengeSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  competencies: {
+    type: [{ type: String, enum: COMPETENCY_NAMES }],
+    default: []
+  },
   testFilePath: {
     type: String,
     default: null

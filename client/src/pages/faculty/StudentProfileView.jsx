@@ -74,6 +74,18 @@ export default function StudentProfileView() {
     }
   }
 
+  const formatBirthdate = (value) => {
+    if (!value) return ''
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      const [year, month, day] = value.split('-').map(Number)
+      if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)) return value
+      const mm = String(month).padStart(2, '0')
+      const dd = String(day).padStart(2, '0')
+      return `${mm}/${dd}/${year}`
+    }
+    return value
+  }
+
   const DEFAULT_BADGE_NAMES = {
     javascript: { beginner: 'Script Starter', intermediate: 'Script Engineer', advanced: 'Script Architect' },
     python: { beginner: 'Python Catcher', intermediate: 'Python Handler', advanced: 'Python Expert' },
@@ -252,7 +264,7 @@ export default function StudentProfileView() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Birthdate</span>
-                  <span className="text-gray-300">{student?.birthdate || 'N/A'}</span>
+                  <span className="text-gray-300">{formatBirthdate(student?.birthdate) || 'N/A'}</span>
                 </div>
               </div>
             </div>

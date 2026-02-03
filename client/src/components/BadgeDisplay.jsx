@@ -4,19 +4,19 @@ import api from '../services/api'
 
 const BADGE_INFO = {
   java: {
-    beginner: { name: 'Java Barista', icon: '☕', color: 'from-orange-500 to-red-600' },
-    intermediate: { name: 'Java Brewer', icon: '🫖', color: 'from-red-500 to-orange-600' },
-    advanced: { name: 'Java Roast Master', icon: '🔥', color: 'from-amber-500 to-red-700' }
+    beginner: { name: 'Java Barista', image: '/images/Barista.png', color: 'from-orange-500 to-red-600' },
+    intermediate: { name: 'Java Brewer', image: '/images/Brewer.png', color: 'from-red-500 to-orange-600' },
+    advanced: { name: 'Java Roastmaster', image: '/images/Roastmaster.png', color: 'from-amber-500 to-red-700' }
   },
   python: {
-    beginner: { name: 'Python Catcher', icon: '🐍', color: 'from-green-500 to-emerald-600' },
-    intermediate: { name: 'Python Handler', icon: '🎯', color: 'from-emerald-500 to-green-600' },
-    advanced: { name: 'Python Expert', icon: '🏆', color: 'from-teal-500 to-green-700' }
+    beginner: { name: 'Python Hatcher', image: '/images/hatcher.png', color: 'from-green-500 to-emerald-600' },
+    intermediate: { name: 'Python Handler', image: '/images/handler.png', color: 'from-emerald-500 to-green-600' },
+    advanced: { name: 'Python Expert', image: '/images/Expert.png', color: 'from-teal-500 to-green-700' }
   },
   javascript: {
-    beginner: { name: 'Script Starter', icon: '⚡', color: 'from-yellow-500 to-amber-600' },
-    intermediate: { name: 'Script Engineer', icon: '🛠️', color: 'from-amber-500 to-yellow-600' },
-    advanced: { name: 'Script Architect', icon: '🏗️', color: 'from-orange-500 to-yellow-700' }
+    beginner: { name: 'JavaScript Starter', image: '/images/Starter.png', color: 'from-yellow-500 to-amber-600' },
+    intermediate: { name: 'JavaScript Engineer', image: '/images/Engineer.png', color: 'from-amber-500 to-yellow-600' },
+    advanced: { name: 'JavaScript Architect', image: '/images/Architect.png', color: 'from-orange-500 to-yellow-700' }
   }
 }
 
@@ -34,6 +34,7 @@ function BadgeCard({ language, difficulty, badgeData, progress, onClaim, onEquip
   
   const info = BADGE_INFO[language]?.[difficulty]
   if (!info) return null
+  const badgeImage = info.image || BADGE_PLACEHOLDER_SRC
   
   const { completed = 0, total = 0, status = 'locked', equipped = false } = progress || {}
   const percentage = total > 0 ? Math.round((completed / total) * 100) : 0
@@ -90,7 +91,7 @@ function BadgeCard({ language, difficulty, badgeData, progress, onClaim, onEquip
       
       <div className="flex flex-col items-center text-center">
         <div 
-          className={`w-16 h-16 rounded-full flex items-center justify-center text-3xl mb-3 ${
+          className={`w-24 h-24 rounded-full flex items-center justify-center text-3xl mb-3 ${
             isClaimable || isClaimed
               ? `bg-gradient-to-br ${info.color}` 
               : 'bg-gray-700'
@@ -98,9 +99,9 @@ function BadgeCard({ language, difficulty, badgeData, progress, onClaim, onEquip
         >
         {isClaimable || isClaimed ? (
           <img
-            src={BADGE_PLACEHOLDER_SRC}
+            src={badgeImage}
             alt={info.name}
-            className="w-8 h-8 object-contain"
+            className="w-16 h-16 object-cover"
           />
         ) : (
           <Lock className="w-6 h-6 text-gray-500" />
@@ -336,6 +337,7 @@ export default function BadgeDisplay({ badges = [], progress = {}, onRefresh }) 
 function ClaimSuccessModal({ badge, onClose }) {
   const info = BADGE_INFO[badge.language]?.[badge.difficulty]
   if (!info) return null
+  const badgeImage = info.image || BADGE_PLACEHOLDER_SRC
   
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-page-in">
@@ -348,12 +350,12 @@ function ClaimSuccessModal({ badge, onClose }) {
         
         <div className="mb-6">
           <div
-            className={`w-24 h-24 mx-auto rounded-full flex items-center justify-center mb-4 bg-gradient-to-br ${info.color} shadow-lg`}
+            className={`w-32 h-32 mx-auto rounded-full flex items-center justify-center mb-4 bg-gradient-to-br ${info.color} shadow-lg`}
           >
             <img
-              src={BADGE_PLACEHOLDER_SRC}
+              src={badgeImage}
               alt={info.name}
-              className="w-12 h-12 object-contain"
+              className="w-20 h-20 object-cover"
             />
           </div>
           <h3 className="text-xl font-bold text-white mb-1">{info.name}</h3>

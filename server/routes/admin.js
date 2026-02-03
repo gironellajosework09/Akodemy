@@ -1,6 +1,6 @@
 import express from 'express'
 import bcrypt from 'bcryptjs'
-import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 import User from '../models/User.js'
 import { authenticateToken, requireAdmin } from '../middleware/auth.js'
 import { sendAccountDeactivatedEmail, sendAccountReactivatedEmail, sendWelcomeEmail, generateRandomPassword } from '../services/emailService.js'
@@ -273,25 +273,25 @@ router.get('/users/template', async (req, res) => {
       }
     ]
 
-    const ws = XLSX.utils.json_to_sheet(templateData)
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Users')
-
-    ws['!cols'] = [
-      { wch: 15 },
-      { wch: 20 },
-      { wch: 20 },
-      { wch: 20 },
-      { wch: 30 },
-      { wch: 20 },
-      { wch: 10 }
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('Users')
+    ws.columns = [
+      { header: 'UID', key: 'UID', width: 15 },
+      { header: 'LastName', key: 'LastName', width: 20 },
+      { header: 'GivenName', key: 'GivenName', width: 20 },
+      { header: 'MiddleName', key: 'MiddleName', width: 20 },
+      { header: 'Email', key: 'Email', width: 30 },
+      { header: 'YearLevelAndSection', key: 'YearLevelAndSection', width: 20 },
+      { header: 'Role', key: 'Role', width: 10 }
     ]
 
-    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
+    templateData.forEach((row) => ws.addRow(row))
+
+    const buffer = await wb.xlsx.writeBuffer()
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     res.setHeader('Content-Disposition', 'attachment; filename=akodemy_users_template.xlsx')
-    res.send(buffer)
+    res.send(Buffer.from(buffer))
   } catch (error) {
     console.error('Error generating template:', error)
     res.status(500).json({ message: 'Failed to generate template' })
@@ -321,35 +321,54 @@ router.post('/users/bulk', async (req, res) => {
 
     let wb
     try {
-      wb = XLSX.read(buffer, { type: 'buffer' })
+      wb = new ExcelJS.Workbook()
+      await wb.xlsx.load(buffer)
     } catch (error) {
       return res.status(400).json({ message: 'Invalid or unsupported Excel file' })
     }
 
-    if (!wb.SheetNames || wb.SheetNames.length === 0) {
+    if (!wb.worksheets || wb.worksheets.length === 0) {
       return res.status(400).json({ message: 'Excel file contains no sheets' })
     }
 
-    const ws = wb.Sheets[wb.SheetNames[0]]
+    const ws = wb.worksheets[0]
     
     const REQUIRED_HEADERS = ['UID', 'LastName', 'GivenName', 'MiddleName', 'Email', 'YearLevelAndSection', 'Role']
-    const headerRow = XLSX.utils.sheet_to_json(ws, { header: 1 })[0]
+    const headerRow = ws.getRow(1)
+    const headerValues = REQUIRED_HEADERS.map((_, index) => {
+      const cellText = headerRow.getCell(index + 1).text
+      return String(cellText || '').trim()
+    })
     
-    if (!headerRow || headerRow.length < REQUIRED_HEADERS.length) {
+    if (!headerRow || headerRow.cellCount < REQUIRED_HEADERS.length) {
       return res.status(400).json({ 
         message: `Invalid Excel format. Required columns in exact order: ${REQUIRED_HEADERS.join(', ')}` 
       })
     }
     
     for (let i = 0; i < REQUIRED_HEADERS.length; i++) {
-      if (String(headerRow[i]).trim() !== REQUIRED_HEADERS[i]) {
+      if (headerValues[i] !== REQUIRED_HEADERS[i]) {
         return res.status(400).json({ 
-          message: `Column ${i + 1} must be "${REQUIRED_HEADERS[i]}" but found "${headerRow[i] || 'empty'}". Required order: ${REQUIRED_HEADERS.join(', ')}` 
+          message: `Column ${i + 1} must be "${REQUIRED_HEADERS[i]}" but found "${headerValues[i] || 'empty'}". Required order: ${REQUIRED_HEADERS.join(', ')}` 
         })
       }
     }
     
-    const rows = XLSX.utils.sheet_to_json(ws, { defval: '' })
+    const rows = []
+    for (let rowNum = 2; rowNum <= ws.rowCount; rowNum++) {
+      const row = ws.getRow(rowNum)
+      const rowValues = REQUIRED_HEADERS.map((_, index) => {
+        const cellText = row.getCell(index + 1).text
+        return String(cellText || '').trim()
+      })
+      const hasValue = rowValues.some(value => value !== '')
+      if (!hasValue) continue
+      const rowData = {}
+      for (let i = 0; i < REQUIRED_HEADERS.length; i++) {
+        rowData[REQUIRED_HEADERS[i]] = rowValues[i]
+      }
+      rows.push(rowData)
+    }
 
     if (rows.length === 0) {
       return res.status(400).json({ message: 'Excel file is empty' })

@@ -7,13 +7,20 @@ import {
 } from './canonical/runnerGenerators.js'
 
 // Service logic for executing official tests.
-function toTestCase(test) {
+function toTestCase(test, slug) {
   const name = test.name || test.description || 'Unnamed test'
   const hasInput = Object.prototype.hasOwnProperty.call(test, 'input')
   const input = hasInput ? test.input : {}
+  let property = test.property || null
+
+  if (!property && slug === 'run-length-encoding') {
+    const lower = String(name).toLowerCase()
+    property = lower.includes('decode') ? 'decode' : 'encode'
+  }
+
   return {
     description: name,
-    property: test.property || null,
+    property,
     input,
     expected: test.expected
   }
@@ -22,9 +29,9 @@ function toTestCase(test) {
 function buildTestSuite(slug, tests) {
   const cases = tests
     .filter(test => Object.prototype.hasOwnProperty.call(test, 'expected'))
-    .map(toTestCase)
+    .map(test => toTestCase(test, slug))
 
-  const defaultProperty = cases.find(testCase => testCase.property)?.property || slug
+  const defaultProperty = cases.find(testCase => testCase.property)?.property || (slug === 'run-length-encoding' ? 'encode' : slug)
 
   return {
     property: defaultProperty,

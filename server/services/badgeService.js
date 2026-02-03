@@ -1,6 +1,6 @@
 import Badge from '../models/Badge.js'
 import Challenge from '../models/Challenge.js'
-import Submission from '../models/Submission.js'
+import ChallengeAnswer from '../models/ChallengeAnswer.js'
 
 const BADGE_MAPPING = {
   java: {
@@ -18,6 +18,33 @@ const BADGE_MAPPING = {
     intermediate: 'Script Engineer',
     advanced: 'Script Architect'
   }
+}
+
+const resolvePassedChallenges = async (userId, challengeIds) => {
+  if (challengeIds.length === 0) {
+    return {
+      passedIds: new Set(),
+      attemptedIds: new Set()
+    }
+  }
+
+  const answers = await ChallengeAnswer.find({
+    userId,
+    challengeId: { $in: challengeIds }
+  }).select('challengeId isCorrect')
+
+  const passedIds = new Set()
+  const attemptedIds = new Set()
+
+  answers.forEach(answer => {
+    const key = answer.challengeId.toString()
+    attemptedIds.add(key)
+    if (answer.isCorrect) {
+      passedIds.add(key)
+    }
+  })
+
+  return { passedIds, attemptedIds }
 }
 
 export async function checkAndUnlockBadge(userId, language, difficulty) {
@@ -51,25 +78,22 @@ export async function checkAndUnlockBadge(userId, language, difficulty) {
 
   const challengeIds = challenges.map(c => c._id)
   
-  const submissions = await Submission.find({
+  const { passedIds, attemptedIds } = await resolvePassedChallenges(
     userId,
-    challengeId: { $in: challengeIds },
-    status: 'accepted'
-  })
-
-  const completedChallengeIds = new Set(
-    submissions.map(s => s.challengeId.toString())
+    challengeIds
   )
 
   const missingOrIncorrect = []
   
   for (const challenge of challenges) {
-    const isCompleted = completedChallengeIds.has(challenge._id.toString())
-    if (!isCompleted) {
+    const challengeId = challenge._id.toString()
+    const isPassed = passedIds.has(challengeId)
+    const hasAttempt = attemptedIds.has(challengeId)
+    if (!isPassed) {
       missingOrIncorrect.push({
-        challengeId: challenge._id.toString(),
+        challengeId,
         title: challenge.title,
-        isCompleted: false,
+        isCompleted: hasAttempt,
         isCorrect: false
       })
     }
@@ -85,7 +109,7 @@ export async function checkAndUnlockBadge(userId, language, difficulty) {
       reason: 'Not all challenges are completed with correct answers.',
       missingOrIncorrect,
       progress: {
-        completed: completedChallengeIds.size,
+        completed: passedIds.size,
         total: challenges.length
       }
     }
@@ -223,20 +247,12 @@ export async function getBadgeProgress(userId) {
       const challenges = await Challenge.find({ language, difficulty })
       const challengeIds = challenges.map(c => c._id)
       
-      const completedSubmissions = await Submission.find({
-        userId,
-        challengeId: { $in: challengeIds },
-        status: 'accepted'
-      })
-      
-      const completedIds = new Set(
-        completedSubmissions.map(s => s.challengeId.toString())
-      )
+      const { passedIds } = await resolvePassedChallenges(userId, challengeIds)
       
       const existingBadge = await Badge.findOne({ userId, language, difficulty })
       
       progress[language][difficulty] = {
-        completed: completedIds.size,
+        completed: passedIds.size,
         total: challenges.length,
         badgeName: BADGE_MAPPING[language]?.[difficulty] || null,
         status: existingBadge?.status || 'locked',

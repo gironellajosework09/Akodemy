@@ -175,15 +175,22 @@ async function downloadExerciseTests(language, slug) {
 
 function normalizeToExercismSlug(slug) {
   // Strip language suffixes so slugs match Exercism's canonical naming.
-  const normalized = slug
+  const cleaned = String(slug || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g, '-')
+    .replace(/-+/g, '-')
+  const normalized = cleaned
     .replace(/-(?:javascript|python|java)$/i, '')
     .replace(/-(?:js|py)$/i, '')
+    .replace(/-+/g, '-')
 
   const aliases = {
     'difference-squares': 'difference-of-squares',
     'rna': 'rna-transcription',
     'rle': 'run-length-encoding',
-    'resistor': 'resistor-color'
+    'resistor': 'resistor-color',
+    'flatten': 'flatten-array'
   }
 
   return aliases[normalized] || normalized

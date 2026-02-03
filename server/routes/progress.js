@@ -6,6 +6,7 @@ import Challenge, { COMPETENCY_NAMES } from '../models/Challenge.js'
 import ChallengeAnswer from '../models/ChallengeAnswer.js'
 import LatestAnswer from '../models/LatestAnswer.js'
 import User from '../models/User.js'
+import { checkAndUnlockBadge } from '../services/badgeService.js'
 
 // Route handlers for Progress APIs.
 const router = express.Router()
@@ -13,9 +14,20 @@ const router = express.Router()
 router.use(authenticateToken)
 router.use(requireRole('student', 'faculty'))
 
+const resolveCompetencies = (challenge) => {
+  if (Array.isArray(challenge?.competencies) && challenge.competencies.length > 0) {
+    return [...new Set(challenge.competencies)].filter(name => COMPETENCY_NAMES.includes(name))
+  }
+  const idx = typeof challenge?.competencyIndex === 'number' ? challenge.competencyIndex : null
+  if (idx !== null && COMPETENCY_NAMES[idx]) {
+    return [COMPETENCY_NAMES[idx]]
+  }
+  return []
+}
+
 router.get('/my-progress', async (req, res) => {
   try {
-    const allChallenges = await Challenge.find({}).select('_id language competencyIndex')
+    const allChallenges = await Challenge.find({}).select('_id language competencyIndex competencies')
     
     const latestAnswers = await LatestAnswer.find({ userId: req.user._id }).select('challengeId isCorrect')
     const correctMap = {}
@@ -25,26 +37,46 @@ router.get('/my-progress', async (req, res) => {
 
     const progress = {}
     const summary = {}
-    
-    for (const language of ['javascript', 'python', 'java']) {
-      progress[language] = []
-      
-      for (let i = 0; i < 6; i++) {
-        const challengesInComp = allChallenges.filter(c => c.language === language && c.competencyIndex === i)
-        const total = challengesInComp.length
-        const correct = challengesInComp.filter(c => correctMap[c._id.toString()] === true).length
-        
-        progress[language].push({
-          index: i,
-          name: COMPETENCY_NAMES[i],
-          correct,
-          total,
-          hasActivity: correct > 0
-        })
-      }
-      
-      const langTotal = progress[language].reduce((sum, c) => sum + c.total, 0)
-      const langCorrect = progress[language].reduce((sum, c) => sum + c.correct, 0)
+    const languages = ['javascript', 'python', 'java']
+    const competencyStats = {}
+
+    for (const language of languages) {
+      competencyStats[language] = {}
+      COMPETENCY_NAMES.forEach(name => {
+        competencyStats[language][name] = { total: 0, correct: 0 }
+      })
+    }
+
+    for (const challenge of allChallenges) {
+      const language = challenge.language
+      if (!competencyStats[language]) continue
+      const compNames = resolveCompetencies(challenge)
+      if (compNames.length === 0) continue
+      const isCorrect = correctMap[challenge._id.toString()] === true
+
+      compNames.forEach(name => {
+        const stat = competencyStats[language][name]
+        if (!stat) return
+        stat.total += 1
+        if (isCorrect) stat.correct += 1
+      })
+    }
+
+    for (const language of languages) {
+      progress[language] = COMPETENCY_NAMES.map((name, index) => {
+        const stat = competencyStats[language][name] || { total: 0, correct: 0 }
+        return {
+          index,
+          name,
+          correct: stat.correct,
+          total: stat.total,
+          hasActivity: stat.correct > 0
+        }
+      })
+
+      const challengesInLang = allChallenges.filter(c => c.language === language)
+      const langTotal = challengesInLang.length
+      const langCorrect = challengesInLang.filter(c => correctMap[c._id.toString()] === true).length
       summary[language] = { correct: langCorrect, total: langTotal }
     }
 
@@ -198,6 +230,26 @@ router.post('/challenge/:challengeId/submit', async (req, res) => {
       bestTime
     })
 
+    let badgeUnlocked = null
+    if (isCorrect) {
+      const challenge = await Challenge.findById(challengeId).select('language difficulty')
+      if (challenge) {
+        const badgeResult = await checkAndUnlockBadge(
+          req.user._id,
+          challenge.language,
+          challenge.difficulty
+        )
+        if (badgeResult.unlocked) {
+          badgeUnlocked = {
+            badgeName: badgeResult.badgeName,
+            language: badgeResult.language,
+            difficulty: badgeResult.difficulty,
+            status: 'claimable'
+          }
+        }
+      }
+    }
+
     res.json({
       success: true,
       submission: {
@@ -205,7 +257,8 @@ router.post('/challenge/:challengeId/submit', async (req, res) => {
         score: submission.score,
         bestTime: submission.bestTime,
         isCorrect: submission.isCorrect
-      }
+      },
+      badgeUnlocked
     })
   } catch (error) {
     console.error('Submit answer error:', error)

@@ -31,11 +31,14 @@ export class PythonRunner extends BaseRunner {
       .replace(new RegExp(`from\\s+${moduleName}\\s+import\\s+\\([^)]+\\)`, 'gs'), '')
       .replace(new RegExp(`from\\s+${moduleName}\\s+import\\s+[^\\n]+`, 'g'), '')
       .replace(new RegExp(`import\\s+${moduleName}\\b`, 'g'), '')
-      .replace(/import\s+unittest\b/g, '')
       .replace(/import\s+pytest\b/g, '')
       .replace(/@pytest\.mark\.parametrize\([^)]+\)/gs, '')
       .replace(/@pytest\.mark\.\w+(\([^)]*\))?/g, '')
       .replace(/unittest\.skip\([^)]*\)/g, 'lambda x: x')
+      .replace(/if\s+__name__\s*==\s*['"]__main__['"]:\s*(?:\r?\n[ \t]+.*)*/g, '')
+      .replace(/if\s+__name__\s*==\s*['"]__main__['"]:\s*unittest\.main\([^)]*\)\s*/g, '')
+      .replace(/^\s*unittest\.main\([^)]*\)\s*$/gm, '')
+      .replace(/\bunittest\.main\([^)]*\)\s*/g, '')
     
     cleaned = cleaned.replace(/^#.*$/gm, '')
     
@@ -47,118 +50,75 @@ export class PythonRunner extends BaseRunner {
   async prepare(userCode, testCode, slug) {
     const sanitizedCode = this.sanitizeCode(userCode)
     const cleanedTestCode = this.cleanImports(testCode, slug)
+    const moduleName = slug.replace(/-/g, '_')
+    const quotedStudentCode = JSON.stringify(sanitizedCode)
+    const quotedTestCode = JSON.stringify(cleanedTestCode)
 
     return `
 import json
 import sys
 import traceback
+import types
+import unittest as ut
 
 # === TEST FRAMEWORK ===
 _test_results = {"passed": 0, "failed": 0, "total": 0, "errors": [], "details": []}
 
-class TestCase:
-    def assertEqual(self, a, b, msg=None):
-        if a != b:
-            raise AssertionError(msg or f"Expected {b}, got {a}")
-    
-    def assertTrue(self, x, msg=None):
-        if not x:
-            raise AssertionError(msg or f"Expected True, got {x}")
-    
-    def assertFalse(self, x, msg=None):
-        if x:
-            raise AssertionError(msg or f"Expected False, got {x}")
-    
-    def assertIsNone(self, x, msg=None):
-        if x is not None:
-            raise AssertionError(msg or f"Expected None, got {x}")
-    
-    def assertIsNotNone(self, x, msg=None):
-        if x is None:
-            raise AssertionError(msg or "Expected not None")
-    
-    def assertIn(self, a, b, msg=None):
-        if a not in b:
-            raise AssertionError(msg or f"{a} not in {b}")
-    
-    def assertNotIn(self, a, b, msg=None):
-        if a in b:
-            raise AssertionError(msg or f"{a} in {b}")
-    
-    def assertAlmostEqual(self, a, b, places=7, msg=None):
-        if round(abs(a - b), places) != 0:
-            raise AssertionError(msg or f"{a} != {b} within {places} places")
-    
-    def assertGreater(self, a, b, msg=None):
-        if not a > b:
-            raise AssertionError(msg or f"{a} not > {b}")
-    
-    def assertLess(self, a, b, msg=None):
-        if not a < b:
-            raise AssertionError(msg or f"{a} not < {b}")
-    
-    def assertRaises(self, exc, fn=None, *args, **kwargs):
-        if fn is None:
-            class RaisesContext:
-                exception = None
-                def __enter__(self): return self
-                def __exit__(self, exc_type, exc_val, tb):
-                    if exc_type is None:
-                        raise AssertionError(f"Expected {exc.__name__} to be raised")
-                    self.exception = exc_val
-                    return issubclass(exc_type, exc)
-            return RaisesContext()
-        try:
-            fn(*args, **kwargs)
-            raise AssertionError(f"Expected {exc.__name__} to be raised")
-        except exc:
-            pass
-    
-    def assertRaisesWithMessage(self, exc, msg, fn, *args, **kwargs):
+# Provide a helper if tests expect it.
+if not hasattr(ut.TestCase, "assertRaisesWithMessage"):
+    def _assertRaisesWithMessage(self, exc, msg, fn, *args, **kwargs):
         try:
             fn(*args, **kwargs)
             raise AssertionError(f"Expected {exc.__name__} to be raised")
         except exc as e:
             if msg not in str(e):
                 raise AssertionError(f"Expected message '{msg}' in '{str(e)}'")
+    ut.TestCase.assertRaisesWithMessage = _assertRaisesWithMessage
 
-class unittest:
-    TestCase = TestCase
+# Backwards-compat for older Exercism tests on newer Python.
+if not hasattr(ut.TestCase, "assertRegexpMatches"):
+    if hasattr(ut.TestCase, "assertRegex"):
+        ut.TestCase.assertRegexpMatches = ut.TestCase.assertRegex
+    else:
+        import re
+        def _assertRegexpMatches(self, text, regex, msg=None):
+            if re.search(regex, text) is None:
+                standard_msg = f"Regex didn't match: {regex!r} not found in {text!r}"
+                raise AssertionError(msg or standard_msg)
+        ut.TestCase.assertRegexpMatches = _assertRegexpMatches
 
-# === USER CODE ===
-${sanitizedCode}
+if not hasattr(ut.TestCase, "assertRaisesRegexp") and hasattr(ut.TestCase, "assertRaisesRegex"):
+    ut.TestCase.assertRaisesRegexp = ut.TestCase.assertRaisesRegex
 
-# === TEST CODE ===
-${cleanedTestCode}
+# === USER CODE (isolated module) ===
+_student_module = types.ModuleType("${moduleName}")
+_student_module.__dict__["__name__"] = "${moduleName}"
+_student_module.__dict__["__file__"] = "${moduleName}.py"
+sys.modules["${moduleName}"] = _student_module
+exec(${quotedStudentCode}, _student_module.__dict__)
+
+# === TEST CODE (isolated module) ===
+_test_module = types.ModuleType("${moduleName}_tests")
+_test_module.__dict__["__name__"] = "${moduleName}_tests"
+_test_module.__dict__["__file__"] = "${moduleName}_test.py"
+exec(${quotedTestCode}, _test_module.__dict__)
 
 # === RUN TESTS ===
-import inspect as _inspect
+_suite = ut.defaultTestLoader.loadTestsFromModule(_test_module)
+_runner = ut.TextTestRunner(verbosity=2)
+_result = _runner.run(_suite)
 
-for _name, _obj in list(globals().items()):
-    if _inspect.isclass(_obj) and _name.endswith('Test') and _name != 'TestCase':
-        try:
-            _instance = _obj()
-            for _method_name in sorted(dir(_instance)):
-                if _method_name.startswith('test_'):
-                    _method = getattr(_instance, _method_name)
-                    if callable(_method):
-                        _test_results["total"] += 1
-                        try:
-                            _method()
-                            _test_results["passed"] += 1
-                            _test_results["details"].append({"name": _method_name, "passed": True})
-                        except Exception as _e:
-                            _test_results["failed"] += 1
-                            _err_msg = str(_e)
-                            _test_results["errors"].append({"test": _method_name, "error": _err_msg})
-                            _test_results["details"].append({"name": _method_name, "passed": False, "error": _err_msg})
-        except Exception as _e:
-            _test_results["total"] += 1
-            _test_results["failed"] += 1
-            _test_results["errors"].append({"test": _name, "error": str(_e)})
-            _test_results["details"].append({"name": _name, "passed": False, "error": str(_e)})
+_test_results["total"] = _result.testsRun
+_test_results["failed"] = len(_result.failures) + len(_result.errors)
+_test_results["passed"] = _test_results["total"] - _test_results["failed"]
+
+for _test, _err in _result.failures + _result.errors:
+    _name = _test.id() if hasattr(_test, "id") else str(_test)
+    _test_results["errors"].append({"test": _name, "error": _err})
+    _test_results["details"].append({"name": _name, "passed": False, "error": _err})
 
 print('__TEST_RESULTS__' + json.dumps(_test_results))
+sys.exit(0 if _result.wasSuccessful() else 1)
 `;
   }
 

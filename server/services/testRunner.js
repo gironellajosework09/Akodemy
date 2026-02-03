@@ -88,10 +88,30 @@ ${cleanedUserCode}
 let __passed = 0;
 let __failed = 0;
 let __results = [];
+let __beforeEach = [];
+let __afterEach = [];
+
+function beforeEach(fn) {
+  if (typeof fn === 'function') __beforeEach.push(fn);
+}
+
+function afterEach(fn) {
+  if (typeof fn === 'function') __afterEach.push(fn);
+}
+
+function runWithHooks(fn) {
+  for (const hook of __beforeEach) {
+    hook();
+  }
+  fn();
+  for (const hook of __afterEach) {
+    hook();
+  }
+}
 
 function test(description, fn) {
   try {
-    fn();
+    runWithHooks(fn);
     __passed++;
     __results.push({ description, passed: true });
   } catch (e) {
@@ -104,9 +124,31 @@ function it(description, fn) {
   test(description, fn);
 }
 
-function describe(name, fn) {
-  fn();
+function xtest() {
+  // Jest's xtest is a skipped test.
 }
+
+function xit() {
+  // Jest's xit is a skipped test.
+}
+
+function describe(name, fn) {
+  const prevBefore = __beforeEach;
+  const prevAfter = __afterEach;
+  __beforeEach = [...prevBefore];
+  __afterEach = [...prevAfter];
+  fn();
+  __beforeEach = prevBefore;
+  __afterEach = prevAfter;
+}
+
+function xdescribe() {
+  // Jest's xdescribe is a skipped suite.
+}
+
+test.skip = function skipTest() {}
+it.skip = function skipIt() {}
+describe.skip = function skipDescribe() {}
 
 function expect(actual) {
   return {
@@ -123,13 +165,33 @@ function expect(actual) {
     },
     toThrow(msg) {
       if (typeof actual !== 'function') throw new Error('Expected a function');
-      try { actual(); throw new Error('Expected function to throw'); } 
-      catch (e) { if (msg && !e.message.includes(msg)) throw e; }
+      try { 
+        actual(); 
+        throw new Error('Expected function to throw'); 
+      } catch (e) { 
+        if (!msg) return;
+        if (typeof msg === 'string') {
+          if (!e.message.includes(msg)) throw e;
+          return;
+        }
+        if (msg instanceof RegExp) {
+          if (!msg.test(e.message)) throw e;
+          return;
+        }
+        if (typeof msg === 'function') {
+          if (!(e instanceof msg)) throw e;
+          return;
+        }
+      }
     },
     toBeTruthy() { if (!actual) throw new Error(\`Expected truthy but got \${actual}\`); },
     toBeFalsy() { if (actual) throw new Error(\`Expected falsy but got \${actual}\`); },
     toContain(item) { 
       if (!actual.includes(item)) throw new Error(\`Expected to contain \${item}\`); 
+    },
+    toMatch(pattern) {
+      const regex = pattern instanceof RegExp ? pattern : new RegExp(pattern);
+      if (!regex.test(String(actual))) throw new Error(\`Expected \${actual} to match \${regex}\`);
     },
     toHaveLength(len) {
       if (actual.length !== len) throw new Error(\`Expected length \${len} but got \${actual.length}\`);
@@ -171,14 +233,20 @@ function wrapPythonCode(userCode, testContent, slug) {
   
   const targetModuleImportRegex = new RegExp(`from\\s+${moduleName}\\s+import\\s+[^\\n]+`, 'g')
   const targetModuleImportRegex2 = new RegExp(`import\\s+${moduleName}\\b`, 'g')
+  const needsFileLike = /from\s+test_utils\s+import\s+FileLike/.test(testContent)
   
   // Strip imports/decorators and run a lightweight unittest-style runner inline.
   const cleanedTest = testContent
     .replace(targetModuleImportRegex, '')
     .replace(targetModuleImportRegex2, '')
+    .replace(/from\s+test_utils\s+import\s+FileLike/g, '')
     .replace(/@pytest\.mark\.parametrize\([^)]+\)/g, '')
     .replace(/@pytest\.mark\.\w+(\([^)]*\))?/g, '')
     .replace(/unittest\.skip\([^)]*\)/g, 'lambda x: x')
+    .replace(/if\s+__name__\s*==\s*['"]__main__['"]:\s*(?:\r?\n[ \t]+.*)*/g, '')
+    .replace(/if\s+__name__\s*==\s*['"]__main__['"]:\s*unittest\.main\([^)]*\)\s*/g, '')
+    .replace(/^\s*unittest\.main\([^)]*\)\s*$/gm, '')
+    .replace(/\bunittest\.main\([^)]*\)\s*/g, '')
     .replace(/try:[\s\S]*?except ImportError[\s\S]*?raise ImportError[\s\S]*?from None/g, '')
     .replace(/except ImportError as import_fail:[\s\S]*?from None/g, '')
     .replace(/self\.assertEqual/g, 'self._assertEqual')
@@ -207,6 +275,18 @@ class TestCase:
     def _assertEqual(self, a, b, msg=None):
         if a != b:
             raise AssertionError(msg or f"Expected {b}, got {a}")
+
+    def assertNotEqual(self, a, b, msg=None):
+        if a == b:
+            raise AssertionError(msg or f"Expected {a} != {b}")
+
+    def assertRegex(self, text, regex, msg=None):
+        import re
+        if re.search(regex, text) is None:
+            raise AssertionError(msg or f"Regex didn't match: {regex!r} not found in {text!r}")
+
+    def assertRegexpMatches(self, text, regex, msg=None):
+        return self.assertRegex(text, regex, msg)
     
     def _assertTrue(self, x, msg=None):
         if not x:
@@ -251,13 +331,78 @@ class TestCase:
         if x is not None:
             raise AssertionError(msg or f"{x} is not None")
     
-    def _assertIsNotNone(self, x, msg=None):
-        if x is None:
-            raise AssertionError(msg or "Value is None")
+def _assertIsNotNone(self, x, msg=None):
+    if x is None:
+        raise AssertionError(msg or "Value is None")
+
+# Alias common starter function names to match Exercism test expectations.
+_alias_map = {}
+if '${moduleName}' == 'hello_world':
+    _alias_map['hello'] = 'hello_world'
+elif '${moduleName}' == 'leap':
+    _alias_map['leap_year'] = 'is_leap'
+elif '${moduleName}' == 'reverse_string':
+    _alias_map['reverse'] = 'reverse_string'
+elif '${moduleName}' == 'hamming':
+    _alias_map['distance'] = 'hamming'
+elif '${moduleName}' == 'binary_search':
+    _alias_map['find'] = 'binary_search'
+elif '${moduleName}' == 'roman_numerals':
+    _alias_map['roman'] = 'to_roman'
+
+for _target, _source in _alias_map.items():
+    if _source in globals() and _target not in globals():
+        globals()[_target] = globals()[_source]
+
+if '${moduleName}' == 'triangle' and 'triangle_type' in globals():
+    def _triangle_equilateral(sides):
+        return triangle_type(*sides) == "equilateral"
+
+    def _triangle_isosceles(sides):
+        return triangle_type(*sides) in ("isosceles", "equilateral")
+
+    def _triangle_scalene(sides):
+        return triangle_type(*sides) == "scalene"
+
+    if 'equilateral' not in globals():
+        equilateral = _triangle_equilateral
+    if 'isosceles' not in globals():
+        isosceles = _triangle_isosceles
+    if 'scalene' not in globals():
+        scalene = _triangle_scalene
 
 # Modified test class that inherits from our TestCase
 class unittest:
     TestCase = TestCase
+
+${needsFileLike ? `
+class FileLike:
+    def __init__(self, fail_something=False):
+        self.fail_something = fail_something
+        self.is_open = False
+        self.was_open = False
+        self.did_something = False
+
+    def open(self):
+        self.is_open = True
+        self.was_open = True
+        return self
+
+    def close(self):
+        self.is_open = False
+
+    def do_something(self):
+        self.did_something = True
+        if self.fail_something:
+            raise Exception("Failed to do something")
+
+    def __enter__(self):
+        return self.open()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return False
+` : ''}
 
 ${cleanedTest}
 

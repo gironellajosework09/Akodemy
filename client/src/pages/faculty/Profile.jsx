@@ -1,8 +1,8 @@
 // Faculty page: Profile.
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import Layout from '../../components/Layout'
-import { User, Save } from 'lucide-react'
+import { User, Save, Calendar } from 'lucide-react'
 import api from '../../services/api'
 import ConfirmDialog from '../../components/ConfirmDialog'
 
@@ -10,6 +10,42 @@ import ConfirmDialog from '../../components/ConfirmDialog'
 export default function FacultyProfile() {
   const { user, updateUser } = useAuth()
   const userId = user?._id
+  const todayISO = (() => {
+    const today = new Date()
+    const year = today.getFullYear()
+    const month = String(today.getMonth() + 1).padStart(2, '0')
+    const day = String(today.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  })()
+  const formatBirthdateDisplay = (value) => {
+    if (!value) return ''
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      const [year, month, day] = value.split('-')
+      return `${month}/${day}/${year}`
+    }
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+      return value
+    }
+    return value
+  }
+
+  const parseBirthdateInput = (value) => {
+    const normalized = value.trim()
+    if (!normalized) return ''
+    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(normalized)) return ''
+    const [month, day, year] = normalized.split('/').map(Number)
+    const date = new Date(year, month - 1, day)
+    const isValidDate = !Number.isNaN(date.getTime())
+      && date.getFullYear() === year
+      && date.getMonth() === month - 1
+      && date.getDate() === day
+    if (!isValidDate) return ''
+    const mm = String(month).padStart(2, '0')
+    const dd = String(day).padStart(2, '0')
+    return `${year}-${mm}-${dd}`
+  }
+
+  const [birthdateInput, setBirthdateInput] = useState(() => formatBirthdateDisplay(user?.birthdate || ''))
   const [formData, setFormData] = useState({
     name: user?.name || '',
     address: user?.address || '',
@@ -33,6 +69,7 @@ export default function FacultyProfile() {
   })
   const [passwordError, setPasswordError] = useState('')
   const [passwordSaving, setPasswordSaving] = useState(false)
+  const birthdatePickerRef = useRef(null)
 
   useEffect(() => {
     if (user && !profileSnapshot) {
@@ -43,6 +80,7 @@ export default function FacultyProfile() {
         birthdate: user.birthdate || '',
         sex: user.sex || ''
       })
+      setBirthdateInput(formatBirthdateDisplay(user.birthdate || ''))
       setProfileSnapshot(user)
     }
   }, [user, profileSnapshot])
@@ -78,6 +116,7 @@ export default function FacultyProfile() {
         birthdate: profile.birthdate || '',
         sex: profile.sex || ''
       })
+      setBirthdateInput(formatBirthdateDisplay(profile.birthdate || ''))
       updateUser(profile)
     } catch (error) {
       console.error('Failed to fetch profile:', error)
@@ -88,6 +127,31 @@ export default function FacultyProfile() {
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleBirthdateInput = (e) => {
+    const { value } = e.target
+    setBirthdateInput(value)
+    const isoValue = parseBirthdateInput(value)
+    setFormData(prev => ({ ...prev, birthdate: isoValue }))
+  }
+
+  const handleBirthdatePicker = (e) => {
+    const { value } = e.target
+    setFormData(prev => ({ ...prev, birthdate: value }))
+    setBirthdateInput(formatBirthdateDisplay(value))
+  }
+
+  const openBirthdatePicker = () => {
+    if (!isEditing) return
+    const picker = birthdatePickerRef.current
+    if (!picker) return
+    if (typeof picker.showPicker === 'function') {
+      picker.showPicker()
+      return
+    }
+    picker.focus()
+    picker.click()
   }
 
   const handleSaveConfirm = async () => {
@@ -104,6 +168,7 @@ export default function FacultyProfile() {
         birthdate: response.data.birthdate || '',
         sex: response.data.sex || ''
       })
+      setBirthdateInput(formatBirthdateDisplay(response.data.birthdate || ''))
       setIsEditing(false)
       showToast('Changes saved successfully.', 'success')
     } catch (error) {
@@ -125,13 +190,37 @@ export default function FacultyProfile() {
       birthdate: snapshot.birthdate || '',
       sex: snapshot.sex || ''
     })
+    setBirthdateInput(formatBirthdateDisplay(snapshot.birthdate || ''))
     setIsEditing(false)
     showToast('Edits discarded.', 'info')
   }
 
+  const getBirthdateError = () => {
+    if (!birthdateInput.trim()) return ''
+    const isoValue = parseBirthdateInput(birthdateInput)
+    if (!isoValue) {
+      return 'Please enter a valid birthdate.'
+    }
+    if (isoValue > todayISO) {
+      return 'Birthdate cannot be in the future.'
+    }
+    return ''
+  }
+
+  const handleSaveRequest = () => {
+    const birthdateError = getBirthdateError()
+    if (birthdateError) {
+      showToast(birthdateError, 'error')
+      return
+    }
+    setShowSaveConfirm(true)
+  }
+
   function hasUnsavedChanges() {
     const snapshot = profileSnapshot || {}
-    return ['name', 'address', 'phone', 'birthdate', 'sex'].some((field) => {
+    const snapshotBirthdate = formatBirthdateDisplay(snapshot.birthdate || '')
+    if ((birthdateInput || '') !== snapshotBirthdate) return true
+    return ['name', 'address', 'phone', 'sex'].some((field) => {
       const currentValue = formData[field] || ''
       const savedValue = snapshot[field] || ''
       return currentValue !== savedValue
@@ -156,6 +245,7 @@ export default function FacultyProfile() {
       birthdate: snapshot.birthdate || '',
       sex: snapshot.sex || ''
     })
+    setBirthdateInput(formatBirthdateDisplay(snapshot.birthdate || ''))
     setIsEditing(false)
     showToast('Edits discarded.', 'info')
     if (pendingAction === 'password') {
@@ -280,14 +370,40 @@ export default function FacultyProfile() {
             </div>
             <div>
               <label className="block text-gray-400 mb-2 text-sm">Birthdate</label>
-              <input
-                type="date"
-                name="birthdate"
-                value={formData.birthdate}
-                onChange={handleChange}
-                disabled={!isEditing}
-                className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-akodemy-purple focus:border-transparent"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  name="birthdate"
+                  value={birthdateInput}
+                  onChange={handleBirthdateInput}
+                  placeholder="MM/DD/YYYY"
+                  inputMode="numeric"
+                  disabled={!isEditing}
+                  className="w-full px-4 py-3 pr-10 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-akodemy-purple focus:border-transparent"
+                />
+                <button
+                  type="button"
+                  onClick={openBirthdatePicker}
+                  disabled={!isEditing}
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 transition ${
+                    isEditing ? 'text-white hover:text-gray-200' : 'text-gray-500 cursor-not-allowed'
+                  }`}
+                  aria-label="Open date picker"
+                >
+                  <Calendar className="w-4 h-4" />
+                </button>
+                <input
+                  ref={birthdatePickerRef}
+                  type="date"
+                  value={formData.birthdate}
+                  onChange={handleBirthdatePicker}
+                  max={todayISO}
+                  disabled={!isEditing}
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  className="sr-only"
+                />
+              </div>
             </div>
             <div>
               <label className="block text-gray-400 mb-2 text-sm">Sex</label>
@@ -317,7 +433,7 @@ export default function FacultyProfile() {
                   Cancel
                 </button>
                 <button
-                  onClick={() => setShowSaveConfirm(true)}
+                  onClick={handleSaveRequest}
                   disabled={saving}
                   className="flex items-center gap-2 bg-akodemy-purple text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 disabled:opacity-50 transition"
                 >

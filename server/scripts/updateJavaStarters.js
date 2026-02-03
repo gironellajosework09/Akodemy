@@ -245,6 +245,72 @@ public class PrimeFactorsCalculator {
         return "";
     }
 }`
+  },
+  {
+    slug: 'bank-account-java',
+    exerciseSlug: 'bank-account',
+    starterCode: `class BankAccountActionInvalidException extends Exception {
+    public BankAccountActionInvalidException(String message) {
+        super(message);
+    }
+}
+
+class BankAccount {
+    private int balance = 0;
+    private boolean open = false;
+
+    public void open() throws BankAccountActionInvalidException {
+        // Open the account
+    }
+
+    public void close() throws BankAccountActionInvalidException {
+        // Close the account
+    }
+
+    public int getBalance() throws BankAccountActionInvalidException {
+        // Return current balance
+        return balance;
+    }
+
+    public void deposit(int amount) throws BankAccountActionInvalidException {
+        // Deposit amount
+    }
+
+    public void withdraw(int amount) throws BankAccountActionInvalidException {
+        // Withdraw amount
+    }
+}`
+  },
+  {
+    slug: 'robot-name-java',
+    exerciseSlug: 'robot-name',
+    starterCode: `class Robot {
+    private String name;
+
+    public Robot() {
+        // Assign a unique name
+        this.name = "";
+    }
+
+    public String getName() {
+        // Return robot name
+        return name;
+    }
+
+    public void reset() {
+        // Assign a new unique name
+    }
+}`
+  },
+  {
+    slug: 'isbn-verifier-java',
+    exerciseSlug: 'isbn-verifier',
+    starterCode: `class IsbnVerifier {
+    public boolean isValid(String stringToVerify) {
+        // Return true if ISBN-10 is valid
+        return false;
+    }
+}`
   }
 ]
 

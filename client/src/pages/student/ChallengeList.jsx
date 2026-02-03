@@ -22,6 +22,14 @@ export default function ChallengeList() {
   const [selectedChallenge, setSelectedChallenge] = useState(null)
   const [showEntryModal, setShowEntryModal] = useState(false)
   const [showInstructionsModal, setShowInstructionsModal] = useState(false)
+  const COMPETENCY_LABELS = [
+    'Variables & Data Types',
+    'Control Structures',
+    'Functions',
+    'Arrays & Collections',
+    'Object-Oriented Programming',
+    'Error Handling'
+  ]
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 640)
@@ -98,6 +106,16 @@ export default function ChallengeList() {
     }
   }
 
+  const resolveCompetencies = (challenge) => {
+    if (Array.isArray(challenge?.competencies) && challenge.competencies.length > 0) {
+      return challenge.competencies
+    }
+    if (challenge?.competencyIndex !== undefined && challenge?.competencyIndex !== null) {
+      return [COMPETENCY_LABELS[challenge.competencyIndex] || '(Missing)']
+    }
+    return []
+  }
+
   const langInfo = getLanguageDisplay()
 
   return (
@@ -154,11 +172,20 @@ export default function ChallengeList() {
                     <h3 className={`text-base sm:text-lg font-bold text-white mb-2 sm:mb-3 transition-colors duration-200 line-clamp-2 ${getTitleHoverColor(challenge?.difficulty)}`}>
                       {challenge.title}
                     </h3>
-                    <p className="text-xs text-gray-500 mb-2">
-                      Competency: {challenge.competencyIndex !== undefined && challenge.competencyIndex !== null 
-                        ? ['Variables & Data Types', 'Control Structures', 'Functions', 'Arrays & Collections', 'Object-Oriented Programming', 'Error Handling'][challenge.competencyIndex] || <span className="text-yellow-500">(Missing - admin must set)</span>
-                        : <span className="text-yellow-500">(Missing - admin must set)</span>}
-                    </p>
+                    {resolveCompetencies(challenge).length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5 mb-2">
+                        {resolveCompetencies(challenge).map((competency) => (
+                          <span
+                            key={`${challenge._id}-${competency}`}
+                            className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-500/20 text-purple-300"
+                          >
+                            {competency}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-yellow-500 mb-2">(Missing - admin must set)</p>
+                    )}
                     <div className="flex items-center justify-between text-xs sm:text-sm text-gray-400">
                       <div className="flex items-center gap-2 sm:gap-4">
                         {challenge.userProgress?.bestTime && (

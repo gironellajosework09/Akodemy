@@ -18,12 +18,14 @@ export default function ChallengeEditor() {
   const [code, setCode] = useState('')
   const [output, setOutput] = useState('')
   const [hint, setHint] = useState('')
+  const [friendlyFeedback, setFriendlyFeedback] = useState(null)
+  const [technicalDetails, setTechnicalDetails] = useState(null)
   const [loading, setLoading] = useState(true)
   const [running, setRunning] = useState(false)
   const [time, setTime] = useState(0)
   const [runCount, setRunCount] = useState(0)
   const [showExitConfirm, setShowExitConfirm] = useState(false)
-  const [showInstructions, setShowInstructions] = useState(false)
+  const [showInstructions, setShowInstructions] = useState(true)
   const [activeTab, setActiveTab] = useState('editor')
   const [testResults, setTestResults] = useState(null)
   const [isMobile, setIsMobile] = useState(false)
@@ -93,6 +95,7 @@ export default function ChallengeEditor() {
   useEffect(() => {
     fetchChallenge()
     fetchLatestSubmission()
+    setShowInstructions(true)
   }, [challengeId])
 
   useEffect(() => {
@@ -153,6 +156,17 @@ export default function ChallengeEditor() {
     }))
   }
 
+  const extractMissingFunctions = (results) => {
+    if (!results) return null
+    const actual = String(results.actual || '')
+    if (results.message !== 'Required function(s) not defined' && !/Missing:/i.test(actual)) {
+      return null
+    }
+    const match = actual.match(/Missing:\s*(.+)/i)
+    const names = match ? match[1].split(',').map(name => name.trim()).filter(Boolean) : []
+    return names.length > 0 ? names : null
+  }
+
   const finishChallenge = async () => {
     try {
       if (timerRef.current) clearInterval(timerRef.current)
@@ -163,13 +177,20 @@ export default function ChallengeEditor() {
       let score = 0
 
       if (testResults) {
-        testsForOverlay = [{ passed: testResults.passed, expected: testResults.expected, actual: testResults.actual }]
+        const missingFunctions = extractMissingFunctions(testResults)
+        testsForOverlay = [{
+          passed: testResults.passed,
+          expected: testResults.expected,
+          actual: testResults.actual,
+          message: testResults.message,
+          missingFunctions
+        }]
         isCorrect = testResults.passed
         score = isCorrect ? 100 : 0
       }
       setFinalTestResults(testsForOverlay)
       
-      await api.post(`/api/progress/challenge/${challengeId}/submit`, {
+      const submitResponse = await api.post(`/api/progress/challenge/${challengeId}/submit`, {
         answer: code,
         language: challenge.language,
         isCorrect,
@@ -185,6 +206,10 @@ export default function ChallengeEditor() {
         runCount,
         completed: true
       })
+
+      if (submitResponse.data?.badgeUnlocked) {
+        setUnlockedBadge(submitResponse.data.badgeUnlocked)
+      }
       
       setShowResults(true)
     } catch (error) {
@@ -202,7 +227,14 @@ export default function ChallengeEditor() {
     
     let testsForOverlay = []
     if (testResults) {
-      testsForOverlay = [{ passed: testResults.passed, expected: testResults.expected, actual: testResults.actual }]
+      const missingFunctions = extractMissingFunctions(testResults)
+      testsForOverlay = [{
+        passed: testResults.passed,
+        expected: testResults.expected,
+        actual: testResults.actual,
+        message: testResults.message,
+        missingFunctions
+      }]
     }
     setFinalTestResults(testsForOverlay)
     
@@ -255,6 +287,8 @@ export default function ChallengeEditor() {
     setRunning(true)
     setOutput('')
     setHint('')
+    setFriendlyFeedback(null)
+    setTechnicalDetails(null)
     setTestResults(null)
     setRunCount((prev) => prev + 1)
 
@@ -267,9 +301,12 @@ export default function ChallengeEditor() {
 
       setOutput(response.data.output || response.data.error || 'No output')
 
-      if (response.data.error && response.data.hint) {
+      if (response.data.hint) {
         setHint(response.data.hint)
       }
+
+      setFriendlyFeedback(response.data.friendlyFeedback || null)
+      setTechnicalDetails(response.data.technicalDetails || null)
 
       if (response.data.testResults) {
         setTestResults(response.data.testResults)
@@ -308,6 +345,25 @@ export default function ChallengeEditor() {
     }
   }
 
+  const COMPETENCY_LABELS = [
+    'Variables & Data Types',
+    'Control Structures',
+    'Functions',
+    'Arrays & Collections',
+    'Object-Oriented Programming',
+    'Error Handling'
+  ]
+
+  const resolveCompetencies = () => {
+    if (Array.isArray(challenge?.competencies) && challenge.competencies.length > 0) {
+      return challenge.competencies
+    }
+    if (challenge?.competencyIndex !== undefined && challenge?.competencyIndex !== null) {
+      return [COMPETENCY_LABELS[challenge.competencyIndex] || '(Missing)']
+    }
+    return []
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
@@ -318,32 +374,121 @@ export default function ChallengeEditor() {
 
   const instructions = parseInstructions(challenge?.description)
 
-  const renderOutput = () => (
-    <div className="flex-1 p-4 overflow-auto">
-      {testResults && (
-        <div className={`mb-4 p-3 rounded-lg ${testResults.passed ? 'bg-green-500/20 border border-green-500/50' : 'bg-red-500/20 border border-red-500/50'}`}>
-          <p className={`font-bold ${testResults.passed ? 'text-green-400' : 'text-red-400'}`}>
-            {testResults.passed ? 'All Tests Passed!' : 'Test Failed'}
-          </p>
-          {!testResults.passed && (
-            <div className="mt-2 text-sm">
-              <p className="text-gray-300"><strong>Expected:</strong> {testResults.expected}</p>
-              <p className="text-gray-300"><strong>Got:</strong> {testResults.actual}</p>
+  const technicalStatus = technicalDetails?.status?.description || ''
+  const hasTechnicalDetails = Boolean(
+    technicalDetails &&
+    (
+      technicalDetails.stderr ||
+      technicalDetails.compile_output ||
+      technicalDetails.message ||
+      (technicalStatus && technicalStatus.toLowerCase() !== 'accepted')
+    )
+  )
+
+  const renderFriendlyFeedback = () => {
+    if (!friendlyFeedback) return null
+    const steps = Array.isArray(friendlyFeedback.action_steps) ? friendlyFeedback.action_steps : []
+    return (
+      <div className="mb-4 p-4 bg-blue-500/10 border border-blue-500/40 rounded-lg">
+        <p className="text-blue-300 font-semibold">{friendlyFeedback.title}</p>
+        <p className="text-sm text-blue-100 mt-1">{friendlyFeedback.summary}</p>
+        <p className="text-xs text-blue-200 mt-2">
+          <strong>Likely cause:</strong> {friendlyFeedback.likely_cause}
+        </p>
+        {steps.length > 0 && (
+          <ul className="mt-2 text-sm text-blue-100 list-disc list-inside space-y-1">
+            {steps.map((step, index) => (
+              <li key={`${step}-${index}`}>{step}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+    )
+  }
+
+  const renderTechnicalDetails = () => {
+    if (!hasTechnicalDetails) return null
+    const statusDescription = technicalDetails?.status?.description || 'Unknown'
+    const statusId = technicalDetails?.status?.id
+    const statusLabel = statusId !== null && statusId !== undefined
+      ? `${statusDescription} (id: ${statusId})`
+      : statusDescription
+
+    return (
+      <details className="mb-4 rounded-lg border border-gray-700 bg-gray-800/60 p-3">
+        <summary className="cursor-pointer text-sm text-gray-300">
+          Show technical details
+        </summary>
+        <div className="mt-3 space-y-3 text-xs text-gray-200">
+          <div>
+            <p className="text-gray-400">Status</p>
+            <p>{statusLabel}</p>
+          </div>
+          {technicalDetails?.stderr && (
+            <div>
+              <p className="text-gray-400">stderr</p>
+              <pre className="whitespace-pre-wrap text-gray-300">
+                {technicalDetails.stderr}
+              </pre>
+            </div>
+          )}
+          {technicalDetails?.compile_output && (
+            <div>
+              <p className="text-gray-400">compile_output</p>
+              <pre className="whitespace-pre-wrap text-gray-300">
+                {technicalDetails.compile_output}
+              </pre>
+            </div>
+          )}
+          {technicalDetails?.message && (
+            <div>
+              <p className="text-gray-400">message</p>
+              <pre className="whitespace-pre-wrap text-gray-300">
+                {technicalDetails.message}
+              </pre>
             </div>
           )}
         </div>
-      )}
-      {hint && (
-        <div className="mb-4 p-3 bg-yellow-500/20 border border-yellow-500/50 rounded-lg">
-          <p className="font-medium text-yellow-400">Hint:</p>
-          <p className="text-yellow-300 text-sm">{hint}</p>
-        </div>
-      )}
-      <pre className={`text-sm whitespace-pre-wrap ${output.includes('Error') || output.includes('error') ? 'text-red-400' : 'text-gray-300'}`}>
-        {output || 'Run your code to see output...'}
-      </pre>
-    </div>
-  )
+      </details>
+    )
+  }
+
+  const renderOutput = () => {
+    const missingFunctions = extractMissingFunctions(testResults)
+    return (
+      <div className="flex-1 min-h-0 p-4 overflow-auto">
+        {testResults && (
+          <div className={`mb-4 p-3 rounded-lg ${testResults.passed ? 'bg-green-500/20 border border-green-500/50' : 'bg-red-500/20 border border-red-500/50'}`}>
+            <p className={`font-bold ${testResults.passed ? 'text-green-400' : 'text-red-400'}`}>
+              {testResults.passed ? 'All Tests Passed!' : 'Test Failed'}
+            </p>
+            {!testResults.passed && (
+              <div className="mt-2 text-sm">
+                {missingFunctions && (
+                  <p className="text-red-300 font-medium">
+                    Missing required function{missingFunctions.length > 1 ? 's' : ''}: {missingFunctions.join(', ')}
+                  </p>
+                )}
+                <p className="text-gray-300"><strong>Expected:</strong> {testResults.expected}</p>
+                <p className="text-gray-300"><strong>Got:</strong> {testResults.actual}</p>
+              </div>
+            )}
+          </div>
+        )}
+        {renderFriendlyFeedback()}
+        {!friendlyFeedback && hint && (
+          <div className="mb-4 p-3 bg-yellow-500/20 border border-yellow-500/50 rounded-lg">
+            <p className="font-medium text-yellow-400">Hint:</p>
+            <p className="text-yellow-300 text-sm">{hint}</p>
+          </div>
+        )}
+        {renderTechnicalDetails()}
+        <pre className={`text-sm whitespace-pre-wrap ${output.includes('Error') || output.includes('error') ? 'text-red-400' : 'text-gray-300'}`}>
+          {output || 'Run your code to see output...'}
+        </pre>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -379,7 +524,7 @@ export default function ChallengeEditor() {
           onClick={() => setShowInstructions(!showInstructions)}
           className="flex items-center justify-between px-4 py-3 bg-gray-800 border-b border-gray-700 hover:bg-gray-750 transition"
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
               challenge?.difficulty === 'beginner' ? 'bg-green-500/20 text-green-400' :
               challenge?.difficulty === 'intermediate' ? 'bg-yellow-500/20 text-yellow-400' :
@@ -387,11 +532,20 @@ export default function ChallengeEditor() {
             }`}>
               {challenge?.difficulty}
             </span>
-            <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-purple-500/20 text-purple-400">
-              {challenge?.competencyIndex !== undefined && challenge?.competencyIndex !== null 
-                ? ['Variables & Data Types', 'Control Structures', 'Functions', 'Arrays & Collections', 'Object-Oriented Programming', 'Error Handling'][challenge.competencyIndex] || '(Missing)'
-                : <span className="text-yellow-500">(Missing)</span>}
-            </span>
+            {resolveCompetencies().length > 0 ? (
+              resolveCompetencies().map((competency) => (
+                <span
+                  key={competency}
+                  className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-purple-500/20 text-purple-400"
+                >
+                  {competency}
+                </span>
+              ))
+            ) : (
+              <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-purple-500/20 text-yellow-500">
+                (Missing)
+              </span>
+            )}
             <span className="text-white font-medium text-sm">
               {showInstructions ? 'Hide Instructions' : 'View Instructions'}
             </span>
@@ -406,16 +560,14 @@ export default function ChallengeEditor() {
         {showInstructions && (
           <div className="bg-gray-800 px-4 py-3 border-b border-gray-700 max-h-48 overflow-auto">
             {instructions.length > 0 ? (
-              <ol className="space-y-2">
-                {instructions.map((step, index) => (
+              <ul className="space-y-2">
+                {instructions.map((step) => (
                   <li key={step.id} className="flex gap-3 text-sm">
-                    <span className="flex-shrink-0 w-6 h-6 bg-akodemy-purple/20 text-akodemy-purple rounded-full flex items-center justify-center text-xs font-medium">
-                      {index + 1}
-                    </span>
-                    <span className="text-gray-300 pt-0.5">{step.text}</span>
+                    <span className="mt-2 h-2 w-2 rounded-full bg-akodemy-purple flex-shrink-0" />
+                    <span className="text-gray-300">{step.text}</span>
                   </li>
                 ))}
-              </ol>
+              </ul>
             ) : (
               <p className="text-sm text-gray-400">Complete the coding challenge.</p>
             )}
@@ -445,7 +597,7 @@ export default function ChallengeEditor() {
         </div>
 
         {isMobile ? (
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-hidden min-h-0">
             <div className="flex border-b border-gray-700 bg-gray-800">
               <button
                 onClick={() => setActiveTab('editor')}
@@ -469,7 +621,7 @@ export default function ChallengeEditor() {
               </button>
             </div>
 
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col overflow-hidden min-h-0">
               {activeTab === 'editor' ? (
                 <div className="flex-1 flex flex-col relative">
                   {!allowClipboard && (
@@ -498,13 +650,13 @@ export default function ChallengeEditor() {
                   </div>
                 </div>
               ) : (
-                <div className="flex-1 bg-gray-900 overflow-auto">
+                <div className="flex-1 bg-gray-900 overflow-auto min-h-0">
                   {renderOutput()}
                 </div>
               )}
             </div>
 
-            <div className="border-t border-gray-700 p-3 flex items-center justify-end bg-gray-800">
+            <div className="border-t border-gray-700 p-3 flex items-center justify-end bg-gray-800 sticky bottom-0 z-10">
               <button
                 onClick={runCode}
                 disabled={running}
@@ -516,8 +668,8 @@ export default function ChallengeEditor() {
             </div>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <div className="flex-1 flex">
+          <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+            <div className="flex-1 flex min-h-0">
               <div className="flex-1 flex flex-col border-r border-gray-700">
                 <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700">
                   <span className="text-sm font-medium text-gray-300">Code Editor</span>
@@ -547,13 +699,13 @@ export default function ChallengeEditor() {
                 </div>
               </div>
 
-              <div className="flex-1 flex flex-col bg-gray-900">
+              <div className="flex-1 flex flex-col bg-gray-900 min-h-0">
                 <p className="px-4 py-2 bg-gray-800 text-sm font-medium text-gray-300 border-b border-gray-700">Output</p>
                 {renderOutput()}
               </div>
             </div>
 
-            <div className="border-t border-gray-700 p-4 flex items-center justify-end bg-gray-800">
+            <div className="border-t border-gray-700 p-4 flex items-center justify-end bg-gray-800 sticky bottom-0 z-10">
               <button
                 onClick={runCode}
                 disabled={running}
@@ -578,7 +730,12 @@ export default function ChallengeEditor() {
       <ConfirmDialog
         isOpen={showExitConfirm}
         title="Exit Challenge"
-        message="Are you sure you want to exit? Your progress will be saved."
+        message="Are you sure you want to exit? Your progress will be discarded."
+        confirmLabel="Exit"
+        cancelLabel="Continue Coding"
+        confirmClassName="px-4 py-2 rounded-lg bg-gray-700 text-white hover:bg-gray-600 transition"
+        cancelClassName="px-4 py-2 rounded-lg bg-akodemy-purple text-white hover:bg-purple-700 transition"
+        reverseButtons
         onConfirm={confirmExit}
         onCancel={() => setShowExitConfirm(false)}
       />
