@@ -9,6 +9,12 @@ import ResultsOverlay from '../../components/ResultsOverlay'
 import LatestSubmissionModal from '../../components/LatestSubmissionModal'
 import HistoryPanel from '../../components/HistoryPanel'
 import BadgeUnlockedModal from '../../components/BadgeEarnedModal'
+import useFullscreenGuard from '../../hooks/useFullscreenGuard'
+import FullscreenExitModal from '../../components/FullscreenExitModal'
+import FullscreenEntryOverlay from '../../components/FullscreenEntryOverlay'
+import FullscreenStatusBanner from '../../components/FullscreenStatusBanner'
+
+const AUTOSAVE_INTERVAL_MS = 30000
 
 // Student page logic for Challenge Editor.
 export default function ChallengeEditor() {
@@ -38,15 +44,39 @@ export default function ChallengeEditor() {
   const [startedAt] = useState(new Date())
   const [attemptNumber, setAttemptNumber] = useState(1)
   const [clipboardToast, setClipboardToast] = useState(false)
+  const [saveDisabledToast, setSaveDisabledToast] = useState(false)
   const [unlockedBadge, setUnlockedBadge] = useState(null)
   const timerRef = useRef(null)
   const containerRef = useRef(null)
   const editorRef = useRef(null)
+  const autosaveEnabledRef = useRef(true)
+  const autosaveDataRef = useRef({ code: '', time: 0, runCount: 0 })
+  const lastAutosaveRef = useRef({ code: '', time: 0, runCount: 0 })
+  const autosaveInFlightRef = useRef(false)
   const allowClipboard = true //toggle for disabling copy & paste in editor
+  const allowFullscreen = false // toggle for disabling fullscreen guard
+
+  const {
+    isFullscreen,
+    isSupported: fullscreenSupported,
+    needsUserGesture,
+    showExitModal,
+    continueWithoutFullscreen,
+    autosaveEnabled,
+    requestFullscreen,
+    exitFullscreen,
+    handleContinueWithoutFullscreen
+    // } = useFullscreenGuard({ targetRef: containerRef })
+  } = useFullscreenGuard({ targetRef: containerRef, enabled: allowFullscreen })
 
   const showClipboardBlockedToast = useCallback(() => {
     setClipboardToast(true)
     setTimeout(() => setClipboardToast(false), 2000)
+  }, [])
+
+  const showSaveDisabledToast = useCallback(() => {
+    setSaveDisabledToast(true)
+    setTimeout(() => setSaveDisabledToast(false), 2000)
   }, [])
 
   const handleEditorMount = useCallback((editor, monaco) => {
@@ -106,6 +136,74 @@ export default function ChallengeEditor() {
       if (timerRef.current) clearInterval(timerRef.current)
     }
   }, [])
+
+  useEffect(() => {
+    autosaveEnabledRef.current = autosaveEnabled
+  }, [autosaveEnabled])
+
+  useEffect(() => {
+    autosaveDataRef.current = { code, time, runCount }
+  }, [code, time, runCount])
+
+  useEffect(() => {
+    lastAutosaveRef.current = { code: '', time: 0, runCount: 0 }
+  }, [challengeId])
+
+  const saveProgress = useCallback(async (payload, { silent = false } = {}) => {
+    if (!autosaveEnabledRef.current) {
+      if (!silent) {
+        showSaveDisabledToast()
+      }
+      return false
+    }
+
+    try {
+      await api.post('/api/progress/save', payload)
+      return true
+    } catch (error) {
+      return false
+    }
+  }, [showSaveDisabledToast])
+
+  const attemptAutosave = useCallback(async () => {
+    if (!autosaveEnabledRef.current) return
+    if (!challengeId || autosaveInFlightRef.current) return
+
+    const current = autosaveDataRef.current
+    const last = lastAutosaveRef.current
+    if (
+      current.code === last.code &&
+      current.time === last.time &&
+      current.runCount === last.runCount
+    ) {
+      return
+    }
+
+    autosaveInFlightRef.current = true
+    const saved = await saveProgress({
+      challengeId,
+      code: current.code,
+      time: current.time,
+      runCount: current.runCount,
+      completed: false
+    }, { silent: true })
+
+    if (saved) {
+      lastAutosaveRef.current = { ...current }
+    }
+    autosaveInFlightRef.current = false
+  }, [challengeId, saveProgress])
+
+  useEffect(() => {
+    if (!challengeId || !challenge || showResults) return undefined
+    if (!autosaveEnabled) return undefined
+
+    const interval = setInterval(() => {
+      attemptAutosave()
+    }, AUTOSAVE_INTERVAL_MS)
+
+    return () => clearInterval(interval)
+  }, [attemptAutosave, autosaveEnabled, challenge, challengeId, showResults])
 
   const fetchChallenge = async () => {
     try {
@@ -199,7 +297,7 @@ export default function ChallengeEditor() {
         startedAt: startedAt.toISOString()
       })
 
-      await api.post(`/api/progress/save`, {
+      await saveProgress({
         challengeId,
         code,
         time,
@@ -210,7 +308,8 @@ export default function ChallengeEditor() {
       if (submitResponse.data?.badgeUnlocked) {
         setUnlockedBadge(submitResponse.data.badgeUnlocked)
       }
-      
+
+      await exitFullscreen({ suppressModal: true })
       setShowResults(true)
     } catch (error) {
       console.error('Failed to finish challenge:', error)
@@ -238,19 +337,21 @@ export default function ChallengeEditor() {
     }
     setFinalTestResults(testsForOverlay)
     
-    await api.post(`/api/progress/save`, {
+    await saveProgress({
       challengeId,
       code,
       time,
       runCount,
       completed: false
-    }).catch(() => {})
-    
+    })
+
+    await exitFullscreen({ suppressModal: true })
     setShowExitConfirm(false)
     setShowResults(true)
   }
 
   const handleBackToChallenges = () => {
+    exitFullscreen({ suppressModal: true })
     navigate(`/challenges/${challenge?.language}/${challenge?.difficulty}`)
   }
 
@@ -266,18 +367,22 @@ export default function ChallengeEditor() {
       const currentIndex = challenges.findIndex(c => c._id === challengeId)
       if (currentIndex >= 0 && currentIndex < challenges.length - 1) {
         const nextChallengeId = challenges[currentIndex + 1]._id
+        exitFullscreen({ suppressModal: true })
         navigate(`/challenges/${challenge?.language}/${challenge?.difficulty}`, {
           state: { retryChallengeId: nextChallengeId }
         })
       } else {
+        exitFullscreen({ suppressModal: true })
         navigate(`/challenges/${challenge?.language}/${challenge?.difficulty}`)
       }
     } catch (error) {
+      exitFullscreen({ suppressModal: true })
       navigate(`/challenges/${challenge?.language}/${challenge?.difficulty}`)
     }
   }
 
   const handleRetry = () => {
+    exitFullscreen({ suppressModal: true })
     navigate(`/challenges/${challenge?.language}/${challenge?.difficulty}`, {
       state: { retryChallengeId: challengeId }
     })
@@ -363,6 +468,14 @@ export default function ChallengeEditor() {
     }
     return []
   }
+
+  // const entryOverlayVisible = needsUserGesture && fullscreenSupported && !isFullscreen
+  // const showFullscreenWarningBanner = continueWithoutFullscreen
+  // const showFullscreenUnsupportedBanner = !fullscreenSupported
+
+  const entryOverlayVisible = allowFullscreen && needsUserGesture && fullscreenSupported && !isFullscreen
+  const showFullscreenWarningBanner = allowFullscreen && continueWithoutFullscreen
+  const showFullscreenUnsupportedBanner = allowFullscreen && !fullscreenSupported
 
   if (loading) {
     return (
@@ -519,6 +632,22 @@ export default function ChallengeEditor() {
             <span className="sm:hidden">Finish</span>
           </button>
         </div>
+
+        {showFullscreenWarningBanner && (
+          <FullscreenStatusBanner
+            variant="warning"
+            message="Saving is disabled outside fullscreen. Re-enter fullscreen to resume autosave."
+            actionLabel="Re-enter Fullscreen"
+            onAction={() => requestFullscreen({ userGesture: true })}
+          />
+        )}
+
+        {!showFullscreenWarningBanner && showFullscreenUnsupportedBanner && (
+          <FullscreenStatusBanner
+            variant="info"
+            message="Fullscreen is not supported in this browser. You can continue without it."
+          />
+        )}
 
         <button
           onClick={() => setShowInstructions(!showInstructions)}
@@ -727,6 +856,17 @@ export default function ChallengeEditor() {
         )}
       </div>
 
+      <FullscreenExitModal
+        isOpen={showExitModal}
+        onReenter={() => requestFullscreen({ userGesture: true })}
+        onContinue={handleContinueWithoutFullscreen}
+      />
+
+      <FullscreenEntryOverlay
+        isOpen={entryOverlayVisible}
+        onRequestFullscreen={() => requestFullscreen({ userGesture: true })}
+      />
+
       <ConfirmDialog
         isOpen={showExitConfirm}
         title="Exit Challenge"
@@ -773,6 +913,15 @@ export default function ChallengeEditor() {
           }
         }}
       />
+
+      {saveDisabledToast && (
+        <div className="fixed bottom-28 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in">
+          <div className="flex items-center gap-2 bg-red-900/90 text-red-100 px-4 py-2 rounded-lg shadow-lg border border-red-700">
+            <ShieldAlert className="w-4 h-4" />
+            <span className="text-sm font-medium">Saving is disabled outside fullscreen.</span>
+          </div>
+        </div>
+      )}
 
       {!allowClipboard && clipboardToast && (
         <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in">
