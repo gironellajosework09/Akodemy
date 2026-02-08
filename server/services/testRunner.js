@@ -124,12 +124,13 @@ function it(description, fn) {
   test(description, fn);
 }
 
-function xtest() {
-  // Jest's xtest is a skipped test.
+function xtest(description, fn) {
+  // Run x-tests as normal tests so Exercism's disabled cases are still enforced.
+  test(description, fn);
 }
 
-function xit() {
-  // Jest's xit is a skipped test.
+function xit(description, fn) {
+  it(description, fn);
 }
 
 function describe(name, fn) {
@@ -142,8 +143,8 @@ function describe(name, fn) {
   __afterEach = prevAfter;
 }
 
-function xdescribe() {
-  // Jest's xdescribe is a skipped suite.
+function xdescribe(name, fn) {
+  describe(name, fn);
 }
 
 test.skip = function skipTest() {}

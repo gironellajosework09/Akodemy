@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Search, Plus, Download, Upload, ChevronLeft, ChevronRight, Users, User, GraduationCap, X, AlertCircle, CheckCircle, UserX, UserCheck, MoreVertical } from 'lucide-react'
+import { Search, Plus, Download, Upload, ChevronLeft, ChevronRight, Users, User, GraduationCap, X, AlertCircle, CheckCircle, UserX, UserCheck, Pencil } from 'lucide-react'
 import Layout from '../../components/Layout'
 import { InlineSpinner } from '../../components/LoadingSpinner'
 import api from '../../services/api'
@@ -17,6 +17,10 @@ export default function UserManagement() {
   const [bulkResult, setBulkResult] = useState(null)
   const [statusModal, setStatusModal] = useState(null)
   const [statusLoading, setStatusLoading] = useState(false)
+  const [editModal, setEditModal] = useState(null)
+  const [editForm, setEditForm] = useState({ uid: '', fullName: '', email: '' })
+  const [editError, setEditError] = useState('')
+  const [editLoading, setEditLoading] = useState(false)
 
   const fetchUsers = useCallback(async () => {
     setLoading(true)
@@ -92,6 +96,54 @@ export default function UserManagement() {
       console.error('Failed to update user status:', error)
     } finally {
       setStatusLoading(false)
+    }
+  }
+
+  const openEditModal = (user) => {
+    setEditError('')
+    setEditForm({
+      uid: user.uid || '',
+      fullName: user.fullName || '',
+      email: user.email || ''
+    })
+    setEditModal(user)
+  }
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target
+    setEditForm(prev => ({ ...prev, [name]: value }))
+    setEditError('')
+  }
+
+  const validateEdit = () => {
+    if (!editForm.uid.trim()) return 'UID is required'
+    if (!editForm.fullName.trim()) return 'Full name is required'
+    if (!editForm.email.trim()) return 'Email is required'
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editForm.email)) return 'Invalid email format'
+    return null
+  }
+
+  const handleEditSave = async () => {
+    if (!editModal) return
+    const validationError = validateEdit()
+    if (validationError) {
+      setEditError(validationError)
+      return
+    }
+    setEditLoading(true)
+    setEditError('')
+    try {
+      await api.patch(`/api/admin/users/${editModal._id}`, {
+        uid: editForm.uid.trim(),
+        fullName: editForm.fullName.trim(),
+        email: editForm.email.trim()
+      })
+      setEditModal(null)
+      fetchUsers()
+    } catch (error) {
+      setEditError(error.response?.data?.message || 'Failed to update user')
+    } finally {
+      setEditLoading(false)
     }
   }
 
@@ -257,26 +309,35 @@ export default function UserManagement() {
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <button
-                            onClick={() => setStatusModal(user)}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-                              user.isActive
-                                ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                                : 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
-                            }`}
-                          >
-                            {user.isActive ? (
-                              <>
-                                <UserX className="w-3 h-3" />
-                                Deactivate
-                              </>
-                            ) : (
-                              <>
-                                <UserCheck className="w-3 h-3" />
-                                Activate
-                              </>
-                            )}
-                          </button>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              onClick={() => openEditModal(user)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition bg-gray-600/60 text-gray-200 hover:bg-gray-600"
+                            >
+                              <Pencil className="w-3 h-3" />
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => setStatusModal(user)}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+                                user.isActive
+                                  ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                                  : 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                              }`}
+                            >
+                              {user.isActive ? (
+                                <>
+                                  <UserX className="w-3 h-3" />
+                                  Deactivate
+                                </>
+                              ) : (
+                                <>
+                                  <UserCheck className="w-3 h-3" />
+                                  Activate
+                                </>
+                              )}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -380,6 +441,71 @@ export default function UserManagement() {
           </div>
         </div>
       )}
+
+      {editModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 border border-gray-700 rounded-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-4 border-b border-gray-700">
+              <h2 className="text-xl font-bold text-white">Edit User</h2>
+              <button onClick={() => setEditModal(null)} className="text-gray-400 hover:text-white">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              {editError && (
+                <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+                  {editError}
+                </div>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">UID</label>
+                <input
+                  type="text"
+                  name="uid"
+                  value={editForm.uid}
+                  onChange={handleEditChange}
+                  className="w-full px-4 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-akodemy-purple"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Full Name</label>
+                <input
+                  type="text"
+                  name="fullName"
+                  value={editForm.fullName}
+                  onChange={handleEditChange}
+                  className="w-full px-4 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-akodemy-purple"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={editForm.email}
+                  onChange={handleEditChange}
+                  className="w-full px-4 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-akodemy-purple"
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setEditModal(null)}
+                  className="flex-1 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleEditSave}
+                  disabled={editLoading}
+                  className="flex-1 py-2.5 bg-akodemy-purple hover:bg-akodemy-purple/80 text-white rounded-lg transition disabled:opacity-50"
+                >
+                  {editLoading ? <InlineSpinner /> : 'Save Changes'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   )
 }
@@ -400,6 +526,12 @@ function AddUserModal({ onClose, onSuccess }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target
+    if (name === 'yearLevelAndSection') {
+      const normalized = value.toUpperCase().replace(/[^0-9A-Z]/g, '').slice(0, 2)
+      setFormData(prev => ({ ...prev, [name]: normalized }))
+      setError('')
+      return
+    }
     setFormData(prev => ({ ...prev, [name]: value }))
     setError('')
   }
@@ -410,8 +542,8 @@ function AddUserModal({ onClose, onSuccess }) {
     if (!formData.givenName.trim()) return 'Given Name is required'
     if (!formData.email.trim()) return 'Email is required'
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) return 'Invalid email format'
-    if (formData.role === 'student' && !formData.yearLevelAndSection.trim()) {
-      return 'Year Level & Section is required for students'
+    if (formData.role === 'student' && !/^[1-9][A-Z]$/.test(formData.yearLevelAndSection.trim())) {
+      return 'Year Level & Section must be in Number and Capital Letter (e.g. 4A)'
     }
     return null
   }
@@ -564,7 +696,8 @@ function AddUserModal({ onClose, onSuccess }) {
                   name="yearLevelAndSection"
                   value={formData.yearLevelAndSection}
                   onChange={handleChange}
-                  placeholder="e.g., 3-A"
+                  placeholder="e.g., 4A"
+                  maxLength={2}
                   className="w-full px-4 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-akodemy-purple"
                 />
               </div>

@@ -185,6 +185,11 @@ export default function Profile() {
       setFormData(prev => ({ ...prev, [name]: normalized }))
       return
     }
+    if (name === 'phone') {
+      const digitsOnly = value.replace(/\D/g, '').slice(0, 11)
+      setFormData(prev => ({ ...prev, [name]: digitsOnly }))
+      return
+    }
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
@@ -273,9 +278,22 @@ export default function Profile() {
     return ''
   }
 
+  const getPhoneError = () => {
+    if (!formData.phone) return ''
+    if (formData.phone.length !== 11) {
+      return 'Contact number must be exactly 11 digits.'
+    }
+    return ''
+  }
+
   const handleSaveRequest = () => {
     if (!isYearSectionValid()) {
       showToast('Year must be a number and section must be an uppercase letter.', 'error')
+      return
+    }
+    const phoneError = getPhoneError()
+    if (phoneError) {
+      showToast(phoneError, 'error')
       return
     }
     const birthdateError = getBirthdateError()
@@ -529,9 +547,8 @@ export default function Profile() {
                       type="text"
                       name="name"
                       value={formData.name}
-                      onChange={handleChange}
-                      readOnly={!isEditing}
-                      className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-akodemy-purple focus:border-transparent"
+                      readOnly
+                      className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-gray-500 cursor-not-allowed"
                     />
                   </div>
                   <div>
@@ -601,6 +618,9 @@ export default function Profile() {
                       value={formData.phone}
                       onChange={handleChange}
                       placeholder="Enter your phone number"
+                      inputMode="numeric"
+                      maxLength={11}
+                      pattern="\d{11}"
                       readOnly={!isEditing}
                       className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-akodemy-purple focus:border-transparent"
                     />

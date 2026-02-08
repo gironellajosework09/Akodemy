@@ -19,6 +19,24 @@ const LANGUAGE_DISPLAY = {
   java: { name: 'Java', icon: '☕', bgColor: 'bg-orange-500' }
 }
 
+const BADGE_IMAGES = {
+  javascript: {
+    beginner: '/images/Starter.png',
+    intermediate: '/images/Engineer.png',
+    advanced: '/images/Architect.png'
+  },
+  python: {
+    beginner: '/images/hatcher.png',
+    intermediate: '/images/handler.png',
+    advanced: '/images/Expert.png'
+  },
+  java: {
+    beginner: '/images/Barista.png',
+    intermediate: '/images/Brewer.png',
+    advanced: '/images/Roastmaster.png'
+  }
+}
+
 export default function StudentProfileView() {
   const navigate = useNavigate()
   const { studentId } = useParams()
@@ -380,6 +398,7 @@ export default function StudentProfileView() {
                         const isLocked = badge.status === 'locked'
                         const isClaimed = badge.status === 'claimed'
                         const isClaimable = badge.status === 'claimable'
+                        const badgeImage = BADGE_IMAGES?.[badge.language]?.[badge.difficulty] || '/images/akodemy-logo.png'
 
                         return (
                           <div
@@ -401,7 +420,11 @@ export default function StudentProfileView() {
                                 {isLocked ? (
                                   <Lock className="w-5 h-5 text-gray-400" />
                                 ) : (
-                                  <span className="text-base">{langInfo.icon}</span>
+                                  <img
+                                    src={badgeImage}
+                                    alt={badge.badgeName}
+                                    className="w-8 h-8 object-contain"
+                                  />
                                 )}
                               </div>
                               

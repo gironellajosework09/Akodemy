@@ -9,14 +9,14 @@ const BADGE_INFO = {
     advanced: { name: 'Java Roastmaster', image: '/images/Roastmaster.png', color: 'from-amber-500 to-red-700' }
   },
   python: {
-    beginner: { name: 'Python Hatcher', image: '/images/hatcher.png', color: 'from-green-500 to-emerald-600' },
+    beginner: { name: 'Python Catcher', image: '/images/hatcher.png', color: 'from-green-500 to-emerald-600' },
     intermediate: { name: 'Python Handler', image: '/images/handler.png', color: 'from-emerald-500 to-green-600' },
     advanced: { name: 'Python Expert', image: '/images/Expert.png', color: 'from-teal-500 to-green-700' }
   },
   javascript: {
-    beginner: { name: 'JavaScript Starter', image: '/images/Starter.png', color: 'from-yellow-500 to-amber-600' },
-    intermediate: { name: 'JavaScript Engineer', image: '/images/Engineer.png', color: 'from-amber-500 to-yellow-600' },
-    advanced: { name: 'JavaScript Architect', image: '/images/Architect.png', color: 'from-orange-500 to-yellow-700' }
+    beginner: { name: 'Script Starter', image: '/images/Starter.png', color: 'from-yellow-500 to-amber-600' },
+    intermediate: { name: 'Script Engineer', image: '/images/Engineer.png', color: 'from-amber-500 to-yellow-600' },
+    advanced: { name: 'Script Architect', image: '/images/Architect.png', color: 'from-orange-500 to-yellow-700' }
   }
 }
 

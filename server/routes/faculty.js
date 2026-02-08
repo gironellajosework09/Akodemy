@@ -6,7 +6,7 @@ import Submission from '../models/Submission.js'
 import Challenge, { COMPETENCY_NAMES } from '../models/Challenge.js'
 import LatestAnswer from '../models/LatestAnswer.js'
 import Badge from '../models/Badge.js'
-import { BADGE_MAPPING } from '../services/badgeService.js'
+import { getBadgeProgress } from '../services/badgeService.js'
 
 // Route handlers for Faculty APIs.
 const router = express.Router()
@@ -153,28 +153,15 @@ router.get('/students', authenticateToken, requireRole('faculty'), async (req, r
 
     const studentIds = students.map(s => s._id)
     
-    const [progressData, challengeCounts, equippedBadges, badgeCounts] = await Promise.all([
-      Submission.aggregate([
-        { $match: { userId: { $in: studentIds }, completed: true } },
-        {
-          $lookup: {
-            from: 'challenges',
-            localField: 'challengeId',
-            foreignField: '_id',
-            as: 'challenge'
-          }
-        },
-        { $unwind: '$challenge' },
-        {
-          $group: {
-            _id: { userId: '$userId', language: '$challenge.language' },
-            count: { $sum: 1 }
-          }
-        }
-      ]),
+    const [correctAnswers, challengeCounts, allChallenges, equippedBadges, badgeCounts] = await Promise.all([
+      LatestAnswer.find({
+        userId: { $in: studentIds },
+        isCorrect: true
+      }).select('userId challengeId'),
       Challenge.aggregate([
         { $group: { _id: '$language', count: { $sum: 1 } } }
       ]),
+      Challenge.find({}).select('_id language'),
       Badge.find({ equipped: true }).select('userId badgeName language difficulty'),
       Badge.aggregate([
         { $match: { status: 'claimed' } },
@@ -187,12 +174,27 @@ router.get('/students', authenticateToken, requireRole('faculty'), async (req, r
       totalByLang[c._id] = c.count
     })
 
+    const challengeLangMap = {}
+    allChallenges.forEach(challenge => {
+      challengeLangMap[challenge._id.toString()] = challenge.language
+    })
+
+    const correctCountMap = {}
+    correctAnswers.forEach(answer => {
+      const userKey = answer.userId.toString()
+      const lang = challengeLangMap[answer.challengeId.toString()]
+      if (!lang) return
+      if (!correctCountMap[userKey]) correctCountMap[userKey] = {}
+      correctCountMap[userKey][lang] = (correctCountMap[userKey][lang] || 0) + 1
+    })
+
     const progressMap = {}
-    progressData.forEach(p => {
-      const key = p._id.userId.toString()
-      if (!progressMap[key]) progressMap[key] = {}
-      const total = totalByLang[p._id.language] || 1
-      progressMap[key][p._id.language] = Math.round((p.count / total) * 100)
+    Object.entries(correctCountMap).forEach(([userKey, langCounts]) => {
+      progressMap[userKey] = {}
+      Object.entries(langCounts).forEach(([lang, count]) => {
+        const total = totalByLang[lang] || 1
+        progressMap[userKey][lang] = Math.round((count / total) * 100)
+      })
     })
 
     const equippedMap = {}
@@ -249,11 +251,10 @@ router.get('/students/:studentId/profile', authenticateToken, requireRole('facul
   try {
     const { studentId } = req.params
 
-    const [student, badges, allChallenges, acceptedSubmissions] = await Promise.all([
+    const [student, badges, badgeProgress] = await Promise.all([
       User.findById(studentId).select('-password'),
       Badge.find({ userId: studentId }).sort({ unlockedAt: -1 }),
-      Challenge.find({}).select('_id language difficulty'),
-      Submission.find({ userId: studentId, status: 'accepted' }).select('challengeId')
+      getBadgeProgress(studentId)
     ])
 
     if (!student || student.role !== 'student') {
@@ -261,43 +262,6 @@ router.get('/students/:studentId/profile', authenticateToken, requireRole('facul
     }
 
     const equippedBadge = badges.find(b => b.equipped)
-
-    const completedChallengeIds = new Set(
-      acceptedSubmissions.map(s => s.challengeId.toString())
-    )
-
-    const challengesByLangDiff = {}
-    allChallenges.forEach(c => {
-      const key = `${c.language}-${c.difficulty}`
-      if (!challengesByLangDiff[key]) {
-        challengesByLangDiff[key] = []
-      }
-      challengesByLangDiff[key].push(c._id.toString())
-    })
-
-    const languages = ['javascript', 'python', 'java']
-    const difficulties = ['beginner', 'intermediate', 'advanced']
-    const badgeProgress = {}
-
-    for (const language of languages) {
-      badgeProgress[language] = {}
-      for (const difficulty of difficulties) {
-        const key = `${language}-${difficulty}`
-        const challengeIds = challengesByLangDiff[key] || []
-        const completedCount = challengeIds.filter(id => completedChallengeIds.has(id)).length
-        const existingBadge = badges.find(b => b.language === language && b.difficulty === difficulty)
-        
-        badgeProgress[language][difficulty] = {
-          completed: completedCount,
-          total: challengeIds.length,
-          badgeName: BADGE_MAPPING[language]?.[difficulty] || null,
-          status: existingBadge?.status || 'locked',
-          equipped: existingBadge?.equipped || false,
-          unlockedAt: existingBadge?.unlockedAt || null,
-          claimedAt: existingBadge?.claimedAt || null
-        }
-      }
-    }
 
     res.json({
       student: {

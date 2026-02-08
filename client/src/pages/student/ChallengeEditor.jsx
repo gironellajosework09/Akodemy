@@ -55,6 +55,7 @@ export default function ChallengeEditor() {
   const autosaveInFlightRef = useRef(false)
   const allowClipboard = true //toggle for disabling copy & paste in editor
   const allowFullscreen = false // toggle for disabling fullscreen guard
+  const editorKey = allowClipboard ? 'clipboard-on' : 'clipboard-off'
 
   const {
     isFullscreen,
@@ -66,7 +67,7 @@ export default function ChallengeEditor() {
     requestFullscreen,
     exitFullscreen,
     handleContinueWithoutFullscreen
-    // } = useFullscreenGuard({ targetRef: containerRef })
+  // } = useFullscreenGuard({ targetRef: containerRef })
   } = useFullscreenGuard({ targetRef: containerRef, enabled: allowFullscreen })
 
   const showClipboardBlockedToast = useCallback(() => {
@@ -469,13 +470,13 @@ export default function ChallengeEditor() {
     return []
   }
 
-  // const entryOverlayVisible = needsUserGesture && fullscreenSupported && !isFullscreen
-  // const showFullscreenWarningBanner = continueWithoutFullscreen
-  // const showFullscreenUnsupportedBanner = !fullscreenSupported
+  const entryOverlayVisible = needsUserGesture && fullscreenSupported && !isFullscreen
+  const showFullscreenWarningBanner = continueWithoutFullscreen
+  const showFullscreenUnsupportedBanner = !fullscreenSupported
 
-  const entryOverlayVisible = allowFullscreen && needsUserGesture && fullscreenSupported && !isFullscreen
-  const showFullscreenWarningBanner = allowFullscreen && continueWithoutFullscreen
-  const showFullscreenUnsupportedBanner = allowFullscreen && !fullscreenSupported
+  // const entryOverlayVisible = allowFullscreen && needsUserGesture && fullscreenSupported && !isFullscreen
+  // const showFullscreenWarningBanner = allowFullscreen && continueWithoutFullscreen
+  // const showFullscreenUnsupportedBanner = allowFullscreen && !fullscreenSupported
 
   if (loading) {
     return (
@@ -605,7 +606,7 @@ export default function ChallengeEditor() {
 
   return (
     <>
-      <div ref={containerRef} className="h-screen bg-gray-900 flex flex-col">
+      <div ref={containerRef} className="h-[100dvh] min-h-screen bg-gray-900 flex flex-col">
         <div className="bg-gray-800 border-b border-gray-700 text-white px-3 sm:px-6 py-2 sm:py-3 flex items-center justify-between">
           <button
             onClick={goBack}
@@ -720,13 +721,23 @@ export default function ChallengeEditor() {
             <History className="w-3.5 h-3.5" />
             History
           </button>
-          <div className="ml-auto text-xs text-gray-500">
-            Runs: {runCount}
+          <div className="ml-auto flex items-center gap-2">
+            <div className="text-xs text-gray-500">
+              Runs: {runCount}
+            </div>
+            <button
+              onClick={runCode}
+              disabled={running}
+              className="md:hidden flex items-center gap-1.5 bg-akodemy-purple text-white px-3 py-1.5 rounded-lg hover:bg-purple-700 disabled:opacity-50 transition text-xs"
+            >
+              <Play className="w-3.5 h-3.5" />
+              {running ? 'Running...' : 'Run'}
+            </button>
           </div>
         </div>
 
         {isMobile ? (
-          <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+          <div className="flex-1 flex flex-col overflow-hidden min-h-0 pb-20">
             <div className="flex border-b border-gray-700 bg-gray-800">
               <button
                 onClick={() => setActiveTab('editor')}
@@ -760,10 +771,11 @@ export default function ChallengeEditor() {
                     </div>
                   )}
                   <div className="flex-1">
-                    <Editor
-                      height="100%"
-                      language={getEditorLanguage(challenge?.language)}
-                      value={code}
+                  <Editor
+                    key={`challenge-editor-${editorKey}`}
+                    height="100%"
+                    language={getEditorLanguage(challenge?.language)}
+                    value={code}
                       onChange={(value) => setCode(value || '')}
                       onMount={handleEditorMount}
                       theme="vs-dark"
@@ -784,17 +796,6 @@ export default function ChallengeEditor() {
                 </div>
               )}
             </div>
-
-            <div className="border-t border-gray-700 p-3 flex items-center justify-end bg-gray-800 sticky bottom-0 z-10">
-              <button
-                onClick={runCode}
-                disabled={running}
-                className="flex items-center gap-2 bg-akodemy-purple text-white px-6 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 transition text-sm"
-              >
-                <Play className="w-4 h-4" />
-                {running ? 'Running...' : 'Run Code'}
-              </button>
-            </div>
           </div>
         ) : (
           <div className="flex-1 flex flex-col overflow-hidden min-h-0">
@@ -811,6 +812,7 @@ export default function ChallengeEditor() {
                 </div>
                 <div className="flex-1">
                   <Editor
+                    key={`challenge-editor-${editorKey}`}
                     height="100%"
                     language={getEditorLanguage(challenge?.language)}
                     value={code}
@@ -855,6 +857,21 @@ export default function ChallengeEditor() {
           />
         )}
       </div>
+
+      {isMobile && (
+        <div className="fixed bottom-0 left-0 right-0 z-[60] border-t border-gray-700 bg-gray-800 px-4 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] shadow-[0_-6px_20px_rgba(0,0,0,0.35)]">
+          <div className="flex items-center justify-end">
+            <button
+              onClick={runCode}
+              disabled={running}
+              className="flex items-center gap-2 bg-akodemy-purple text-white px-6 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 transition text-sm"
+            >
+              <Play className="w-4 h-4" />
+              {running ? 'Running...' : 'Run Code'}
+            </button>
+          </div>
+        </div>
+      )}
 
       <FullscreenExitModal
         isOpen={showExitModal}
@@ -934,6 +951,3 @@ export default function ChallengeEditor() {
     </>
   )
 }
-
-
-

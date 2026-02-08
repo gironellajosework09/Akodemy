@@ -247,12 +247,16 @@ alias_map = {
     "leap": {"leap_year": "is_leap"},
     "reverse-string": {"reverse": "reverse_string"},
     "hamming": {"distance": "hamming"},
+    "isogram": {"isogram": "is_isogram"},
+    "pangram": {"pangram": "is_pangram"},
+    "rna-transcription": {"rna_transcription": "to_rna"},
     "binary-search": {"find": "binary_search"},
     "roman-numerals": {"roman": "to_roman", "roman_numerals": "to_roman"},
+    "anagram": {"anagram": "find_anagrams"},
     "run-length-encoding": {"run_length_encoding": "encode"},
     "sum-of-multiples": {"sum_multiples": "sum_of_multiples", "sum": "sum_of_multiples"},
     "sum-multiples": {"sum_multiples": "sum_of_multiples", "sum": "sum_of_multiples"},
-    "triangle": {"equilateral": "triangle_type", "isosceles": "triangle_type", "scalene": "triangle_type"},
+    "triangle": {"triangle": "triangle_type", "equilateral": "triangle_type", "isosceles": "triangle_type", "scalene": "triangle_type"},
 }
 
 if exercise_slug == "triangle" and "triangle_type" in globals():
@@ -290,6 +294,25 @@ def get_input_args(input_obj):
     if exercise_slug == "reverse-string" and isinstance(input_obj, dict):
         if "value" in input_obj and len(input_obj) == 1:
             return [input_obj["value"]], {}
+    if exercise_slug == "isogram" and isinstance(input_obj, dict):
+        if "phrase" in input_obj and len(input_obj) == 1:
+            return [input_obj["phrase"]], {}
+    if exercise_slug == "pangram" and isinstance(input_obj, dict):
+        if "sentence" in input_obj and len(input_obj) == 1:
+            return [input_obj["sentence"]], {}
+    if exercise_slug == "triangle" and isinstance(input_obj, dict):
+        if "sides" in input_obj:
+            sides = input_obj["sides"]
+            if isinstance(sides, list):
+                if input_obj.get("_property") in ("equilateral", "isosceles", "scalene"):
+                    return [sides], {}
+                return sides, {}
+    if exercise_slug in ("rna-transcription", "rna") and isinstance(input_obj, dict):
+        if "strand" in input_obj and len(input_obj) == 1:
+            return [input_obj["strand"]], {}
+    if exercise_slug == "anagram" and isinstance(input_obj, dict):
+        if "subject" in input_obj and "candidates" in input_obj:
+            return [input_obj["subject"], input_obj["candidates"]], {}
     if exercise_slug in ("sum-of-multiples", "sum-multiples") and isinstance(input_obj, dict):
         if "limit" in input_obj and "factors" in input_obj:
             return [input_obj["limit"], input_obj["factors"]], {}
@@ -312,7 +335,11 @@ details = []
 
 for tc in test_cases:
     try:
-        args, kwargs = get_input_args(tc['input'])
+        raw_input = tc['input']
+        if exercise_slug == "triangle" and isinstance(raw_input, dict):
+            raw_input = dict(raw_input)
+            raw_input["_property"] = tc.get('property')
+        args, kwargs = get_input_args(raw_input)
         fn_name = camel_to_snake(tc.get('property', '${functionName}'))
         if exercise_slug == "run-length-encoding" and fn_name == "consistency":
             if "encode" not in globals() or "decode" not in globals():

@@ -363,7 +363,7 @@ export default function Login() {
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-white mb-2">
-              {mode === 'login' && (isAdminMode ? 'Admin Login' : 'Welcome Back')}
+              {mode === 'login' && (isAdminMode ? 'Admin Login' : 'Welcome to Akodemy')}
               {mode === 'forgot' && 'Forgot Password'}
               {mode === 'otp' && 'Verify OTP'}
               {mode === 'reset' && 'Reset Password'}
@@ -404,7 +404,7 @@ export default function Login() {
                   </div>
                 )}
                 <div>
-                  <label className="block text-gray-300 mb-2 text-sm font-medium">Email or Username</label>
+                  <label className="block text-gray-300 mb-2 text-sm font-medium">Email or ID Number</label>
                   <input
                     ref={emailRef}
                     type="text"
@@ -476,7 +476,7 @@ export default function Login() {
                   ) : 'Sign In'}
                 </button>
 
-                <div className="mt-4 text-center">
+                {/* <div className="mt-4 text-center">
                   <button
                     type="button"
                     onClick={() => { 
@@ -490,7 +490,7 @@ export default function Login() {
                   >
                     {isAdminMode ? 'Back to regular login' : 'Are you an admin? Login as admin'}
                   </button>
-                </div>
+                </div> */}
               </form>
             )}
 
@@ -668,10 +668,6 @@ export default function Login() {
             )}
 
           </div>
-
-          <p className="text-center text-gray-600 text-xs mt-6">
-            By continuing, you agree to Akodemy's Terms of Service and Privacy Policy.
-          </p>
         </div>
       </div>
 

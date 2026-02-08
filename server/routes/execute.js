@@ -164,7 +164,7 @@ router.post('/', async (req, res) => {
             } catch {}
           }
 
-          if (normalizedLanguage === 'python' && (baseSlug === 'run-length-encoding' || baseSlug === 'binary-search' || baseSlug === 'flatten-array' || baseSlug === 'roman-numerals' || baseSlug === 'reverse-string' || baseSlug === 'sum-of-multiples' || baseSlug === 'sum-multiples' || baseSlug === 'two-fer')) {
+          if (normalizedLanguage === 'python' && (baseSlug === 'run-length-encoding' || baseSlug === 'binary-search' || baseSlug === 'flatten-array' || baseSlug === 'roman-numerals' || baseSlug === 'reverse-string' || baseSlug === 'sum-of-multiples' || baseSlug === 'sum-multiples' || baseSlug === 'two-fer' || baseSlug === 'anagram' || baseSlug === 'hamming' || baseSlug === 'isogram' || baseSlug === 'pangram' || baseSlug === 'rna-transcription' || baseSlug === 'rna' || baseSlug === 'triangle')) {
             const hasInputs = tests.some(hasMeaningfulInput)
             if (!hasInputs) {
               try {
@@ -340,6 +340,10 @@ router.post('/', async (req, res) => {
                   leap: ['is_leap'],
                   'reverse-string': ['reverse_string'],
                   hamming: ['hamming'],
+                  isogram: ['is_isogram'],
+                  pangram: ['is_pangram'],
+                  rna: ['to_rna'],
+                  anagram: ['find_anagrams'],
                   triangle: ['triangle_type'],
                   'binary-search': ['binary_search'],
                   'roman-numerals': ['to_roman'],

@@ -10,6 +10,16 @@ const router = express.Router()
 router.use(authenticateToken)
 router.use(requireAdmin)
 
+const normalizeYearLevelAndSection = (value) => {
+  const normalized = String(value || '')
+    .trim()
+    .toUpperCase()
+    .replace(/[^0-9A-Z]/g, '')
+
+  if (!normalized) return ''
+  return /^[1-9][A-Z]$/.test(normalized) ? normalized : ''
+}
+
 router.get('/users', async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1
@@ -74,7 +84,9 @@ router.get('/users', async (req, res) => {
         fullName,
         email: user.email,
         role: user.role,
-        yearLevelAndSection: user.role === 'student' ? (user.yearLevelAndSection || user.yearSection || '—') : '—',
+        yearLevelAndSection: user.role === 'student'
+          ? (normalizeYearLevelAndSection(user.yearLevelAndSection || user.yearSection) || '—')
+          : '—',
         createdAt: user.createdAt,
         isActive: user.isActive !== false
       }
@@ -104,7 +116,7 @@ router.post('/users', async (req, res) => {
     const normalizedGivenName = String(givenName || '').trim()
     const normalizedMiddleName = String(middleName || '').trim()
     const normalizedRole = String(role || '').trim().toLowerCase()
-    const normalizedYearLevelAndSection = String(yearLevelAndSection || '').trim()
+    const normalizedYearLevelAndSection = normalizeYearLevelAndSection(yearLevelAndSection)
 
     if (!normalizedUid || !normalizedLastName || !normalizedGivenName || !normalizedEmail || !normalizedRole) {
       return res.status(400).json({ message: 'Required fields: uid, lastName, givenName, email, role' })
@@ -115,7 +127,7 @@ router.post('/users', async (req, res) => {
     }
 
     if (normalizedRole === 'student' && !normalizedYearLevelAndSection) {
-      return res.status(400).json({ message: 'Year Level & Section is required for students' })
+      return res.status(400).json({ message: 'Year Level & Section must be in Number and Capital Letter (e.g. 4A)' })
     }
 
     const existingEmail = await User.findOne({ email: normalizedEmail })
@@ -241,6 +253,112 @@ router.patch('/users/:id/status', async (req, res) => {
   }
 })
 
+router.patch('/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { uid, fullName, email } = req.body
+
+    const normalizedUid = String(uid || '').trim()
+    const normalizedEmail = String(email || '').trim().toLowerCase()
+    const normalizedFullName = String(fullName || '').trim()
+
+    if (!normalizedUid || !normalizedEmail || !normalizedFullName) {
+      return res.status(400).json({ message: 'UID, full name, and email are required' })
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      return res.status(400).json({ message: 'Invalid email format' })
+    }
+
+    const user = await User.findById(id)
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' })
+    }
+
+    if (user.role === 'admin') {
+      return res.status(403).json({ message: 'Cannot modify admin account details' })
+    }
+
+    const existingEmail = await User.findOne({ email: normalizedEmail, _id: { $ne: id } })
+    if (existingEmail) {
+      return res.status(409).json({
+        message: 'Email already exists',
+        conflict: { type: 'email', value: normalizedEmail, id: existingEmail._id, role: existingEmail.role }
+      })
+    }
+
+    const existingUid = await User.findOne({ uid: normalizedUid, _id: { $ne: id } })
+    if (existingUid) {
+      return res.status(409).json({
+        message: 'UID already exists',
+        conflict: { type: 'uid', value: normalizedUid, id: existingUid._id, role: existingUid.role }
+      })
+    }
+
+    const parseFullName = (value) => {
+      if (!value) {
+        return { name: '', lastName: null, givenName: null, middleName: null }
+      }
+      if (value.includes(',')) {
+        const [lastRaw, restRaw = ''] = value.split(',')
+        const lastName = lastRaw.trim()
+        const parts = restRaw.trim().split(/\s+/).filter(Boolean)
+        const givenName = parts.shift() || ''
+        const middleName = parts.length > 0 ? parts.join(' ') : null
+        const name = middleName ? `${lastName}, ${givenName} ${middleName}` : `${lastName}, ${givenName}`.trim()
+        return { name: name.trim(), lastName: lastName || null, givenName: givenName || null, middleName }
+      }
+
+      const parts = value.split(/\s+/).filter(Boolean)
+      if (parts.length < 2) {
+        return { name: value.trim(), lastName: null, givenName: null, middleName: null }
+      }
+      const lastName = parts.pop()
+      const givenName = parts.shift() || ''
+      const middleName = parts.length > 0 ? parts.join(' ') : null
+      const name = middleName ? `${lastName}, ${givenName} ${middleName}` : `${lastName}, ${givenName}`.trim()
+      return { name: name.trim(), lastName: lastName || null, givenName: givenName || null, middleName }
+    }
+
+    const parsedName = parseFullName(normalizedFullName)
+
+    user.uid = normalizedUid
+    user.email = normalizedEmail
+    user.name = parsedName.name || normalizedFullName
+    user.lastName = parsedName.lastName
+    user.givenName = parsedName.givenName
+    user.middleName = parsedName.middleName
+
+    if (user.role === 'student') {
+      user.student_id = normalizedUid
+    }
+
+    await user.save()
+
+    res.json({
+      message: 'User updated successfully',
+      user: {
+        _id: user._id,
+        uid: user.uid,
+        fullName: user.name,
+        email: user.email,
+        role: user.role
+      }
+    })
+  } catch (error) {
+    if (error?.code === 11000) {
+      const key = error?.keyValue ? Object.keys(error.keyValue)[0] : undefined
+      const value = error?.keyValue?.[key]
+      return res.status(409).json({
+        message: `${key === 'email' ? 'Email' : 'UID'} already exists`,
+        conflict: { type: key || 'unknown', value }
+      })
+    }
+    console.error('Error updating user:', error)
+    res.status(500).json({ message: 'Failed to update user' })
+  }
+})
+
 router.get('/users/template', async (req, res) => {
   try {
     const templateData = [
@@ -259,7 +377,7 @@ router.get('/users/template', async (req, res) => {
         GivenName: 'Juan',
         MiddleName: 'Miguel',
         Email: 'juan.delacruz@example.com',
-        YearLevelAndSection: '3-A',
+        YearLevelAndSection: '3A',
         Role: 'student'
       },
       {
@@ -394,7 +512,7 @@ router.post('/users/bulk', async (req, res) => {
       const givenName = String(row.GivenName || '').trim()
       const middleName = String(row.MiddleName || '').trim()
       const email = String(row.Email || '').trim().toLowerCase()
-      const yearLevelAndSection = String(row.YearLevelAndSection || '').trim()
+      const yearLevelAndSection = normalizeYearLevelAndSection(row.YearLevelAndSection)
       const role = String(row.Role || '').trim().toLowerCase()
 
       if (!uid) rowErrors.push({ column: 'UID', reason: 'UID is required' })
@@ -408,7 +526,7 @@ router.post('/users/bulk', async (req, res) => {
       }
 
       if (role === 'student' && !yearLevelAndSection) {
-        rowErrors.push({ column: 'YearLevelAndSection', reason: 'Year Level & Section is required for students' })
+        rowErrors.push({ column: 'YearLevelAndSection', reason: 'Year Level & Section must be in Number and Capital Letter (e.g. 4A)' })
       }
 
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {

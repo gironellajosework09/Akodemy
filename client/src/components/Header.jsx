@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { User, LogOut, Code2, Home, Users } from 'lucide-react'
+import { User, LogOut, Home } from 'lucide-react'
 import ConfirmDialog from './ConfirmDialog'
 
 function getHomeRoute(role) {
@@ -59,15 +59,7 @@ export default function Header() {
           )}
         </Link>
         <div className="flex items-center gap-2 sm:gap-4">
-          {user?.role === 'admin' ? (
-            <Link 
-              to="/admin/users" 
-              className="flex items-center gap-2 bg-gray-800 text-white px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-gray-700 transition border border-gray-700"
-            >
-              <Users className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="hidden sm:inline text-sm sm:text-base">Users</span>
-            </Link>
-          ) : (
+          {user?.role !== 'admin' && (
             <>
               <Link 
                 to={homeRoute} 
