@@ -22,6 +22,7 @@ export default function ChallengeEditor() {
   const { challengeId } = useParams()
   const [challenge, setChallenge] = useState(null)
   const [code, setCode] = useState('')
+  const [starterCode, setStarterCode] = useState('')
   const [output, setOutput] = useState('')
   const [hint, setHint] = useState('')
   const [friendlyFeedback, setFriendlyFeedback] = useState(null)
@@ -209,8 +210,10 @@ export default function ChallengeEditor() {
   const fetchChallenge = async () => {
     try {
       const response = await api.get(`/api/challenges/${challengeId}`)
+      const initialCode = response.data.starterCode || getDefaultCode(response.data.language)
       setChallenge(response.data)
-      setCode(response.data.starterCode || getDefaultCode(response.data.language))
+      setStarterCode(initialCode)
+      setCode(initialCode)
     } catch (error) {
       console.error('Failed to fetch challenge:', error)
     } finally {
@@ -254,6 +257,10 @@ export default function ChallengeEditor() {
       text: line.trim()
     }))
   }
+
+  const normalizeCodeForComparison = (value = '') => value.replace(/\r\n/g, '\n').trim()
+  const hasValidCodeModification =
+    normalizeCodeForComparison(code) !== normalizeCodeForComparison(starterCode)
 
   const extractMissingFunctions = (results) => {
     if (!results) return null
@@ -390,6 +397,8 @@ export default function ChallengeEditor() {
   }
 
   const runCode = async () => {
+    if (running || !hasValidCodeModification) return
+
     setRunning(true)
     setOutput('')
     setHint('')
@@ -583,7 +592,6 @@ export default function ChallengeEditor() {
                     Missing required function{missingFunctions.length > 1 ? 's' : ''}: {missingFunctions.join(', ')}
                   </p>
                 )}
-                <p className="text-gray-300"><strong>Expected:</strong> {testResults.expected}</p>
                 <p className="text-gray-300"><strong>Got:</strong> {testResults.actual}</p>
               </div>
             )}
@@ -727,7 +735,8 @@ export default function ChallengeEditor() {
             </div>
             <button
               onClick={runCode}
-              disabled={running}
+              disabled={running || !hasValidCodeModification}
+              title={!hasValidCodeModification ? 'Modify the starter code before running.' : ''}
               className="md:hidden flex items-center gap-1.5 bg-akodemy-purple text-white px-3 py-1.5 rounded-lg hover:bg-purple-700 disabled:opacity-50 transition text-xs"
             >
               <Play className="w-3.5 h-3.5" />
@@ -839,7 +848,8 @@ export default function ChallengeEditor() {
             <div className="border-t border-gray-700 p-4 flex items-center justify-end bg-gray-800 sticky bottom-0 z-10">
               <button
                 onClick={runCode}
-                disabled={running}
+                disabled={running || !hasValidCodeModification}
+                title={!hasValidCodeModification ? 'Modify the starter code before running.' : ''}
                 className="flex items-center gap-2 bg-akodemy-purple text-white px-6 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 transition"
               >
                 <Play className="w-4 h-4" />
@@ -863,7 +873,8 @@ export default function ChallengeEditor() {
           <div className="flex items-center justify-end">
             <button
               onClick={runCode}
-              disabled={running}
+              disabled={running || !hasValidCodeModification}
+              title={!hasValidCodeModification ? 'Modify the starter code before running.' : ''}
               className="flex items-center gap-2 bg-akodemy-purple text-white px-6 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 transition text-sm"
             >
               <Play className="w-4 h-4" />
