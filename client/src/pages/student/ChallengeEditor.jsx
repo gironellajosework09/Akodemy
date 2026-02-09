@@ -54,7 +54,7 @@ export default function ChallengeEditor() {
   const autosaveDataRef = useRef({ code: '', time: 0, runCount: 0 })
   const lastAutosaveRef = useRef({ code: '', time: 0, runCount: 0 })
   const autosaveInFlightRef = useRef(false)
-  const allowClipboard = true //toggle for disabling copy & paste in editor
+  const allowClipboard = false //toggle for disabling copy & paste in editor
   const allowFullscreen = false // toggle for disabling fullscreen guard
   const editorKey = allowClipboard ? 'clipboard-on' : 'clipboard-off'
 
@@ -68,8 +68,8 @@ export default function ChallengeEditor() {
     requestFullscreen,
     exitFullscreen,
     handleContinueWithoutFullscreen
-  // } = useFullscreenGuard({ targetRef: containerRef })
-  } = useFullscreenGuard({ targetRef: containerRef, enabled: allowFullscreen })
+  } = useFullscreenGuard({ targetRef: containerRef })
+  // } = useFullscreenGuard({ targetRef: containerRef, enabled: allowFullscreen })
 
   const showClipboardBlockedToast = useCallback(() => {
     setClipboardToast(true)
@@ -510,20 +510,38 @@ export default function ChallengeEditor() {
 
   const renderFriendlyFeedback = () => {
     if (!friendlyFeedback) return null
-    const steps = Array.isArray(friendlyFeedback.action_steps) ? friendlyFeedback.action_steps : []
+    const likelyCauses = Array.isArray(friendlyFeedback.likely_causes)
+      ? friendlyFeedback.likely_causes
+      : (friendlyFeedback.likely_cause ? [friendlyFeedback.likely_cause] : [])
+    const suggestedFixes = Array.isArray(friendlyFeedback.suggested_fixes)
+      ? friendlyFeedback.suggested_fixes
+      : (Array.isArray(friendlyFeedback.action_steps) ? friendlyFeedback.action_steps : [])
+
     return (
       <div className="mb-4 p-4 bg-blue-500/10 border border-blue-500/40 rounded-lg">
         <p className="text-blue-300 font-semibold">{friendlyFeedback.title}</p>
         <p className="text-sm text-blue-100 mt-1">{friendlyFeedback.summary}</p>
-        <p className="text-xs text-blue-200 mt-2">
-          <strong>Likely cause:</strong> {friendlyFeedback.likely_cause}
-        </p>
-        {steps.length > 0 && (
-          <ul className="mt-2 text-sm text-blue-100 list-disc list-inside space-y-1">
-            {steps.map((step, index) => (
-              <li key={`${step}-${index}`}>{step}</li>
-            ))}
-          </ul>
+
+        {likelyCauses.length > 0 && (
+          <div className="mt-2">
+            <p className="text-xs text-blue-200 font-semibold">Likely causes</p>
+            <ul className="mt-1 text-sm text-blue-100 list-disc list-inside space-y-1">
+              {likelyCauses.map((cause, index) => (
+                <li key={`${cause}-${index}`}>{cause}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {suggestedFixes.length > 0 && (
+          <div className="mt-2">
+            <p className="text-xs text-blue-200 font-semibold">Suggested checks</p>
+            <ul className="mt-1 text-sm text-blue-100 list-disc list-inside space-y-1">
+              {suggestedFixes.map((step, index) => (
+                <li key={`${step}-${index}`}>{step}</li>
+              ))}
+            </ul>
+          </div>
         )}
       </div>
     )
@@ -578,9 +596,10 @@ export default function ChallengeEditor() {
 
   const renderOutput = () => {
     const missingFunctions = extractMissingFunctions(testResults)
+    const showRawTestFailure = Boolean(testResults && (!friendlyFeedback || testResults.passed))
     return (
       <div className="flex-1 min-h-0 p-4 overflow-auto">
-        {testResults && (
+        {showRawTestFailure && (
           <div className={`mb-4 p-3 rounded-lg ${testResults.passed ? 'bg-green-500/20 border border-green-500/50' : 'bg-red-500/20 border border-red-500/50'}`}>
             <p className={`font-bold ${testResults.passed ? 'text-green-400' : 'text-red-400'}`}>
               {testResults.passed ? 'All Tests Passed!' : 'Test Failed'}

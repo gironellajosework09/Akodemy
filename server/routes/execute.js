@@ -29,6 +29,31 @@ public class Main {
 `
 }
 
+function sanitizeKnownTestFailureText(value) {
+  if (typeof value !== 'string') return value
+  const text = value.trim()
+  if (!text) return value
+
+  const hasHelloWorldReturnHint =
+    /this test expects a return of the string ['"]hello,\s*world!['"]/i.test(text) &&
+    /did you use print\(['"]hello,\s*world!['"]\)/i.test(text)
+
+  if (!hasHelloWorldReturnHint) return value
+
+  const lines = text.split(/\r?\n/).map(line => line.trim()).filter(Boolean)
+  const usefulLine = [...lines].reverse().find(line => (
+    !/this test expects a return of the string/i.test(line) &&
+    !/did you use print\(/i.test(line)
+  ))
+
+  return usefulLine || 'Output did not match the expected returned value.'
+}
+
+function pickActualValue(firstFail) {
+  const raw = firstFail?.actual ?? (firstFail?.error ? `Error: ${firstFail.error}` : undefined)
+  return sanitizeKnownTestFailureText(raw)
+}
+
 router.use(authenticateToken)
 router.use(requireRole('student', 'faculty'))
 
@@ -258,7 +283,7 @@ router.post('/', async (req, res) => {
                   const details = fileResult.details || fileResult.results || []
                   const firstFail = pickFirstFailure(details, [], fileResult.error)
                   const expectedValue = firstFail?.expected
-                  const actualValue = firstFail?.actual ?? (firstFail?.error ? `Error: ${firstFail.error}` : undefined)
+                  const actualValue = pickActualValue(firstFail)
                   const total = fileResult.total ?? details.length
                   const passedCount = typeof fileResult.passed === 'number' ? fileResult.passed : (fileResult.passedTests || 0)
                   const failedCount = Math.max(0, total - passedCount)
@@ -379,7 +404,7 @@ router.post('/', async (req, res) => {
                 const details = fileResult.details || fileResult.results || []
                 const firstFail = pickFirstFailure(details, [], fileResult.error)
                 const expectedValue = firstFail?.expected
-                const actualValue = firstFail?.actual ?? (firstFail?.error ? `Error: ${firstFail.error}` : undefined)
+                const actualValue = pickActualValue(firstFail)
                 const total = fileResult.total ?? details.length
                 const passedCount = typeof fileResult.passed === 'number' ? fileResult.passed : (fileResult.passedTests || 0)
                 const failedCount = Math.max(0, total - passedCount)
@@ -419,7 +444,7 @@ router.post('/', async (req, res) => {
             const result = await runOfficialTests(code, normalizedLanguage, baseSlug, tests)
             const firstFail = pickFirstFailure(result.details || [], result.errors || [], result.error)
             const expectedValue = firstFail?.expected
-            const actualValue = firstFail?.actual ?? (firstFail?.error ? `Error: ${firstFail.error}` : undefined)
+            const actualValue = pickActualValue(firstFail)
 
             passed = result.totalTests > 0 && result.failedTests === 0 && !result.error
             testResults = {
@@ -437,7 +462,7 @@ router.post('/', async (req, res) => {
             const details = fileResult.details || fileResult.results || []
             const firstFail = pickFirstFailure(details, [], fileResult.error)
             const expectedValue = firstFail?.expected
-            const actualValue = firstFail?.actual ?? (firstFail?.error ? `Error: ${firstFail.error}` : undefined)
+            const actualValue = pickActualValue(firstFail)
             const total = fileResult.total ?? details.length
             const passedCount = typeof fileResult.passed === 'number' ? fileResult.passed : (fileResult.passedTests || 0)
             const failedCount = Math.max(0, total - passedCount)
@@ -477,6 +502,50 @@ router.post('/', async (req, res) => {
               details: [],
               message: 'Tests were not executed for this submission'
             }
+          }
+        }
+
+        if (
+          challenge &&
+          !friendlyFeedback &&
+          !error &&
+          testResults &&
+          testResults.passed === false
+        ) {
+          const failedCount = typeof testResults.failedCount === 'number'
+            ? testResults.failedCount
+            : (typeof testResults.total === 'number' && typeof testResults.passedCount === 'number'
+                ? Math.max(0, testResults.total - testResults.passedCount)
+                : null)
+
+          friendlyFeedback = await humanizeJudge0Error(
+            {
+              status: { id: 4, description: 'Wrong Answer' },
+              compile_output: '',
+              stderr: '',
+              message: testResults.message || 'Some tests failed',
+              exit_code: result.exitCode,
+              time: result.time,
+              memory: result.memory
+            },
+            {
+              language: normalizedLanguage,
+              challengeTitle: challenge?.title,
+              difficulty: challenge?.difficulty,
+              forceHumanize: true,
+              testResults: {
+                passed: false,
+                total: testResults.total ?? null,
+                failedCount,
+                expected: testResults.expected ?? '',
+                actual: testResults.actual ?? '',
+                message: testResults.message || 'Some tests failed'
+              }
+            }
+          )
+
+          if (friendlyFeedback) {
+            hint = friendlyFeedback.summary
           }
         }
 
