@@ -55,7 +55,7 @@ export default function ChallengeEditor() {
   const lastAutosaveRef = useRef({ code: '', time: 0, runCount: 0 })
   const autosaveInFlightRef = useRef(false)
   const allowClipboard = false //toggle for disabling copy & paste in editor
-  const allowFullscreen = false // toggle for disabling fullscreen guard
+  const allowFullscreen = true // toggle for disabling fullscreen guard
   const editorKey = allowClipboard ? 'clipboard-on' : 'clipboard-off'
 
   const {
@@ -597,6 +597,8 @@ export default function ChallengeEditor() {
   const renderOutput = () => {
     const missingFunctions = extractMissingFunctions(testResults)
     const showRawTestFailure = Boolean(testResults && (!friendlyFeedback || testResults.passed))
+    const hasErrorOutput = output.includes('Error') || output.includes('error')
+    const showRawOutput = !(hasTechnicalDetails && hasErrorOutput)
     return (
       <div className="flex-1 min-h-0 p-4 overflow-auto">
         {showRawTestFailure && (
@@ -624,9 +626,11 @@ export default function ChallengeEditor() {
           </div>
         )}
         {renderTechnicalDetails()}
-        <pre className={`text-sm whitespace-pre-wrap ${output.includes('Error') || output.includes('error') ? 'text-red-400' : 'text-gray-300'}`}>
-          {output || 'Run your code to see output...'}
-        </pre>
+        {showRawOutput && (
+          <pre className={`text-sm whitespace-pre-wrap ${hasErrorOutput ? 'text-red-400' : 'text-gray-300'}`}>
+            {output || 'Run your code to see output...'}
+          </pre>
+        )}
       </div>
     )
   }
@@ -752,15 +756,6 @@ export default function ChallengeEditor() {
             <div className="text-xs text-gray-500">
               Runs: {runCount}
             </div>
-            <button
-              onClick={runCode}
-              disabled={running || !hasValidCodeModification}
-              title={!hasValidCodeModification ? 'Modify the starter code before running.' : ''}
-              className="md:hidden flex items-center gap-1.5 bg-akodemy-purple text-white px-3 py-1.5 rounded-lg hover:bg-purple-700 disabled:opacity-50 transition text-xs"
-            >
-              <Play className="w-3.5 h-3.5" />
-              {running ? 'Running...' : 'Run'}
-            </button>
           </div>
         </div>
 
@@ -791,14 +786,14 @@ export default function ChallengeEditor() {
 
             <div className="flex-1 flex flex-col overflow-hidden min-h-0">
               {activeTab === 'editor' ? (
-                <div className="flex-1 flex flex-col relative">
+                <div className="flex-1 flex flex-col relative min-h-0">
                   {!allowClipboard && (
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-yellow-900/30 border-b border-yellow-700/50">
                       <ShieldAlert className="w-3.5 h-3.5 text-yellow-500" />
                       <span className="text-xs text-yellow-400">Copy & Paste is disabled for this challenge.</span>
                     </div>
                   )}
-                  <div className="flex-1">
+                  <div className="flex-1 min-h-0 overflow-hidden touch-pan-y">
                   <Editor
                     key={`challenge-editor-${editorKey}`}
                     height="100%"
@@ -814,6 +809,11 @@ export default function ChallengeEditor() {
                         scrollBeyondLastLine: false,
                         automaticLayout: true,
                         wordWrap: 'on',
+                        scrollbar: {
+                          vertical: 'auto',
+                          horizontal: 'auto',
+                          alwaysConsumeMouseWheel: false
+                        }
                       }}
                     />
                   </div>
@@ -887,7 +887,7 @@ export default function ChallengeEditor() {
         )}
       </div>
 
-      {isMobile && (
+      {isMobile && !showResults && (
         <div className="fixed bottom-0 left-0 right-0 z-[60] border-t border-gray-700 bg-gray-800 px-4 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] shadow-[0_-6px_20px_rgba(0,0,0,0.35)]">
           <div className="flex items-center justify-end">
             <button
