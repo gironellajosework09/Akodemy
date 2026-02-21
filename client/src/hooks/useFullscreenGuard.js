@@ -58,8 +58,7 @@ export default function useFullscreenGuard({ targetRef, enabled = true } = {}) {
       setShowExitModal(false)
       return true
     } catch (error) {
-      const name = error?.name
-      if ((name === 'NotAllowedError' || name === 'SecurityError') && !userGesture) {
+      if (!userGesture) {
         setNeedsUserGesture(true)
       }
       if (!loggedErrorRef.current) {

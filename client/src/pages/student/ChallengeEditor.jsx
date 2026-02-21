@@ -1,6 +1,6 @@
 // Student page: Challenge Editor.
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import Editor from '@monaco-editor/react'
 import api from '../../services/api'
 import { Play, ChevronLeft, ChevronDown, ChevronUp, Eye, History, ShieldAlert } from 'lucide-react'
@@ -21,6 +21,8 @@ const AUTOSAVE_INTERVAL_MS = 30000
 export default function ChallengeEditor() {
   const navigate = useNavigate()
   const { challengeId } = useParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const attemptSessionId = searchParams.get('session') || ''
   const [challenge, setChallenge] = useState(null)
   const [code, setCode] = useState('')
   const [starterCode, setStarterCode] = useState('')
@@ -43,7 +45,7 @@ export default function ChallengeEditor() {
   const [showLatestModal, setShowLatestModal] = useState(false)
   const [latestSubmission, setLatestSubmission] = useState(null)
   const [showHistory, setShowHistory] = useState(false)
-  const [startedAt] = useState(new Date())
+  const [startedAt, setStartedAt] = useState(() => new Date())
   const [attemptNumber, setAttemptNumber] = useState(1)
   const [clipboardToast, setClipboardToast] = useState(false)
   const [saveDisabledToast, setSaveDisabledToast] = useState(false)
@@ -55,11 +57,17 @@ export default function ChallengeEditor() {
   const autosaveDataRef = useRef({ code: '', time: 0, runCount: 0 })
   const lastAutosaveRef = useRef({ code: '', time: 0, runCount: 0 })
   const autosaveInFlightRef = useRef(false)
+  const startAttemptKeyRef = useRef('')
+  const previousFullscreenRequirementKeyRef = useRef('')
   const clipboardToastCooldownRef = useRef(0)
   const clipboardToastTimerRef = useRef(null)
   const allowClipboard = false //toggle for disabling copy & paste in editor
   const allowFullscreen = true // toggle for disabling fullscreen guard
   const editorKey = allowClipboard ? 'clipboard-on' : 'clipboard-off'
+  const fullscreenRequirementKey = challengeId && attemptSessionId
+    ? `fullscreen_required:${challengeId}:${attemptSessionId}`
+    : ''
+  const fullscreenGuardEnabled = allowFullscreen && Boolean(challengeId) && !showResults
 
   const {
     isFullscreen,
@@ -71,10 +79,19 @@ export default function ChallengeEditor() {
     requestFullscreen,
     exitFullscreen,
     dismissExitModal
-  } = useFullscreenGuard({ targetRef: containerRef })
-  // } = useFullscreenGuard({ targetRef: containerRef, enabled: allowFullscreen })
+  } = useFullscreenGuard({ targetRef: containerRef, enabled: fullscreenGuardEnabled })
+  // } = useFullscreenGuard({ targetRef: containerRef, enabled: fullscreenGuardEnabled })
 
   const isChallengeActive = Boolean(challengeId && !loading && !showResults)
+
+  const setFullscreenRequirement = useCallback((required) => {
+    if (typeof window === 'undefined' || !fullscreenRequirementKey) return
+    if (required) {
+      window.sessionStorage.setItem(fullscreenRequirementKey, '1')
+    } else {
+      window.sessionStorage.removeItem(fullscreenRequirementKey)
+    }
+  }, [fullscreenRequirementKey])
 
   const showClipboardBlockedToast = useCallback(() => {
     const now = Date.now()
@@ -96,6 +113,13 @@ export default function ChallengeEditor() {
   const showSaveDisabledToast = useCallback(() => {
     setSaveDisabledToast(true)
     setTimeout(() => setSaveDisabledToast(false), 2000)
+  }, [])
+
+  const createAttemptSessionId = useCallback(() => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID()
+    }
+    return `session-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
   }, [])
 
   useClipboardGuard({
@@ -137,10 +161,75 @@ export default function ChallengeEditor() {
   }, [])
 
   useEffect(() => {
+    if (!challengeId || attemptSessionId) return
+    const nextSessionId = createAttemptSessionId()
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.set('session', nextSessionId)
+      return next
+    }, { replace: true })
+  }, [attemptSessionId, challengeId, createAttemptSessionId, setSearchParams])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const previousKey = previousFullscreenRequirementKeyRef.current
+    if (previousKey && previousKey !== fullscreenRequirementKey) {
+      window.sessionStorage.removeItem(previousKey)
+    }
+    previousFullscreenRequirementKeyRef.current = fullscreenRequirementKey
+  }, [fullscreenRequirementKey])
+
+  useEffect(() => {
+    if (!fullscreenRequirementKey) return
+    if (fullscreenGuardEnabled) {
+      setFullscreenRequirement(true)
+    } else {
+      setFullscreenRequirement(false)
+    }
+  }, [fullscreenGuardEnabled, fullscreenRequirementKey, setFullscreenRequirement])
+
+  useEffect(() => {
     fetchChallenge()
     fetchLatestSubmission()
     setShowInstructions(true)
+    setAttemptNumber(1)
+    setStartedAt(new Date())
   }, [challengeId])
+
+  useEffect(() => {
+    if (!challengeId || !attemptSessionId) return
+
+    const startKey = `${challengeId}:${attemptSessionId}`
+    if (startAttemptKeyRef.current === startKey) return
+    startAttemptKeyRef.current = startKey
+
+    const startAttempt = async () => {
+      const clientStartedAt = new Date().toISOString()
+      try {
+        const response = await api.post(`/api/progress/challenge/${challengeId}/start`, {
+          sessionId: attemptSessionId,
+          startedAt: clientStartedAt
+        })
+
+        if (response.data?.attemptNumber) {
+          setAttemptNumber(response.data.attemptNumber)
+        }
+
+        if (response.data?.startedAt) {
+          const serverStartedAt = new Date(response.data.startedAt)
+          if (!Number.isNaN(serverStartedAt.getTime())) {
+            setStartedAt(serverStartedAt)
+          }
+        } else {
+          setStartedAt(new Date(clientStartedAt))
+        }
+      } catch (error) {
+        console.error('Failed to start attempt:', error)
+      }
+    }
+
+    startAttempt()
+  }, [attemptSessionId, challengeId])
 
   useEffect(() => {
     timerRef.current = setInterval(() => {
@@ -238,10 +327,8 @@ export default function ChallengeEditor() {
       const response = await api.get(`/api/progress/challenge/${challengeId}/latest`)
       if (response.data) {
         setLatestSubmission(response.data)
-      }
-      const summaryResponse = await api.get(`/api/progress/challenge/${challengeId}/summary`)
-      if (summaryResponse.data?.attemptCount) {
-        setAttemptNumber(summaryResponse.data.attemptCount + 1)
+      } else {
+        setLatestSubmission(null)
       }
     } catch (error) {
       console.error('Failed to fetch latest submission:', error)
@@ -314,7 +401,8 @@ export default function ChallengeEditor() {
         isCorrect,
         score,
         runs: runCount,
-        startedAt: startedAt.toISOString()
+        startedAt: startedAt.toISOString(),
+        sessionId: attemptSessionId
       })
 
       await saveProgress({
@@ -330,6 +418,7 @@ export default function ChallengeEditor() {
       }
 
       await exitFullscreen({ suppressModal: true })
+      setFullscreenRequirement(false)
       setShowResults(true)
     } catch (error) {
       console.error('Failed to finish challenge:', error)
@@ -366,12 +455,14 @@ export default function ChallengeEditor() {
     })
 
     await exitFullscreen({ suppressModal: true })
+    setFullscreenRequirement(false)
     setShowExitConfirm(false)
     setShowResults(true)
   }
 
   const handleBackToChallenges = () => {
     exitFullscreen({ suppressModal: true })
+    setFullscreenRequirement(false)
     navigate(`/challenges/${challenge?.language}/${challenge?.difficulty}`)
   }
 
@@ -388,21 +479,25 @@ export default function ChallengeEditor() {
       if (currentIndex >= 0 && currentIndex < challenges.length - 1) {
         const nextChallengeId = challenges[currentIndex + 1]._id
         exitFullscreen({ suppressModal: true })
+        setFullscreenRequirement(false)
         navigate(`/challenges/${challenge?.language}/${challenge?.difficulty}`, {
           state: { retryChallengeId: nextChallengeId }
         })
       } else {
         exitFullscreen({ suppressModal: true })
+        setFullscreenRequirement(false)
         navigate(`/challenges/${challenge?.language}/${challenge?.difficulty}`)
       }
     } catch (error) {
       exitFullscreen({ suppressModal: true })
+      setFullscreenRequirement(false)
       navigate(`/challenges/${challenge?.language}/${challenge?.difficulty}`)
     }
   }
 
   const handleRetry = () => {
     exitFullscreen({ suppressModal: true })
+    setFullscreenRequirement(false)
     navigate(`/challenges/${challenge?.language}/${challenge?.difficulty}`, {
       state: { retryChallengeId: challengeId }
     })

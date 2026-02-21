@@ -116,6 +116,13 @@ export default function ChallengeList() {
     return []
   }
 
+  const createAttemptSessionId = () => {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID()
+    }
+    return `session-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  }
+
   const langInfo = getLanguageDisplay()
 
   return (
@@ -269,7 +276,8 @@ export default function ChallengeList() {
         }}
         onStartCoding={() => {
           setShowInstructionsModal(false)
-          navigate(`/challenge/${selectedChallenge._id}`)
+          const attemptSessionId = createAttemptSessionId()
+          navigate(`/challenge/${selectedChallenge._id}?session=${attemptSessionId}`)
         }}
       />
     </Layout>

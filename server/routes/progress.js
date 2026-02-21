@@ -4,8 +4,8 @@ import { authenticateToken, requireRole } from '../middleware/auth.js'
 import Submission from '../models/Submission.js'
 import Challenge, { COMPETENCY_NAMES } from '../models/Challenge.js'
 import ChallengeAnswer from '../models/ChallengeAnswer.js'
+import ChallengeAttempt from '../models/ChallengeAttempt.js'
 import LatestAnswer from '../models/LatestAnswer.js'
-import User from '../models/User.js'
 import { checkAndUnlockBadge } from '../services/badgeService.js'
 
 // Route handlers for Progress APIs.
@@ -23,6 +23,90 @@ const resolveCompetencies = (challenge) => {
     return [COMPETENCY_NAMES[idx]]
   }
   return []
+}
+
+const normalizeSessionId = (sessionId) => {
+  if (typeof sessionId !== 'string') return ''
+  return sessionId.trim().slice(0, 128)
+}
+
+const resolveStartedAt = (startedAt) => {
+  const parsed = startedAt ? new Date(startedAt) : new Date()
+  if (Number.isNaN(parsed.getTime())) {
+    return new Date()
+  }
+  return parsed
+}
+
+const getNextAttemptNumber = async (userId, challengeId) => {
+  const [latestAttempt, latestSubmission] = await Promise.all([
+    ChallengeAttempt.findOne({ userId, challengeId })
+      .sort({ attemptNumber: -1 })
+      .select('attemptNumber')
+      .lean(),
+    ChallengeAnswer.findOne({ userId, challengeId })
+      .sort({ attemptNumber: -1 })
+      .select('attemptNumber')
+      .lean()
+  ])
+
+  const maxAttemptNumber = Math.max(
+    latestAttempt?.attemptNumber || 0,
+    latestSubmission?.attemptNumber || 0
+  )
+  return maxAttemptNumber + 1
+}
+
+const reserveAttempt = async ({ userId, challengeId, sessionId, startedAt }) => {
+  const normalizedSessionId = normalizeSessionId(sessionId)
+  if (!normalizedSessionId) {
+    const error = new Error('Session ID is required')
+    error.statusCode = 400
+    throw error
+  }
+
+  const existing = await ChallengeAttempt.findOne({
+    userId,
+    challengeId,
+    sessionId: normalizedSessionId
+  }).lean()
+  if (existing) {
+    return existing
+  }
+
+  const attemptStartedAt = resolveStartedAt(startedAt)
+
+  for (let retry = 0; retry < 5; retry += 1) {
+    const attemptNumber = await getNextAttemptNumber(userId, challengeId)
+
+    try {
+      const created = await ChallengeAttempt.create({
+        userId,
+        challengeId,
+        sessionId: normalizedSessionId,
+        attemptNumber,
+        startedAt: attemptStartedAt
+      })
+      return created.toObject()
+    } catch (error) {
+      if (error?.code === 11000) {
+        const deduped = await ChallengeAttempt.findOne({
+          userId,
+          challengeId,
+          sessionId: normalizedSessionId
+        }).lean()
+        if (deduped) {
+          return deduped
+        }
+        continue
+      }
+      throw error
+    }
+  }
+
+  const conflictError = new Error('Unable to reserve attempt')
+  conflictError.statusCode = 409
+  throw conflictError
 }
 
 router.get('/my-progress', async (req, res) => {
@@ -140,6 +224,35 @@ router.get('/challenge/:challengeId', async (req, res) => {
   }
 })
 
+router.post('/challenge/:challengeId/start', async (req, res) => {
+  try {
+    const { challengeId } = req.params
+    const { sessionId, startedAt } = req.body || {}
+
+    const attempt = await reserveAttempt({
+      userId: req.user._id,
+      challengeId,
+      sessionId,
+      startedAt
+    })
+
+    res.json({
+      success: true,
+      attemptNumber: attempt.attemptNumber,
+      startedAt: attempt.startedAt
+    })
+  } catch (error) {
+    if (error?.statusCode === 400) {
+      return res.status(400).json({ message: error.message })
+    }
+    if (error?.statusCode === 409) {
+      return res.status(409).json({ message: 'Failed to start attempt. Please retry.' })
+    }
+    console.error('Start attempt error:', error)
+    res.status(500).json({ message: 'Failed to start attempt' })
+  }
+})
+
 router.get('/challenge/:challengeId/latest', async (req, res) => {
   try {
     const latest = await LatestAnswer.findOne({
@@ -196,11 +309,19 @@ router.get('/challenge/:challengeId/history', async (req, res) => {
 router.post('/challenge/:challengeId/submit', async (req, res) => {
   try {
     const { challengeId } = req.params
-    const { answer, language, isCorrect, score, runs, startedAt } = req.body
+    const { answer, language, isCorrect, score, runs, startedAt, sessionId } = req.body
 
-    const attemptNumber = await ChallengeAnswer.getNextAttemptNumber(req.user._id, challengeId)
+    const attempt = await reserveAttempt({
+      userId: req.user._id,
+      challengeId,
+      sessionId: normalizeSessionId(sessionId) || `legacy-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+      startedAt
+    })
+
+    const attemptStartedAt = attempt.startedAt ? new Date(attempt.startedAt) : resolveStartedAt(startedAt)
+    const attemptNumber = attempt.attemptNumber
     const submittedAt = new Date()
-    const bestTime = Math.round((submittedAt - new Date(startedAt)) / 1000)
+    const bestTime = Math.max(0, Math.round((submittedAt - attemptStartedAt) / 1000))
 
     const submission = await ChallengeAnswer.create({
       userId: req.user._id,
@@ -211,7 +332,7 @@ router.post('/challenge/:challengeId/submit', async (req, res) => {
       score,
       attemptNumber,
       runs,
-      startedAt: new Date(startedAt),
+      startedAt: attemptStartedAt,
       submittedAt,
       bestTime
     })
@@ -225,10 +346,15 @@ router.post('/challenge/:challengeId/submit', async (req, res) => {
       score,
       attemptNumber,
       runs,
-      startedAt: new Date(startedAt),
+      startedAt: attemptStartedAt,
       submittedAt,
       bestTime
     })
+
+    await ChallengeAttempt.updateOne(
+      { _id: attempt._id, userId: req.user._id },
+      { $set: { completedAt: submittedAt } }
+    )
 
     let badgeUnlocked = null
     if (isCorrect) {
@@ -268,6 +394,18 @@ router.post('/challenge/:challengeId/submit', async (req, res) => {
 
 router.get('/challenge/:challengeId/summary', async (req, res) => {
   try {
+    const [sessionAttemptCount, submissionAttemptCount] = await Promise.all([
+      ChallengeAttempt.countDocuments({
+        userId: req.user._id,
+        challengeId: req.params.challengeId
+      }),
+      ChallengeAnswer.countDocuments({
+        userId: req.user._id,
+        challengeId: req.params.challengeId
+      })
+    ])
+    const attemptCount = Math.max(sessionAttemptCount, submissionAttemptCount)
+
     const latest = await LatestAnswer.findOne({
       userId: req.user._id,
       challengeId: req.params.challengeId
@@ -275,11 +413,11 @@ router.get('/challenge/:challengeId/summary', async (req, res) => {
 
     if (!latest) {
       return res.json({
-        hasAttempted: false,
+        hasAttempted: attemptCount > 0,
         bestTime: null,
         runs: 0,
         latestCode: null,
-        attemptCount: 0
+        attemptCount
       })
     }
 
@@ -289,13 +427,8 @@ router.get('/challenge/:challengeId/summary', async (req, res) => {
       isCorrect: true
     }).sort({ bestTime: 1 }).lean()
 
-    const attemptCount = await ChallengeAnswer.countDocuments({
-      userId: req.user._id,
-      challengeId: req.params.challengeId
-    })
-
     res.json({
-      hasAttempted: true,
+      hasAttempted: attemptCount > 0,
       bestTime: bestTimeSubmission?.bestTime || latest.bestTime,
       runs: latest.runs,
       latestCode: latest.answer,
