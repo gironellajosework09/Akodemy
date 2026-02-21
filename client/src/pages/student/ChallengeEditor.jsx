@@ -10,6 +10,7 @@ import LatestSubmissionModal from '../../components/LatestSubmissionModal'
 import HistoryPanel from '../../components/HistoryPanel'
 import BadgeUnlockedModal from '../../components/BadgeEarnedModal'
 import useFullscreenGuard from '../../hooks/useFullscreenGuard'
+import useClipboardGuard from '../../hooks/useClipboardGuard'
 import FullscreenExitModal from '../../components/FullscreenExitModal'
 import FullscreenEntryOverlay from '../../components/FullscreenEntryOverlay'
 import FullscreenStatusBanner from '../../components/FullscreenStatusBanner'
@@ -54,6 +55,8 @@ export default function ChallengeEditor() {
   const autosaveDataRef = useRef({ code: '', time: 0, runCount: 0 })
   const lastAutosaveRef = useRef({ code: '', time: 0, runCount: 0 })
   const autosaveInFlightRef = useRef(false)
+  const clipboardToastCooldownRef = useRef(0)
+  const clipboardToastTimerRef = useRef(null)
   const allowClipboard = false //toggle for disabling copy & paste in editor
   const allowFullscreen = true // toggle for disabling fullscreen guard
   const editorKey = allowClipboard ? 'clipboard-on' : 'clipboard-off'
@@ -67,19 +70,42 @@ export default function ChallengeEditor() {
     autosaveEnabled,
     requestFullscreen,
     exitFullscreen,
-    handleContinueWithoutFullscreen
+    dismissExitModal
   } = useFullscreenGuard({ targetRef: containerRef })
   // } = useFullscreenGuard({ targetRef: containerRef, enabled: allowFullscreen })
 
+  const isChallengeActive = Boolean(challengeId && !loading && !showResults)
+
   const showClipboardBlockedToast = useCallback(() => {
+    const now = Date.now()
+    if (now - clipboardToastCooldownRef.current < 2000) {
+      return
+    }
+    clipboardToastCooldownRef.current = now
+
     setClipboardToast(true)
-    setTimeout(() => setClipboardToast(false), 2000)
+    if (clipboardToastTimerRef.current) {
+      clearTimeout(clipboardToastTimerRef.current)
+    }
+    clipboardToastTimerRef.current = setTimeout(() => {
+      setClipboardToast(false)
+      clipboardToastTimerRef.current = null
+    }, 2000)
   }, [])
 
   const showSaveDisabledToast = useCallback(() => {
     setSaveDisabledToast(true)
     setTimeout(() => setSaveDisabledToast(false), 2000)
   }, [])
+
+  useClipboardGuard({
+    enabled: !allowClipboard && isChallengeActive,
+    workspaceRef: containerRef,
+    editorRef,
+    value: code,
+    onRestoreValue: setCode,
+    onBlocked: showClipboardBlockedToast
+  })
 
   const handleEditorMount = useCallback((editor, monaco) => {
     editorRef.current = editor
@@ -94,28 +120,14 @@ export default function ChallengeEditor() {
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyX, () => {
         showClipboardBlockedToast()
       })
-
-      const editorDom = editor.getDomNode()
-      if (editorDom) {
-        editorDom.addEventListener('contextmenu', (e) => {
-          e.preventDefault()
-          showClipboardBlockedToast()
-        })
-        editorDom.addEventListener('paste', (e) => {
-          e.preventDefault()
-          showClipboardBlockedToast()
-        })
-        editorDom.addEventListener('copy', (e) => {
-          e.preventDefault()
-          showClipboardBlockedToast()
-        })
-        editorDom.addEventListener('cut', (e) => {
-          e.preventDefault()
-          showClipboardBlockedToast()
-        })
-      }
     }
   }, [allowClipboard, showClipboardBlockedToast])
+
+  useEffect(() => () => {
+    if (clipboardToastTimerRef.current) {
+      clearTimeout(clipboardToastTimerRef.current)
+    }
+  }, [])
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768)
@@ -637,7 +649,10 @@ export default function ChallengeEditor() {
 
   return (
     <>
-      <div ref={containerRef} className="h-[100dvh] min-h-screen bg-gray-900 flex flex-col">
+      <div
+        ref={containerRef}
+        className={`h-[100dvh] min-h-screen bg-gray-900 flex flex-col ${isChallengeActive && !allowClipboard ? 'challenge-workspace-clipboard-guard' : ''}`}
+      >
         <div className="bg-gray-800 border-b border-gray-700 text-white px-3 sm:px-6 py-2 sm:py-3 flex items-center justify-between">
           <button
             onClick={goBack}
@@ -906,7 +921,10 @@ export default function ChallengeEditor() {
       <FullscreenExitModal
         isOpen={showExitModal}
         onReenter={() => requestFullscreen({ userGesture: true })}
-        onContinue={handleContinueWithoutFullscreen}
+        onExitChallenge={() => {
+          dismissExitModal()
+          goBack()
+        }}
       />
 
       <FullscreenEntryOverlay
@@ -974,7 +992,7 @@ export default function ChallengeEditor() {
         <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in">
           <div className="flex items-center gap-2 bg-red-900/90 text-red-100 px-4 py-2 rounded-lg shadow-lg border border-red-700">
             <ShieldAlert className="w-4 h-4" />
-            <span className="text-sm font-medium">Copy & Paste is blocked</span>
+            <span className="text-sm font-medium">Copy/Paste is disabled during challenges.</span>
           </div>
         </div>
       )}

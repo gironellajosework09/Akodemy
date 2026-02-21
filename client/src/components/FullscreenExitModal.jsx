@@ -12,7 +12,7 @@ const FOCUSABLE_SELECTOR = [
 ].join(',')
 
 // Component logic for Fullscreen Exit Warning Modal.
-export default function FullscreenExitModal({ isOpen, onReenter, onContinue }) {
+export default function FullscreenExitModal({ isOpen, onReenter, onExitChallenge }) {
   const modalRef = useRef(null)
   const previouslyFocusedRef = useRef(null)
 
@@ -52,10 +52,18 @@ export default function FullscreenExitModal({ isOpen, onReenter, onContinue }) {
       }
     }
 
+    const handleGlobalKeyDown = (event) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      event.stopPropagation()
+    }
+
     node?.addEventListener('keydown', handleKeyDown)
+    document.addEventListener('keydown', handleGlobalKeyDown, true)
 
     return () => {
       node?.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('keydown', handleGlobalKeyDown, true)
       previouslyFocusedRef.current?.focus?.()
     }
   }, [isOpen])
@@ -83,22 +91,22 @@ export default function FullscreenExitModal({ isOpen, onReenter, onContinue }) {
           </h2>
         </div>
         <p id="fullscreen-exit-body" className="text-gray-300 mb-6">
-          If you continue outside fullscreen, your progress won&apos;t be saved.
+          If you exit fullscreen, your progress won&apos;t be saved and you will exit the challenge.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-end">
+          <button
+            onClick={onExitChallenge}
+            className="px-4 py-2 rounded-lg border border-red-500/50 text-red-200 hover:bg-red-500/10 transition font-semibold"
+            data-testid="fullscreen-exit-challenge"
+          >
+            Exit Challenge
+          </button>
           <button
             onClick={onReenter}
             className="px-4 py-2 rounded-lg bg-akodemy-purple text-white hover:bg-purple-700 transition font-semibold"
             data-testid="fullscreen-reenter"
           >
             Re-enter Fullscreen
-          </button>
-          <button
-            onClick={onContinue}
-            className="px-4 py-2 rounded-lg border border-red-500/50 text-red-200 hover:bg-red-500/10 transition font-semibold"
-            data-testid="fullscreen-continue"
-          >
-            Continue without Fullscreen
           </button>
         </div>
       </div>

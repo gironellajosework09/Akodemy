@@ -1,8 +1,6 @@
 // Hook: manage fullscreen entry and exit warnings for challenge sessions.
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-const EXIT_MODAL_DELAY_MS = 150
-
 export default function useFullscreenGuard({ targetRef, enabled = true } = {}) {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isSupported, setIsSupported] = useState(true)
@@ -105,6 +103,10 @@ export default function useFullscreenGuard({ targetRef, enabled = true } = {}) {
     setShowExitModal(false)
   }, [])
 
+  const dismissExitModal = useCallback(() => {
+    setShowExitModal(false)
+  }, [])
+
   useEffect(() => {
     continueWithoutFullscreenRef.current = continueWithoutFullscreen
   }, [continueWithoutFullscreen])
@@ -154,16 +156,10 @@ export default function useFullscreenGuard({ targetRef, enabled = true } = {}) {
         return
       }
 
-      if (pendingExitTimerRef.current) {
-        clearTimeout(pendingExitTimerRef.current)
-      }
-
-      pendingExitTimerRef.current = setTimeout(() => {
-        if (!isMountedRef.current) return
-        if (document.fullscreenElement) return
-        if (continueWithoutFullscreenRef.current) return
-        setShowExitModal(true)
-      }, EXIT_MODAL_DELAY_MS)
+      if (!isMountedRef.current) return
+      if (document.fullscreenElement) return
+      if (continueWithoutFullscreenRef.current) return
+      setShowExitModal(true)
     }
 
     document.addEventListener('fullscreenchange', handleFullscreenChange)
@@ -214,6 +210,7 @@ export default function useFullscreenGuard({ targetRef, enabled = true } = {}) {
     autosaveEnabled,
     requestFullscreen,
     exitFullscreen,
-    handleContinueWithoutFullscreen
+    handleContinueWithoutFullscreen,
+    dismissExitModal
   }
 }

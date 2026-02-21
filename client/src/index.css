@@ -10,6 +10,23 @@ body {
   overscroll-behavior: none;
 }
 
+.challenge-workspace-clipboard-guard {
+  -webkit-touch-callout: none;
+}
+
+.challenge-workspace-clipboard-guard * {
+  user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+}
+
+.challenge-workspace-clipboard-guard .monaco-editor,
+.challenge-workspace-clipboard-guard .monaco-editor * {
+  user-select: text;
+  -webkit-user-select: text;
+  -ms-user-select: text;
+}
+
 .mastery-bar {
   transition: width 0.5s ease-in-out;
 }
