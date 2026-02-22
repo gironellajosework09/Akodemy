@@ -78,7 +78,8 @@ export default function ChallengeEditor() {
     autosaveEnabled,
     requestFullscreen,
     exitFullscreen,
-    dismissExitModal
+    dismissExitModal,
+    resetFullscreenViolation
   } = useFullscreenGuard({ targetRef: containerRef, enabled: fullscreenGuardEnabled })
   // } = useFullscreenGuard({ targetRef: containerRef, enabled: fullscreenGuardEnabled })
 
@@ -194,7 +195,8 @@ export default function ChallengeEditor() {
     setShowInstructions(true)
     setAttemptNumber(1)
     setStartedAt(new Date())
-  }, [challengeId])
+    resetFullscreenViolation()
+  }, [challengeId, resetFullscreenViolation])
 
   useEffect(() => {
     if (!challengeId || !attemptSessionId) return
@@ -419,14 +421,39 @@ export default function ChallengeEditor() {
 
       await exitFullscreen({ suppressModal: true })
       setFullscreenRequirement(false)
+      resetFullscreenViolation()
       setShowResults(true)
     } catch (error) {
       console.error('Failed to finish challenge:', error)
     }
   }
 
-  const goBack = () => {
-    setShowExitConfirm(true)
+  const goBack = async () => {
+    if (!isChallengeActive) return
+    if (!document.fullscreenElement) return
+
+    try {
+      await exitFullscreen()
+    } catch (error) {
+      console.error('Failed to exit fullscreen from back action:', error)
+    }
+  }
+
+  const handleContinueCoding = async () => {
+    setShowExitConfirm(false)
+
+    if (document.fullscreenElement) return
+
+    try {
+      const target = containerRef.current
+      if (target?.requestFullscreen) {
+        await target.requestFullscreen()
+        return
+      }
+      await requestFullscreen({ userGesture: true })
+    } catch (error) {
+      console.error('Failed to re-enter fullscreen from continue action:', error)
+    }
   }
 
   const confirmExit = async () => {
@@ -456,6 +483,7 @@ export default function ChallengeEditor() {
 
     await exitFullscreen({ suppressModal: true })
     setFullscreenRequirement(false)
+    resetFullscreenViolation()
     setShowExitConfirm(false)
     setShowResults(true)
   }
@@ -463,6 +491,7 @@ export default function ChallengeEditor() {
   const handleBackToChallenges = () => {
     exitFullscreen({ suppressModal: true })
     setFullscreenRequirement(false)
+    resetFullscreenViolation()
     navigate(`/challenges/${challenge?.language}/${challenge?.difficulty}`)
   }
 
@@ -480,17 +509,20 @@ export default function ChallengeEditor() {
         const nextChallengeId = challenges[currentIndex + 1]._id
         exitFullscreen({ suppressModal: true })
         setFullscreenRequirement(false)
+        resetFullscreenViolation()
         navigate(`/challenges/${challenge?.language}/${challenge?.difficulty}`, {
           state: { retryChallengeId: nextChallengeId }
         })
       } else {
         exitFullscreen({ suppressModal: true })
         setFullscreenRequirement(false)
+        resetFullscreenViolation()
         navigate(`/challenges/${challenge?.language}/${challenge?.difficulty}`)
       }
     } catch (error) {
       exitFullscreen({ suppressModal: true })
       setFullscreenRequirement(false)
+      resetFullscreenViolation()
       navigate(`/challenges/${challenge?.language}/${challenge?.difficulty}`)
     }
   }
@@ -498,6 +530,7 @@ export default function ChallengeEditor() {
   const handleRetry = () => {
     exitFullscreen({ suppressModal: true })
     setFullscreenRequirement(false)
+    resetFullscreenViolation()
     navigate(`/challenges/${challenge?.language}/${challenge?.difficulty}`, {
       state: { retryChallengeId: challengeId }
     })
@@ -1018,7 +1051,7 @@ export default function ChallengeEditor() {
         onReenter={() => requestFullscreen({ userGesture: true })}
         onExitChallenge={() => {
           dismissExitModal()
-          goBack()
+          setShowExitConfirm(true)
         }}
       />
 
@@ -1037,7 +1070,7 @@ export default function ChallengeEditor() {
         cancelClassName="px-4 py-2 rounded-lg bg-akodemy-purple text-white hover:bg-purple-700 transition"
         reverseButtons
         onConfirm={confirmExit}
-        onCancel={() => setShowExitConfirm(false)}
+        onCancel={handleContinueCoding}
       />
 
       <ResultsOverlay
@@ -1074,14 +1107,14 @@ export default function ChallengeEditor() {
         }}
       />
 
-      {saveDisabledToast && (
+      {/* {saveDisabledToast && (
         <div className="fixed bottom-28 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in">
           <div className="flex items-center gap-2 bg-red-900/90 text-red-100 px-4 py-2 rounded-lg shadow-lg border border-red-700">
             <ShieldAlert className="w-4 h-4" />
             <span className="text-sm font-medium">Saving is disabled outside fullscreen.</span>
           </div>
         </div>
-      )}
+      )} */}
 
       {!allowClipboard && clipboardToast && (
         <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 animate-fade-in">

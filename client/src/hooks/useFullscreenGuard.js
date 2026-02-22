@@ -7,6 +7,7 @@ export default function useFullscreenGuard({ targetRef, enabled = true } = {}) {
   const [needsUserGesture, setNeedsUserGesture] = useState(false)
   const [showExitModal, setShowExitModal] = useState(false)
   const [continueWithoutFullscreen, setContinueWithoutFullscreen] = useState(false)
+  const [hadFullscreenViolation, setHadFullscreenViolation] = useState(false)
 
   const hasEnteredFullscreenRef = useRef(false)
   const pendingExitTimerRef = useRef(null)
@@ -106,6 +107,16 @@ export default function useFullscreenGuard({ targetRef, enabled = true } = {}) {
     setShowExitModal(false)
   }, [])
 
+  const openExitModal = useCallback(() => {
+    if (!enabled) return
+    setShowExitModal(true)
+  }, [enabled])
+
+  const resetFullscreenViolation = useCallback(() => {
+    setHadFullscreenViolation(false)
+    setShowExitModal(false)
+  }, [])
+
   useEffect(() => {
     continueWithoutFullscreenRef.current = continueWithoutFullscreen
   }, [continueWithoutFullscreen])
@@ -158,6 +169,7 @@ export default function useFullscreenGuard({ targetRef, enabled = true } = {}) {
       if (!isMountedRef.current) return
       if (document.fullscreenElement) return
       if (continueWithoutFullscreenRef.current) return
+      setHadFullscreenViolation(true)
       setShowExitModal(true)
     }
 
@@ -205,11 +217,14 @@ export default function useFullscreenGuard({ targetRef, enabled = true } = {}) {
     isSupported,
     needsUserGesture,
     showExitModal,
+    hadFullscreenViolation,
     continueWithoutFullscreen,
     autosaveEnabled,
     requestFullscreen,
     exitFullscreen,
     handleContinueWithoutFullscreen,
-    dismissExitModal
+    dismissExitModal,
+    openExitModal,
+    resetFullscreenViolation
   }
 }
