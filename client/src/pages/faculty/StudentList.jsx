@@ -11,6 +11,7 @@ import jsPDF from 'jspdf'
 export default function StudentList() {
   const navigate = useNavigate()
   const [students, setStudents] = useState([])
+  const [needsAttention, setNeedsAttention] = useState([])
   const [search, setSearch] = useState('')
   const [yearSectionFilter, setYearSectionFilter] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
@@ -28,8 +29,12 @@ export default function StudentList() {
 
   const fetchStudents = async () => {
     try {
-      const response = await api.get('/api/faculty/students')
-      setStudents(response.data)
+      const [studentsResponse, analyticsResponse] = await Promise.all([
+        api.get('/api/faculty/students'),
+        api.get('/api/faculty/analytics/students')
+      ])
+      setStudents(studentsResponse.data)
+      setNeedsAttention(analyticsResponse.data?.needsAttention || [])
     } catch (error) {
       console.error('Failed to fetch students:', error)
     } finally {
@@ -173,9 +178,6 @@ export default function StudentList() {
 
     return { lang, avg, mastered, developing, needsPractice, notStarted }
   })
-  const topPerformers = [...students]
-    .sort((a, b) => getAverageProgress(b) - getAverageProgress(a))
-    .slice(0, 3)
   const rowsPerPage = 20
   const studentChunks = []
   for (let i = 0; i < students.length; i += rowsPerPage) {
@@ -516,9 +518,9 @@ export default function StudentList() {
                 <p className="text-lg font-semibold text-gray-900">{averageBadges}</p>
               </div>
               <div className="border border-gray-200 rounded-lg p-3">
-                <p className="text-xs text-gray-500">Top Performer</p>
-                <p className="text-sm font-semibold text-gray-900">{topPerformers[0]?.name || 'N/A'}</p>
-                <p className="text-xs text-gray-500">{topPerformers[0] ? `${getAverageProgress(topPerformers[0])}% avg` : ''}</p>
+                <p className="text-xs text-gray-500">Needs Attention</p>
+                <p className="text-sm font-semibold text-gray-900">{needsAttention[0]?.name || 'N/A'}</p>
+                <p className="text-xs text-gray-500">{needsAttention[0] ? `${needsAttention[0].failRate}% fail` : ''}</p>
               </div>
             </div>
 
@@ -549,16 +551,17 @@ export default function StudentList() {
             </div>
 
             <div className="mt-6">
-              <h2 className="text-sm font-semibold text-gray-700 uppercase mb-3">Top Performers</h2>
+              <h2 className="text-sm font-semibold text-gray-700 uppercase mb-3">Needs Attention</h2>
               <div className="grid grid-cols-3 gap-3">
-                {topPerformers.map((student, index) => (
+                {needsAttention.map((student, index) => (
                   <div key={`${student._id}-top`} className="border border-gray-200 rounded-lg p-3">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[10px] uppercase text-gray-400">Rank {index + 1}</span>
-                      <span className="text-[10px] text-gray-500">{getAverageProgress(student)}% avg</span>
+                      <span className="text-[10px] uppercase text-gray-400">Priority {index + 1}</span>
+                      <span className="text-[10px] text-gray-500">{student.failRate}% fail</span>
                     </div>
                     <p className="text-xs font-semibold text-gray-900">{student.name}</p>
                     <p className="text-[10px] text-gray-500">{student.email}</p>
+                    <p className="text-[10px] text-gray-500 mt-1">{student.attempts} attempts</p>
                   </div>
                 ))}
               </div>

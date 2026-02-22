@@ -5,7 +5,9 @@ import User from '../models/User.js'
 import Submission from '../models/Submission.js'
 import Challenge, { COMPETENCY_NAMES } from '../models/Challenge.js'
 import LatestAnswer from '../models/LatestAnswer.js'
+import ChallengeAnswer from '../models/ChallengeAnswer.js'
 import Badge from '../models/Badge.js'
+import ChallengeAttempt from '../models/ChallengeAttempt.js'
 import { getBadgeProgress } from '../services/badgeService.js'
 
 // Route handlers for Faculty APIs.
@@ -153,7 +155,7 @@ router.get('/students', authenticateToken, requireRole('faculty'), async (req, r
 
     const studentIds = students.map(s => s._id)
     
-    const [correctAnswers, challengeCounts, allChallenges, equippedBadges, badgeCounts] = await Promise.all([
+    const [correctAnswers, challengeCounts, allChallenges, equippedBadges, badgeCounts, attemptedUsers, attemptedAnswerUsers] = await Promise.all([
       LatestAnswer.find({
         userId: { $in: studentIds },
         isCorrect: true
@@ -166,7 +168,9 @@ router.get('/students', authenticateToken, requireRole('faculty'), async (req, r
       Badge.aggregate([
         { $match: { status: 'claimed' } },
         { $group: { _id: '$userId', count: { $sum: 1 } } }
-      ])
+      ]),
+      ChallengeAttempt.distinct('userId', { userId: { $in: studentIds } }),
+      ChallengeAnswer.distinct('userId', { userId: { $in: studentIds } })
     ])
 
     const totalByLang = {}
@@ -210,6 +214,10 @@ router.get('/students', authenticateToken, requireRole('faculty'), async (req, r
     badgeCounts.forEach(b => {
       badgeCountMap[b._id.toString()] = b.count
     })
+    const attemptedUserSet = new Set([
+      ...attemptedUsers.map(id => id.toString()),
+      ...attemptedAnswerUsers.map(id => id.toString())
+    ])
 
     const studentsWithProgress = students.map(s => {
       const id = s._id.toString()
@@ -219,6 +227,7 @@ router.get('/students', authenticateToken, requireRole('faculty'), async (req, r
         email: s.email,
         yearSection: s.yearSection || '',
         progress: progressMap[id] || {},
+        hasAttempted: attemptedUserSet.has(id),
         equippedTitle: equippedMap[id] || null,
         badgeCount: badgeCountMap[id] || 0
       }
