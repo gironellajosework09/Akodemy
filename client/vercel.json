@@ -1,7 +1,7 @@
 {
 "rewrites": [
 {
-    "source": "/api/:path*",
+    "source": "/api/auth/:path*",
     "destination": "https://akodemy-1.onrender.com/api/:path*"
 }
 ]
