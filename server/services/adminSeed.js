@@ -3,7 +3,7 @@ import User from '../models/User.js'
 
 const DEFAULT_ADMIN = {
   uid: 'Admin',
-  email: 'admin@akodemy.local',
+  email: 'akodemy.aeoncarde@gmail.com',
   name: 'System Administrator',
   lastName: 'Administrator',
   givenName: 'System',
